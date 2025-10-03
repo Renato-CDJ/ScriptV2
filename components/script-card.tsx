@@ -76,27 +76,29 @@ export function ScriptCard({
       <div className="bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-950/20 dark:to-pink-950/20 border border-orange-200 dark:border-orange-800 rounded-lg py-3 px-6">
         <div className="grid grid-cols-2 gap-6 items-center">
           <div className="flex items-center gap-3">
-            <label className="text-sm font-semibold text-orange-600 dark:text-orange-400 whitespace-nowrap">
+            <span className="text-sm font-semibold text-orange-600 dark:text-orange-400 whitespace-nowrap">
               Texto do Script:
-            </label>
+            </span>
             <Slider
               value={textSize}
               onValueChange={setTextSize}
               max={100}
               step={1}
               className="flex-1 [&_[role=slider]]:bg-orange-500 [&_[role=slider]]:border-orange-600 [&_.bg-primary]:bg-orange-500"
+              aria-label="Tamanho do texto do script"
             />
           </div>
           <div className="flex items-center gap-3">
-            <label className="text-sm font-semibold text-orange-600 dark:text-orange-400 whitespace-nowrap">
+            <span className="text-sm font-semibold text-orange-600 dark:text-orange-400 whitespace-nowrap">
               Botões:
-            </label>
+            </span>
             <Slider
               value={buttonSize}
               onValueChange={setButtonSize}
               max={100}
               step={1}
               className="flex-1 [&_[role=slider]]:bg-orange-500 [&_[role=slider]]:border-orange-600 [&_.bg-primary]:bg-orange-500"
+              aria-label="Tamanho dos botões"
             />
           </div>
         </div>
