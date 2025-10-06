@@ -69,6 +69,10 @@ export function ScriptsTab() {
 
         if (result.stepCount > 0) {
           refreshSteps()
+          setEditingStep(null)
+          setIsCreating(false)
+          setPreviewStep(null)
+
           toast({
             title: "Script importado com sucesso!",
             description: `${result.productCount} produto(s) e ${result.stepCount} tela(s) foram importados.`,

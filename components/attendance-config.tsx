@@ -57,11 +57,15 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Card className="relative">
+      <Card className="relative shadow-xl border-2 border-orange-200 dark:border-zinc-700">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl font-bold">Início</CardTitle>
-            <Button variant="ghost" size="sm" className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30"
+            >
               <div className="h-5 w-5 rounded-full bg-green-600 flex items-center justify-center">
                 <Check className="h-3 w-3 text-white" />
               </div>
@@ -73,15 +77,15 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
           {/* Tipo de atendimento */}
           <div className="space-y-3">
             <h3 className="text-base font-semibold text-foreground">Tipo de atendimento</h3>
-            <div className="flex gap-3">
+            <div className="flex gap-3 justify-center">
               <Button
                 variant={attendanceType === "ativo" ? "default" : "outline"}
                 size="lg"
                 onClick={() => setAttendanceType("ativo")}
                 className={
                   attendanceType === "ativo"
-                    ? "bg-orange-500 hover:bg-orange-600 text-white font-semibold"
-                    : "bg-white hover:bg-gray-50 text-gray-700 border-2"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-semibold border-0 shadow-lg min-w-[140px]"
+                    : "bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-700 min-w-[140px]"
                 }
               >
                 Ativo
@@ -92,8 +96,8 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
                 onClick={() => setAttendanceType("receptivo")}
                 className={
                   attendanceType === "receptivo"
-                    ? "bg-orange-500 hover:bg-orange-600 text-white font-semibold"
-                    : "bg-white hover:bg-gray-50 text-gray-700 border-2"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-semibold border-0 shadow-lg min-w-[140px]"
+                    : "bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-700 min-w-[140px]"
                 }
               >
                 Receptivo
@@ -104,15 +108,15 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
           {/* Pessoa */}
           <div className="space-y-3">
             <h3 className="text-base font-semibold text-foreground">Pessoa</h3>
-            <div className="flex gap-3">
+            <div className="flex gap-3 justify-center">
               <Button
                 variant={personType === "fisica" ? "default" : "outline"}
                 size="lg"
                 onClick={() => setPersonType("fisica")}
                 className={
                   personType === "fisica"
-                    ? "bg-orange-500 hover:bg-orange-600 text-white font-semibold"
-                    : "bg-white hover:bg-gray-50 text-gray-700 border-2"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-semibold border-0 shadow-lg min-w-[140px]"
+                    : "bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-700 min-w-[140px]"
                 }
               >
                 Física
@@ -123,8 +127,8 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
                 onClick={() => setPersonType("juridica")}
                 className={
                   personType === "juridica"
-                    ? "bg-orange-500 hover:bg-orange-600 text-white font-semibold"
-                    : "bg-white hover:bg-gray-50 text-gray-700 border-2"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-semibold border-0 shadow-lg min-w-[140px]"
+                    : "bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-700 min-w-[140px]"
                 }
               >
                 Jurídica
@@ -141,7 +145,7 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
                   <p className="text-sm mt-1">Entre em contato com o administrador.</p>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3 justify-center">
                   {filteredProducts.map((prod) => (
                     <Button
                       key={prod.id}
@@ -150,8 +154,8 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
                       onClick={() => setProduct(prod.id)}
                       className={
                         product === prod.id
-                          ? "bg-orange-500 hover:bg-orange-600 text-white font-semibold uppercase"
-                          : "bg-white hover:bg-gray-50 text-gray-700 border-2 uppercase"
+                          ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-semibold uppercase border-0 shadow-lg min-w-[140px]"
+                          : "bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-700 uppercase min-w-[140px]"
                       }
                     >
                       {prod.name}
@@ -170,7 +174,7 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
           size="lg"
           onClick={handleStart}
           disabled={!attendanceType || !personType || !product}
-          className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8"
+          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold px-12 py-6 text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 border-0 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           Iniciar
         </Button>
@@ -178,7 +182,7 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
           size="lg"
           variant="outline"
           onClick={handleReset}
-          className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 border-0"
+          className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-gray-700 dark:to-gray-800 dark:hover:from-gray-800 dark:hover:to-gray-900 text-white font-bold px-12 py-6 text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 border-0 rounded-xl"
         >
           Resetar
         </Button>

@@ -92,44 +92,52 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           size="sm"
           onClick={() => setActiveSection("notes")}
           className={`flex-col h-auto py-2 ${
-            activeSection === "notes" ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
+            activeSection === "notes"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              : ""
           }`}
         >
           <StickyNote className="h-4 w-4 mb-1" />
-          <span className="text-xs">Notas</span>
+          <span className="text-xs truncate w-full">Notas</span>
         </Button>
         <Button
           variant={activeSection === "tabulation" ? "default" : "outline"}
           size="sm"
           onClick={() => setActiveSection("tabulation")}
           className={`flex-col h-auto py-2 ${
-            activeSection === "tabulation" ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
+            activeSection === "tabulation"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              : ""
           }`}
         >
           <Tags className="h-4 w-4 mb-1" />
-          <span className="text-xs">Tabulação</span>
+          <span className="text-xs truncate w-full px-1">Tabulação</span>
         </Button>
         <Button
           variant={activeSection === "situation" ? "default" : "outline"}
           size="sm"
           onClick={() => setActiveSection("situation")}
           className={`flex-col h-auto py-2 ${
-            activeSection === "situation" ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
+            activeSection === "situation"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              : ""
           }`}
         >
           <AlertCircle className="h-4 w-4 mb-1" />
-          <span className="text-xs">Situação</span>
+          <span className="text-xs truncate w-full px-1">Situação</span>
         </Button>
         <Button
           variant={activeSection === "channel" ? "default" : "outline"}
           size="sm"
           onClick={() => setActiveSection("channel")}
           className={`flex-col h-auto py-2 ${
-            activeSection === "channel" ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
+            activeSection === "channel"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              : ""
           }`}
         >
           <Radio className="h-4 w-4 mb-1" />
-          <span className="text-xs">Canal</span>
+          <span className="text-xs truncate w-full">Canal</span>
         </Button>
       </div>
 
@@ -160,23 +168,23 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             <CardContent className="space-y-3">
               <Button
                 variant="outline"
-                className="w-full justify-start bg-transparent"
+                className="w-full justify-start bg-transparent text-sm"
                 onClick={() => setShowTabulationFullView(true)}
               >
-                <List className="h-4 w-4 mr-2" />
-                Visualizar todo conteúdo
+                <List className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">Visualizar todo conteúdo</span>
               </Button>
 
               <Select value={selectedTabulation} onValueChange={setSelectedTabulation}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Escolha uma tabulação" />
                 </SelectTrigger>
                 <SelectContent>
                   {tabulations.map((tab) => (
                     <SelectItem key={tab.id} value={tab.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tab.color }} />
-                        {tab.name}
+                      <div className="flex items-center gap-2 max-w-full">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: tab.color }} />
+                        <span className="truncate">{tab.name}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -185,8 +193,10 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
 
               {selectedTabulation && (
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">{tabulations.find((t) => t.id === selectedTabulation)?.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-sm font-medium break-words">
+                    {tabulations.find((t) => t.id === selectedTabulation)?.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 break-words">
                     {tabulations.find((t) => t.id === selectedTabulation)?.description}
                   </p>
                 </div>
@@ -203,11 +213,11 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             <CardContent className="space-y-3">
               <Button
                 variant="outline"
-                className="w-full justify-start bg-transparent"
+                className="w-full justify-start bg-transparent text-sm"
                 onClick={() => setShowSituationFullView(true)}
               >
-                <List className="h-4 w-4 mr-2" />
-                Visualizar todo conteúdo
+                <List className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">Visualizar todo conteúdo</span>
               </Button>
 
               {situations.map((situation) => (
@@ -215,14 +225,16 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                   key={situation.id}
                   variant={selectedSituation === situation.id ? "default" : "outline"}
                   className={`w-full justify-start text-left ${
-                    selectedSituation === situation.id ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
+                    selectedSituation === situation.id
+                      ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+                      : ""
                   }`}
                   onClick={() => {
                     setSelectedSituation(situation.id)
                     setShowSituationDialog(true)
                   }}
                 >
-                  {situation.name}
+                  <span className="truncate w-full">{situation.name}</span>
                 </Button>
               ))}
             </CardContent>
@@ -237,11 +249,11 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             <CardContent className="space-y-3">
               <Button
                 variant="outline"
-                className="w-full justify-start bg-transparent"
+                className="w-full justify-start bg-transparent text-sm"
                 onClick={() => setShowChannelFullView(true)}
               >
-                <List className="h-4 w-4 mr-2" />
-                Visualizar todo conteúdo
+                <List className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">Visualizar todo conteúdo</span>
               </Button>
 
               {channels.map((channel) => (
@@ -249,14 +261,16 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                   key={channel.id}
                   variant={selectedChannel === channel.id ? "default" : "outline"}
                   className={`w-full justify-start text-left ${
-                    selectedChannel === channel.id ? "bg-orange-500 hover:bg-orange-600 text-white" : ""
+                    selectedChannel === channel.id
+                      ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+                      : ""
                   }`}
                   onClick={() => {
                     setSelectedChannel(channel.id)
                     setShowChannelDialog(true)
                   }}
                 >
-                  {channel.name}
+                  <span className="truncate w-full">{channel.name}</span>
                 </Button>
               ))}
             </CardContent>
@@ -288,14 +302,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                   onClick={() => handleTabulationClick(tab)}
                   className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${
                     index === 0
-                      ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                      ? "border-orange-500 dark:border-white bg-orange-50 dark:bg-zinc-800"
                       : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-1">
                       <svg
-                        className="h-5 w-5 text-orange-500"
+                        className="h-5 w-5 text-orange-500 dark:text-white"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg"
@@ -306,14 +320,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                     <div className="flex-1">
                       <h3
                         className={`font-bold text-base mb-1 ${
-                          index === 0 ? "text-orange-600 dark:text-orange-400" : "text-gray-900 dark:text-gray-100"
+                          index === 0 ? "text-orange-600 dark:text-white" : "text-gray-900 dark:text-gray-100"
                         }`}
                       >
                         {tab.name}
                       </h3>
                       <p
                         className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-orange-300" : "text-gray-600 dark:text-gray-400"
+                          index === 0 ? "text-orange-700 dark:text-gray-300" : "text-gray-600 dark:text-gray-400"
                         }`}
                       >
                         {tab.description}
@@ -330,7 +344,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 setShowTabulationFullView(false)
                 setTabulationSearchQuery("")
               }}
-              className="w-full bg-orange-500 hover:bg-orange-600"
+              className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
             >
               <span className="mr-2">📋</span>
               Voltar
@@ -363,14 +377,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                   onClick={() => handleSituationClick(situation)}
                   className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${
                     index === 0
-                      ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                      ? "border-orange-500 dark:border-white bg-orange-50 dark:bg-zinc-800"
                       : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-1">
                       <svg
-                        className="h-5 w-5 text-orange-500"
+                        className="h-5 w-5 text-orange-500 dark:text-white"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg"
@@ -381,14 +395,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                     <div className="flex-1">
                       <h3
                         className={`font-bold text-base mb-1 ${
-                          index === 0 ? "text-orange-600 dark:text-orange-400" : "text-gray-900 dark:text-gray-100"
+                          index === 0 ? "text-orange-600 dark:text-white" : "text-gray-900 dark:text-gray-100"
                         }`}
                       >
                         {situation.name}
                       </h3>
                       <p
                         className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-orange-300" : "text-gray-600 dark:text-gray-400"
+                          index === 0 ? "text-orange-700 dark:text-gray-300" : "text-gray-600 dark:text-gray-400"
                         }`}
                       >
                         {situation.description}
@@ -405,7 +419,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 setShowSituationFullView(false)
                 setSituationSearchQuery("")
               }}
-              className="w-full bg-orange-500 hover:bg-orange-600"
+              className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
             >
               <span className="mr-2">📋</span>
               Voltar
@@ -438,14 +452,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                   onClick={() => handleChannelClick(channel)}
                   className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${
                     index === 0
-                      ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                      ? "border-orange-500 dark:border-white bg-orange-50 dark:bg-zinc-800"
                       : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-1">
                       <svg
-                        className="h-5 w-5 text-orange-500"
+                        className="h-5 w-5 text-orange-500 dark:text-white"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg"
@@ -456,14 +470,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                     <div className="flex-1">
                       <h3
                         className={`font-bold text-base mb-1 ${
-                          index === 0 ? "text-orange-600 dark:text-orange-400" : "text-gray-900 dark:text-gray-100"
+                          index === 0 ? "text-orange-600 dark:text-white" : "text-gray-900 dark:text-gray-100"
                         }`}
                       >
                         {channel.name}
                       </h3>
                       <p
                         className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-orange-300" : "text-gray-600 dark:text-gray-400"
+                          index === 0 ? "text-orange-700 dark:text-gray-300" : "text-gray-600 dark:text-gray-400"
                         }`}
                       >
                         {channel.contact}
@@ -480,7 +494,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 setShowChannelFullView(false)
                 setChannelSearchQuery("")
               }}
-              className="w-full bg-orange-500 hover:bg-orange-600"
+              className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
             >
               <span className="mr-2">📋</span>
               Voltar
@@ -492,14 +506,17 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       <Dialog open={showTabulationModal} onOpenChange={setShowTabulationModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-orange-400 text-xl">
+            <DialogTitle className="text-orange-600 dark:text-white text-xl">
               {selectedTabulationForModal?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-700 dark:text-gray-300">{selectedTabulationForModal?.description}</p>
           </div>
-          <Button onClick={() => setShowTabulationModal(false)} className="w-full bg-orange-500 hover:bg-orange-600">
+          <Button
+            onClick={() => setShowTabulationModal(false)}
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+          >
             Fechar
           </Button>
         </DialogContent>
@@ -508,14 +525,17 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       <Dialog open={showSituationModal} onOpenChange={setShowSituationModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-orange-400 text-xl">
+            <DialogTitle className="text-orange-600 dark:text-white text-xl">
               {selectedSituationForModal?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-700 dark:text-gray-300">{selectedSituationForModal?.description}</p>
           </div>
-          <Button onClick={() => setShowSituationModal(false)} className="w-full bg-orange-500 hover:bg-orange-600">
+          <Button
+            onClick={() => setShowSituationModal(false)}
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+          >
             Fechar
           </Button>
         </DialogContent>
@@ -524,7 +544,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       <Dialog open={showChannelModal} onOpenChange={setShowChannelModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-orange-400 text-xl">
+            <DialogTitle className="text-orange-600 dark:text-white text-xl">
               {selectedChannelForModal?.name}
             </DialogTitle>
           </DialogHeader>
@@ -533,7 +553,10 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               {selectedChannelForModal?.contact}
             </p>
           </div>
-          <Button onClick={() => setShowChannelModal(false)} className="w-full bg-orange-500 hover:bg-orange-600">
+          <Button
+            onClick={() => setShowChannelModal(false)}
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+          >
             Fechar
           </Button>
         </DialogContent>
@@ -554,7 +577,10 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               <p className="text-sm text-blue-900 dark:text-blue-100">{selectedSituationData?.description}</p>
             </div>
           </div>
-          <Button onClick={() => setShowSituationDialog(false)} className="w-full bg-orange-500 hover:bg-orange-600">
+          <Button
+            onClick={() => setShowSituationDialog(false)}
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+          >
             Fechar
           </Button>
         </DialogContent>
@@ -577,7 +603,10 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               </p>
             </div>
           </div>
-          <Button onClick={() => setShowChannelDialog(false)} className="w-full bg-orange-500 hover:bg-orange-600">
+          <Button
+            onClick={() => setShowChannelDialog(false)}
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+          >
             Fechar
           </Button>
         </DialogContent>

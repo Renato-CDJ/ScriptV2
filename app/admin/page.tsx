@@ -56,13 +56,13 @@ function AdminContent() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <aside className="w-64 flex-shrink-0">
+    <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden">
+      <aside className="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-border">
         <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
       </aside>
 
       <main className="flex-1 overflow-auto">
-        <div className="container mx-auto p-8">{renderContent()}</div>
+        <div className="container mx-auto p-4 md:p-6 lg:p-8">{renderContent()}</div>
       </main>
 
       <Toaster />

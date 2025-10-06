@@ -9,8 +9,6 @@ import { AttendanceConfig } from "@/components/attendance-config"
 import { useAuth } from "@/lib/auth-context"
 import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/store"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
-import { Button } from "@/components/ui/button"
-import { PanelRightOpen, PanelRightClose } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 function OperatorContent() {
@@ -21,6 +19,7 @@ function OperatorContent() {
   const [isSessionActive, setIsSessionActive] = useState(false)
   const [showConfig, setShowConfig] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [showControls, setShowControls] = useState(true)
   const [attendanceConfig, setAttendanceConfig] = useState<AttendanceConfigType | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -48,12 +47,10 @@ function OperatorContent() {
 
   useEffect(() => {
     const handleStoreUpdate = () => {
-      console.log("[v0] Store updated, refreshing data")
       if (currentStep) {
         const updatedStep = getScriptStepById(currentStep.id)
         if (updatedStep) {
           setCurrentStep(updatedStep)
-          console.log("[v0] Current step refreshed:", updatedStep.id)
         }
       }
     }
@@ -70,7 +67,6 @@ function OperatorContent() {
       const foundStep = steps.find((step) => step.title.toLowerCase().includes(query.toLowerCase()))
 
       if (foundStep) {
-        console.log("[v0] Search found step:", foundStep.title)
         setCurrentStep(foundStep)
       }
     }
@@ -80,14 +76,11 @@ function OperatorContent() {
     setAttendanceConfig(config)
 
     const product = getProductById(config.product)
-    console.log("[v0] Starting attendance with product:", product)
 
     if (product) {
       const steps = getScriptSteps()
-      console.log("[v0] Loaded", steps.length, "steps for product", product.name)
 
       const firstStep = getScriptStepById(product.scriptId)
-      console.log("[v0] First step:", firstStep)
 
       if (firstStep) {
         setCurrentStep(firstStep)
@@ -146,39 +139,34 @@ function OperatorContent() {
   const operatorFirstName = user.fullName.split(" ")[0]
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <OperatorHeader searchQuery={searchQuery} onSearchChange={handleSearch} />
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
+      <OperatorHeader
+        searchQuery={searchQuery}
+        onSearchChange={handleSearch}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        showControls={showControls}
+        onToggleControls={() => setShowControls(!showControls)}
+        isSessionActive={isSessionActive}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <main className="flex-1 overflow-auto">
-          <div className="container mx-auto px-4 py-8">
+          <div className="container mx-auto px-3 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8">
             {showConfig && !isSessionActive ? (
-              <div className="space-y-6">
+              <div className="space-y-6 max-w-4xl mx-auto">
                 <div className="text-center space-y-2">
-                  <h1 className="text-3xl font-bold">Bem-vindo, {user.fullName}</h1>
-                  <p className="text-muted-foreground text-lg">
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-balance">
+                    Bem-vindo, {user.fullName}
+                  </h1>
+                  <p className="text-muted-foreground text-base md:text-lg text-pretty">
                     Configure as opções abaixo para iniciar um novo atendimento
                   </p>
                 </div>
                 <AttendanceConfig onStart={handleStartAttendance} />
               </div>
             ) : currentStep ? (
-              <div className="max-w-5xl mx-auto">
-                <div className="flex items-center justify-end mb-4">
-                  <Button variant="outline" size="sm" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                    {isSidebarOpen ? (
-                      <>
-                        <PanelRightClose className="h-4 w-4 mr-2" />
-                        Ocultar Painel
-                      </>
-                    ) : (
-                      <>
-                        <PanelRightOpen className="h-4 w-4 mr-2" />
-                        Mostrar Painel
-                      </>
-                    )}
-                  </Button>
-                </div>
+              <div className="w-full">
                 <ScriptCard
                   step={currentStep}
                   onButtonClick={handleButtonClick}
@@ -187,6 +175,7 @@ function OperatorContent() {
                   operatorName={operatorFirstName}
                   customerFirstName="Maria"
                   searchQuery={searchQuery}
+                  showControls={showControls}
                 />
               </div>
             ) : null}
