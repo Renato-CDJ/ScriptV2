@@ -13,10 +13,13 @@ import {
   Settings,
   LogOut,
   Package,
+  Sun,
+  Moon,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
 
 interface AdminSidebarProps {
   activeTab: string
@@ -38,10 +41,20 @@ const menuItems = [
 export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
+  const [isDark, setIsDark] = useState(false)
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains("dark"))
+  }, [])
 
   const handleLogout = () => {
     logout()
     router.push("/")
+  }
+
+  const toggleTheme = () => {
+    setIsDark(!isDark)
+    document.documentElement.classList.toggle("dark")
   }
 
   return (
@@ -72,8 +85,24 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
         </nav>
       </ScrollArea>
 
-      {/* Footer */}
-      <div className="p-3 border-t">
+      <div className="p-3 border-t space-y-2">
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-3 border-2 hover:scale-105 transition-all shadow-sm hover:shadow-md bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 hover:from-orange-100 hover:to-amber-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800"
+          onClick={toggleTheme}
+        >
+          {isDark ? (
+            <>
+              <Sun className="h-4 w-4 text-orange-500 dark:text-white" />
+              Tema Claro
+            </>
+          ) : (
+            <>
+              <Moon className="h-4 w-4 text-amber-600" />
+              Tema Escuro
+            </>
+          )}
+        </Button>
         <Button variant="ghost" className="w-full justify-start gap-3 text-destructive" onClick={handleLogout}>
           <LogOut className="h-4 w-4" />
           Sair

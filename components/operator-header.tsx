@@ -4,8 +4,23 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
-import { Search, Sun, Moon, LogOut, Circle, PanelRightClose, PanelRightOpen, Eye, EyeOff } from "lucide-react"
+import {
+  Search,
+  Sun,
+  Moon,
+  LogOut,
+  Circle,
+  PanelRightClose,
+  PanelRightOpen,
+  Eye,
+  EyeOff,
+  Home,
+  Hash,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getProducts } from "@/lib/store"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface OperatorHeaderProps {
   searchQuery?: string
@@ -15,6 +30,8 @@ interface OperatorHeaderProps {
   showControls?: boolean
   onToggleControls?: () => void
   isSessionActive?: boolean
+  onBackToStart?: () => void
+  onProductSelect?: (productId: string) => void
 }
 
 export function OperatorHeader({
@@ -25,13 +42,26 @@ export function OperatorHeader({
   showControls = true,
   onToggleControls,
   isSessionActive = false,
+  onBackToStart,
+  onProductSelect,
 }: OperatorHeaderProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
   const [isDark, setIsDark] = useState(false)
+  const [showProductSearch, setShowProductSearch] = useState(false)
+  const [products, setProducts] = useState(getProducts().filter((p) => p.isActive))
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"))
+  }, [])
+
+  useEffect(() => {
+    const handleStoreUpdate = () => {
+      setProducts(getProducts().filter((p) => p.isActive))
+    }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
   const handleLogout = () => {
@@ -42,6 +72,21 @@ export function OperatorHeader({
   const toggleTheme = () => {
     setIsDark(!isDark)
     document.documentElement.classList.toggle("dark")
+  }
+
+  const handleSearchInput = (value: string) => {
+    if (value.startsWith("#")) {
+      setShowProductSearch(true)
+    } else {
+      setShowProductSearch(false)
+      onSearchChange?.(value)
+    }
+  }
+
+  const handleProductSelect = (productId: string) => {
+    setShowProductSearch(false)
+    onSearchChange?.("")
+    onProductSelect?.(productId)
   }
 
   return (
@@ -55,18 +100,58 @@ export function OperatorHeader({
               </div>
             )}
             <div className="flex-1 max-w-md relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Pesquisar títulos..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange?.(e.target.value)}
-                className="pl-9 text-sm"
-              />
+              <Popover open={showProductSearch} onOpenChange={setShowProductSearch}>
+                <PopoverTrigger asChild>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Pesquisar títulos ou #produto..."
+                      value={searchQuery}
+                      onChange={(e) => handleSearchInput(e.target.value)}
+                      className="pl-9 pr-9 text-sm"
+                    />
+                    {searchQuery.startsWith("#") && (
+                      <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-500 animate-pulse" />
+                    )}
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Digite o nome do produto..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                      <CommandGroup heading="Produtos Disponíveis">
+                        {products.map((product) => (
+                          <CommandItem
+                            key={product.id}
+                            onSelect={() => handleProductSelect(product.id)}
+                            className="cursor-pointer"
+                          >
+                            <Hash className="mr-2 h-4 w-4 text-orange-500" />
+                            <span className="font-semibold">{product.name}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
           <div className="flex items-center gap-1 md:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBackToStart}
+              className="gap-1 md:gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 dark:from-green-600 dark:to-emerald-600 dark:hover:from-green-700 dark:hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all font-semibold"
+              title="Voltar ao Início"
+            >
+              <Home className="h-4 w-4" />
+              <span className="hidden lg:inline text-xs md:text-sm">Voltar ao Início</span>
+            </Button>
+
             {isSessionActive && onToggleControls && (
               <Button
                 variant="outline"

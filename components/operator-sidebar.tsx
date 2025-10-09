@@ -153,7 +153,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           }`}
         >
           <CalendarIcon className="h-4 w-4 mb-1" />
-          <span className="text-xs truncate w-full">Prazo</span>
+          <span className="text-xs truncate w-full">Calendario</span>
         </Button>
       </div>
 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { authenticateUser } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
-import { AlertCircle, User, Lock } from "lucide-react"
+import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function LoginForm() {
@@ -16,6 +16,7 @@ export function LoginForm() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isDark, setIsDark] = useState(false)
   const { refreshUser } = useAuth()
 
   const handleUsernameChange = (value: string) => {
@@ -46,10 +47,31 @@ export function LoginForm() {
     setIsLoading(false)
   }
 
+  const toggleTheme = () => {
+    setIsDark(!isDark)
+    document.documentElement.classList.toggle("dark")
+  }
+
   return (
     <Card className="w-full max-w-md bg-gradient-to-br from-white to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl backdrop-blur-sm transition-all duration-300 hover:shadow-[0_20px_60px_rgba(249,115,22,0.4)] hover:scale-[1.02] relative overflow-hidden">
       {/* Decorative gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-amber-500/5 pointer-events-none"></div>
+
+      <div className="absolute top-4 right-4 z-20">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleTheme}
+          title="Alternar tema"
+          className="h-9 w-9 border-2 hover:scale-110 transition-all shadow-md hover:shadow-lg bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 hover:from-orange-100 hover:to-amber-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800"
+        >
+          {isDark ? (
+            <Sun className="h-5 w-5 text-orange-500 dark:text-white" />
+          ) : (
+            <Moon className="h-5 w-5 text-amber-600" />
+          )}
+        </Button>
+      </div>
 
       <CardContent className="pt-10 pb-10 px-10 relative z-10">
         <div className="flex justify-center mb-8">

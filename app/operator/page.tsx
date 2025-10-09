@@ -107,12 +107,7 @@ function OperatorContent() {
       }
     } else {
       // End session
-      setIsSessionActive(false)
-      setCurrentStep(null)
-      setShowConfig(true)
-      setAttendanceConfig(null)
-      setSearchQuery("")
-      setStepHistory([])
+      handleBackToStart()
     }
   }
 
@@ -134,12 +129,37 @@ function OperatorContent() {
     }
   }
 
+  const handleBackToStart = () => {
+    setIsSessionActive(false)
+    setCurrentStep(null)
+    setShowConfig(true)
+    setAttendanceConfig(null)
+    setSearchQuery("")
+    setStepHistory([])
+  }
+
+  const handleProductSelect = (productId: string) => {
+    const product = getProductById(productId)
+
+    if (product) {
+      const firstStep = getScriptStepById(product.scriptId)
+
+      if (firstStep) {
+        setCurrentStep(firstStep)
+        setStepHistory([firstStep.id])
+        setIsSessionActive(true)
+        setShowConfig(false)
+        setSearchQuery("")
+      }
+    }
+  }
+
   if (!user) return null
 
   const operatorFirstName = user.fullName.split(" ")[0]
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col h-screen h-dvh bg-background overflow-hidden">
       <OperatorHeader
         searchQuery={searchQuery}
         onSearchChange={handleSearch}
@@ -148,9 +168,11 @@ function OperatorContent() {
         showControls={showControls}
         onToggleControls={() => setShowControls(!showControls)}
         isSessionActive={isSessionActive}
+        onBackToStart={handleBackToStart}
+        onProductSelect={handleProductSelect}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         <main className="flex-1 overflow-auto">
           <div className="container mx-auto px-3 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8">
             {showConfig && !isSessionActive ? (
@@ -173,7 +195,7 @@ function OperatorContent() {
                   onGoBack={handleGoBack}
                   canGoBack={stepHistory.length > 1}
                   operatorName={operatorFirstName}
-                  customerFirstName="Maria"
+                  customerFirstName="[Primeiro nome do cliente]"
                   searchQuery={searchQuery}
                   showControls={showControls}
                 />

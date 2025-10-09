@@ -11,6 +11,7 @@ import { TabulationsTab } from "@/components/admin-tabs/tabulations-tab"
 import { SituationsTab } from "@/components/admin-tabs/situations-tab"
 import { ChannelsTab } from "@/components/admin-tabs/channels-tab"
 import { NotesTab } from "@/components/admin-tabs/notes-tab"
+import SettingsPage from "@/app/admin/settings/page"
 import { Toaster } from "@/components/ui/toaster"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
@@ -44,24 +45,19 @@ function AdminContent() {
       case "notes":
         return <NotesTab />
       case "settings":
-        return (
-          <div>
-            <h2 className="text-3xl font-bold">Configurações</h2>
-            <p className="text-muted-foreground mt-1">Configurações gerais do sistema</p>
-          </div>
-        )
+        return <SettingsPage />
       default:
         return <DashboardTab />
     }
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden">
-      <aside className="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-border">
+    <div className="flex flex-col md:flex-row h-screen h-dvh bg-background overflow-hidden">
+      <aside className="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-border overflow-auto md:overflow-hidden">
         <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
       </aside>
 
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto min-h-0">
         <div className="container mx-auto p-4 md:p-6 lg:p-8">{renderContent()}</div>
       </main>
 

@@ -123,16 +123,36 @@
     @apply bg-background text-foreground;
   }
 
-  /* Improved responsive base styles with better zoom support */
+  /* Improved responsive base styles with better zoom support and viewport handling */
   html {
     font-size: 16px;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    overflow-x: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   @media (max-width: 640px) {
     html {
       font-size: 14px;
+    }
+  }
+
+  @media (max-width: 1366px) {
+    html {
+      font-size: 15px;
+    }
+  }
+
+  /* Ensure content fits within viewport */
+  @media (max-height: 768px) {
+    .container {
+      @apply py-3;
     }
   }
 

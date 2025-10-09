@@ -103,4 +103,5 @@ export interface Product {
   createdAt: Date
   attendanceTypes?: ("ativo" | "receptivo")[]
   personTypes?: ("fisica" | "juridica")[]
+  description?: string // Added description field for hover tooltip
 }

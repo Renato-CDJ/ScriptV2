@@ -98,7 +98,7 @@ export function SituationsTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Situações de Atendimento</h2>
+          <h2 className="text-3xl font-bold text-foreground">Situações de Atendimento</h2>
           <p className="text-muted-foreground mt-1">Configure as situações que podem ocorrer durante o atendimento</p>
         </div>
         <Button
@@ -168,15 +168,18 @@ export function SituationsTab() {
           {situations.map((situation) => (
             <Card
               key={situation.id}
-              className="cursor-pointer hover:shadow-md transition-all bg-white dark:bg-gray-800"
+              className="cursor-pointer hover:shadow-md transition-all bg-card hover:bg-accent/50"
               onClick={() => setExpandedId(expandedId === situation.id ? null : situation.id)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 flex items-center gap-3">
-                    <CardTitle className="text-base font-bold uppercase">{situation.name}</CardTitle>
+                    <CardTitle className="text-base font-bold uppercase text-foreground">{situation.name}</CardTitle>
                     {situation.isActive && (
-                      <Badge variant="outline" className="text-green-600 border-green-600">
+                      <Badge
+                        variant="outline"
+                        className="text-green-600 dark:text-green-400 border-green-600 dark:border-green-400"
+                      >
                         Ativo
                       </Badge>
                     )}
@@ -189,8 +192,9 @@ export function SituationsTab() {
                         e.stopPropagation()
                         handleEdit(situation)
                       }}
+                      className="hover:bg-accent"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4 text-foreground" />
                     </Button>
                     <Button
                       size="icon"
@@ -199,11 +203,12 @@ export function SituationsTab() {
                         e.stopPropagation()
                         handleDelete(situation.id)
                       }}
+                      className="hover:bg-destructive/10"
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                     <ChevronRight
-                      className={`h-5 w-5 text-orange-500 transition-transform ${
+                      className={`h-5 w-5 text-orange-500 dark:text-orange-400 transition-transform ${
                         expandedId === situation.id ? "rotate-90" : ""
                       }`}
                     />
@@ -212,8 +217,8 @@ export function SituationsTab() {
               </CardHeader>
               {expandedId === situation.id && (
                 <CardContent className="pt-0 pb-4">
-                  <div className="pl-4 border-l-2 border-orange-500">
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{situation.description}</p>
+                  <div className="pl-4 border-l-2 border-orange-500 dark:border-orange-400">
+                    <p className="text-sm text-foreground/80 whitespace-pre-wrap">{situation.description}</p>
                   </div>
                 </CardContent>
               )}

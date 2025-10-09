@@ -76,27 +76,27 @@ export function ScriptCard({
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto">
       {showControls && (
-        <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900 border-2 border-orange-300 dark:border-zinc-700 rounded-xl py-5 px-4 md:px-6 shadow-lg">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 items-center">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-              <label className="text-sm font-bold text-orange-700 dark:text-white whitespace-nowrap min-w-fit flex items-center gap-2">
-                <span className="text-lg">📝</span>
-                Texto do Script:
+        <div className="py-3 px-2 md:px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-center max-w-4xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+              <label className="text-xs md:text-sm font-semibold text-foreground whitespace-nowrap min-w-fit flex items-center gap-2">
+                <span className="text-base md:text-lg">📝</span>
+                Texto:
               </label>
               <Slider
                 value={textSize}
                 onValueChange={setTextSize}
                 max={100}
                 step={1}
-                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:shadow-lg [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
+                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
               />
-              <span className="text-xs font-semibold text-orange-600 dark:text-white min-w-[3rem] text-right">
+              <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">
                 {textSize[0]}%
               </span>
             </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-              <label className="text-sm font-bold text-orange-700 dark:text-white whitespace-nowrap min-w-fit flex items-center gap-2">
-                <span className="text-lg">🔘</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+              <label className="text-xs md:text-sm font-semibold text-foreground whitespace-nowrap min-w-fit flex items-center gap-2">
+                <span className="text-base md:text-lg">🔘</span>
                 Botões:
               </label>
               <Slider
@@ -104,9 +104,9 @@ export function ScriptCard({
                 onValueChange={setButtonSize}
                 max={100}
                 step={1}
-                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:shadow-lg [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
+                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
               />
-              <span className="text-xs font-semibold text-orange-600 dark:text-white min-w-[3rem] text-right">
+              <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">
                 {buttonSize[0]}%
               </span>
             </div>
@@ -164,8 +164,8 @@ export function ScriptCard({
         </CardContent>
       </Card>
 
-      <div className="flex justify-center items-center pt-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+      <div className="flex justify-center items-center pt-4 px-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 w-full max-w-3xl">
           {step.buttons
             .sort((a, b) => a.order - b.order)
             .map((button) => {
