@@ -7,15 +7,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { getTabulations, getSituations, getChannels } from "@/lib/store"
-import { StickyNote, Tags, AlertCircle, Radio, List, Search } from "lucide-react"
+import { StickyNote, Tags, AlertCircle, Radio, List, Search, CalendarIcon } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { PromiseCalendar } from "@/components/promise-calendar"
 
 interface OperatorSidebarProps {
   isOpen: boolean
 }
 
 export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
-  const [activeSection, setActiveSection] = useState<"notes" | "tabulation" | "situation" | "channel">("notes")
+  const [activeSection, setActiveSection] = useState<"notes" | "tabulation" | "situation" | "channel" | "calendar">(
+    "notes",
+  )
+
   const [notes, setNotes] = useState("")
   const [selectedTabulation, setSelectedTabulation] = useState("")
   const [selectedSituation, setSelectedSituation] = useState("")
@@ -85,8 +89,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
 
   return (
     <aside className="w-80 border-l bg-card flex flex-col h-full">
-      {/* Section tabs */}
-      <div className="border-b p-2 grid grid-cols-4 gap-1">
+      <div className="border-b p-2 grid grid-cols-5 gap-1">
         <Button
           variant={activeSection === "notes" ? "default" : "outline"}
           size="sm"
@@ -138,6 +141,19 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
         >
           <Radio className="h-4 w-4 mb-1" />
           <span className="text-xs truncate w-full">Canal</span>
+        </Button>
+        <Button
+          variant={activeSection === "calendar" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveSection("calendar")}
+          className={`flex-col h-auto py-2 ${
+            activeSection === "calendar"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              : ""
+          }`}
+        >
+          <CalendarIcon className="h-4 w-4 mb-1" />
+          <span className="text-xs truncate w-full">Prazo</span>
         </Button>
       </div>
 
@@ -276,6 +292,8 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             </CardContent>
           </Card>
         )}
+
+        {activeSection === "calendar" && <PromiseCalendar />}
       </div>
 
       <Dialog open={showTabulationFullView} onOpenChange={setShowTabulationFullView}>
@@ -431,7 +449,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       <Dialog open={showChannelFullView} onOpenChange={setShowChannelFullView}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Todos os Canais</DialogTitle>
+            <DialogTitle>Todas os Canais</DialogTitle>
             <DialogDescription>Lista completa de canais disponíveis</DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto space-y-4 py-4 max-h-[calc(90vh-200px)]">
