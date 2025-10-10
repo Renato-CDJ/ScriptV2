@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react"
 import type { ScriptStep } from "@/lib/types"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface ScriptCardProps {
@@ -19,7 +19,7 @@ interface ScriptCardProps {
   showControls?: boolean
 }
 
-export function ScriptCard({
+export const ScriptCard = memo(function ScriptCard({
   step,
   onButtonClick,
   onGoBack,
@@ -53,25 +53,35 @@ export function ScriptCard({
     return () => window.removeEventListener("keydown", handleKeyPress)
   }, [canGoBack, onGoBack])
 
-  const firstName = operatorName.split(" ")[0]
+  const firstName = useMemo(() => operatorName.split(" ")[0], [operatorName])
 
-  const processedContent = step.content
-    .replace(/\[Nome do operador\]/g, `<strong>${firstName}</strong>`)
-    .replace(/\[Primeiro nome do cliente\]/g, `<strong>${customerFirstName}</strong>`)
-    .replace(/\[Nome completo do cliente\]/g, `<strong>${customerFirstName} Silva</strong>`)
-    .replace(/\[CPF do cliente\]/g, "<strong>***.***.***-**</strong>")
+  const processedContent = useMemo(
+    () =>
+      step.content
+        .replace(/\[Nome do operador\]/g, `<strong>${firstName}</strong>`)
+        .replace(/\[Primeiro nome do cliente\]/g, `<strong>${customerFirstName}</strong>`)
+        .replace(/\[Nome completo do cliente\]/g, `<strong>${customerFirstName} Silva</strong>`)
+        .replace(/\[CPF do cliente\]/g, "<strong>***.***.***-**</strong>"),
+    [step.content, firstName, customerFirstName],
+  )
 
-  const highlightedTitle =
-    searchQuery && step.title.toLowerCase().includes(searchQuery.toLowerCase())
-      ? step.title.replace(
-          new RegExp(`(${searchQuery})`, "gi"),
-          '<mark class="bg-yellow-300 dark:bg-yellow-600">$1</mark>',
-        )
-      : step.title
+  const highlightedTitle = useMemo(
+    () =>
+      searchQuery && step.title.toLowerCase().includes(searchQuery.toLowerCase())
+        ? step.title.replace(
+            new RegExp(`(${searchQuery})`, "gi"),
+            '<mark class="bg-yellow-300 dark:bg-yellow-600">$1</mark>',
+          )
+        : step.title,
+    [searchQuery, step.title],
+  )
 
-  const textFontSize = 14 + (textSize[0] / 100) * 10
-  const buttonFontSize = 14 + (buttonSize[0] / 100) * 6
-  const buttonPadding = 14 + (buttonSize[0] / 100) * 10
+  const textFontSize = useMemo(() => 14 + (textSize[0] / 100) * 10, [textSize])
+  const buttonFontSize = useMemo(() => 14 + (buttonSize[0] / 100) * 6, [buttonSize])
+  const buttonPadding = useMemo(() => 14 + (buttonSize[0] / 100) * 10, [buttonSize])
+
+  const handleTabulationOpen = useCallback(() => setShowTabulation(true), [])
+  const handleTabulationClose = useCallback(() => setShowTabulation(false), [])
 
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto">
@@ -86,6 +96,7 @@ export function ScriptCard({
               <Slider
                 value={textSize}
                 onValueChange={setTextSize}
+                min={40}
                 max={100}
                 step={1}
                 className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
@@ -102,6 +113,7 @@ export function ScriptCard({
               <Slider
                 value={buttonSize}
                 onValueChange={setButtonSize}
+                min={40}
                 max={100}
                 step={1}
                 className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
@@ -118,7 +130,7 @@ export function ScriptCard({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setShowTabulation(true)}
+          onClick={handleTabulationOpen}
           className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg transition-all z-10 text-xs md:text-sm ${
             showTabulationPulse ? "animate-bounce" : ""
           }`}
@@ -222,7 +234,7 @@ export function ScriptCard({
             )}
           </div>
           <Button
-            onClick={() => setShowTabulation(false)}
+            onClick={handleTabulationClose}
             className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black border-0"
           >
             Entendi
@@ -231,4 +243,4 @@ export function ScriptCard({
       </Dialog>
     </div>
   )
-}
+})

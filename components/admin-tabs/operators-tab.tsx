@@ -23,6 +23,7 @@ import {
   forceLogoutUser,
   getTodayLoginSessions,
   getTodayConnectedTime,
+  getCurrentUser,
 } from "@/lib/store"
 import type { User } from "@/lib/types"
 
@@ -88,7 +89,15 @@ export function OperatorsTab() {
   }
 
   const handleForceLogout = (operatorId: string) => {
+    const currentUser = getCurrentUser()
+
     forceLogoutUser(operatorId)
+
+    // If the logged out user is the current user, redirect to login
+    if (currentUser && currentUser.id === operatorId) {
+      window.location.href = "/"
+    }
+
     toast({
       title: "Sucesso",
       description: "Operador deslogado com sucesso",

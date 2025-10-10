@@ -49,7 +49,7 @@ export function addBusinessDays(startDate: Date, businessDays: number): Date {
 
 export function getMaxPromiseDate(productType: "cartao" | "comercial" | "habitacional"): Date {
   const today = new Date()
-  const businessDays = productType === "cartao" ? 7 : 10
+  const businessDays = productType === "cartao" ? 6 : 9
 
   return addBusinessDays(today, businessDays)
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { OperatorHeader } from "@/components/operator-header"
 import { OperatorSidebar } from "@/components/operator-sidebar"
@@ -29,17 +29,13 @@ function OperatorContent() {
       const hours = now.getHours()
       const minutes = now.getMinutes()
 
-      // Check if it's 21:00 (9 PM)
       if (hours === 21 && minutes === 0) {
         logout()
         router.push("/")
       }
     }
 
-    // Check every minute
     const interval = setInterval(checkAutoLogout, 60000)
-
-    // Check immediately on mount
     checkAutoLogout()
 
     return () => clearInterval(interval)
@@ -59,27 +55,28 @@ function OperatorContent() {
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [currentStep])
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearchQuery(query)
 
-    if (query.trim() && isSessionActive) {
-      const steps = getScriptSteps()
-      const foundStep = steps.find((step) => step.title.toLowerCase().includes(query.toLowerCase()))
+      if (query.trim() && isSessionActive) {
+        const steps = getScriptSteps()
+        const foundStep = steps.find((step) => step.title.toLowerCase().includes(query.toLowerCase()))
 
-      if (foundStep) {
-        setCurrentStep(foundStep)
+        if (foundStep) {
+          setCurrentStep(foundStep)
+        }
       }
-    }
-  }
+    },
+    [isSessionActive],
+  )
 
-  const handleStartAttendance = (config: AttendanceConfigType) => {
+  const handleStartAttendance = useCallback((config: AttendanceConfigType) => {
     setAttendanceConfig(config)
 
     const product = getProductById(config.product)
 
     if (product) {
-      const steps = getScriptSteps()
-
       const firstStep = getScriptStepById(product.scriptId)
 
       if (firstStep) {
@@ -93,52 +90,51 @@ function OperatorContent() {
     } else {
       alert("Erro: Produto não encontrado. Entre em contato com o administrador.")
     }
-  }
+  }, [])
 
-  const handleButtonClick = (nextStepId: string | null) => {
+  const handleButtonClick = useCallback((nextStepId: string | null) => {
     if (nextStepId) {
       const nextStep = getScriptStepById(nextStepId)
       if (nextStep) {
-        if (currentStep) {
-          setStepHistory((prev) => [...prev, nextStep.id])
-        }
+        setStepHistory((prev) => [...prev, nextStep.id])
         setCurrentStep(nextStep)
         setSearchQuery("")
       }
     } else {
-      // End session
       handleBackToStart()
     }
-  }
+  }, [])
 
-  const handleGoBack = () => {
-    if (stepHistory.length > 1) {
-      // Remove current step from history
-      const newHistory = [...stepHistory]
-      newHistory.pop()
-      setStepHistory(newHistory)
+  const handleGoBack = useCallback(() => {
+    setStepHistory((prev) => {
+      if (prev.length > 1) {
+        const newHistory = [...prev]
+        newHistory.pop()
 
-      // Get previous step
-      const previousStepId = newHistory[newHistory.length - 1]
-      const previousStep = getScriptStepById(previousStepId)
+        const previousStepId = newHistory[newHistory.length - 1]
+        const previousStep = getScriptStepById(previousStepId)
 
-      if (previousStep) {
-        setCurrentStep(previousStep)
-        setSearchQuery("")
+        if (previousStep) {
+          setCurrentStep(previousStep)
+          setSearchQuery("")
+        }
+
+        return newHistory
       }
-    }
-  }
+      return prev
+    })
+  }, [])
 
-  const handleBackToStart = () => {
+  const handleBackToStart = useCallback(() => {
     setIsSessionActive(false)
     setCurrentStep(null)
     setShowConfig(true)
     setAttendanceConfig(null)
     setSearchQuery("")
     setStepHistory([])
-  }
+  }, [])
 
-  const handleProductSelect = (productId: string) => {
+  const handleProductSelect = useCallback((productId: string) => {
     const product = getProductById(productId)
 
     if (product) {
@@ -152,7 +148,10 @@ function OperatorContent() {
         setSearchQuery("")
       }
     }
-  }
+  }, [])
+
+  const toggleSidebar = useCallback(() => setIsSidebarOpen((prev) => !prev), [])
+  const toggleControls = useCallback(() => setShowControls((prev) => !prev), [])
 
   if (!user) return null
 
@@ -164,9 +163,9 @@ function OperatorContent() {
         searchQuery={searchQuery}
         onSearchChange={handleSearch}
         isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        onToggleSidebar={toggleSidebar}
         showControls={showControls}
-        onToggleControls={() => setShowControls(!showControls)}
+        onToggleControls={toggleControls}
         isSessionActive={isSessionActive}
         onBackToStart={handleBackToStart}
         onProductSelect={handleProductSelect}

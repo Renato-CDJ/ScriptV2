@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Check, Sparkles } from "lucide-react"
+import { Check } from "lucide-react"
 import { getProducts } from "@/lib/store"
 import type { AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
@@ -58,7 +58,6 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
 
   return (
     <div className="max-w-5xl mx-auto">
-      {/* Wrapped Card component with TooltipProvider */}
       <TooltipProvider>
         <Card className="relative shadow-2xl border-0 bg-gradient-to-br from-white via-orange-50/30 to-amber-50/30 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800 overflow-hidden">
           {/* Decorative elements */}
@@ -67,14 +66,9 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
 
           <CardHeader className="pb-6 relative z-10">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
-                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent">
-                  Configuração de Atendimento
-                </CardTitle>
-              </div>
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent">
+                Configuração de Atendimento
+              </CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
@@ -94,24 +88,22 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
               <div className="flex gap-4 justify-center">
                 <Button
                   variant={attendanceType === "ativo" ? "default" : "outline"}
-                  size="lg"
                   onClick={() => setAttendanceType("ativo")}
                   className={
                     attendanceType === "ativo"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all min-w-[160px] h-14 text-base"
-                      : "bg-white dark:bg-zinc-800 hover:bg-orange-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-600 hover:border-orange-300 dark:hover:border-orange-500 min-w-[160px] h-14 text-base font-semibold transition-all hover:scale-105"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
                   }
                 >
                   Ativo
                 </Button>
                 <Button
                   variant={attendanceType === "receptivo" ? "default" : "outline"}
-                  size="lg"
                   onClick={() => setAttendanceType("receptivo")}
                   className={
                     attendanceType === "receptivo"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all min-w-[160px] h-14 text-base"
-                      : "bg-white dark:bg-zinc-800 hover:bg-orange-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-600 hover:border-orange-300 dark:hover:border-orange-500 min-w-[160px] h-14 text-base font-semibold transition-all hover:scale-105"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
                   }
                 >
                   Receptivo
@@ -125,24 +117,22 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
               <div className="flex gap-4 justify-center">
                 <Button
                   variant={personType === "fisica" ? "default" : "outline"}
-                  size="lg"
                   onClick={() => setPersonType("fisica")}
                   className={
                     personType === "fisica"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all min-w-[160px] h-14 text-base"
-                      : "bg-white dark:bg-zinc-800 hover:bg-orange-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-600 hover:border-orange-300 dark:hover:border-orange-500 min-w-[160px] h-14 text-base font-semibold transition-all hover:scale-105"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
                   }
                 >
                   Física
                 </Button>
                 <Button
                   variant={personType === "juridica" ? "default" : "outline"}
-                  size="lg"
                   onClick={() => setPersonType("juridica")}
                   className={
                     personType === "juridica"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all min-w-[160px] h-14 text-base"
-                      : "bg-white dark:bg-zinc-800 hover:bg-orange-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-600 hover:border-orange-300 dark:hover:border-orange-500 min-w-[160px] h-14 text-base font-semibold transition-all hover:scale-105"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
                   }
                 >
                   Jurídica
@@ -154,7 +144,7 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-foreground text-center">Selecione o Produto</h3>
                 {filteredProducts.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground bg-white/50 dark:bg-zinc-800/50 rounded-xl border-2 border-dashed border-gray-300 dark:border-zinc-700">
+                  <div className="text-center py-12 text-muted-foreground bg-card/50 rounded-xl border-2 border-dashed border-border">
                     <p className="text-lg font-semibold">Nenhum produto disponível</p>
                     <p className="text-sm mt-2">Entre em contato com o administrador.</p>
                   </div>
@@ -165,12 +155,11 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
                         <TooltipTrigger asChild>
                           <Button
                             variant={product === prod.id ? "default" : "outline"}
-                            size="lg"
                             onClick={() => setProduct(prod.id)}
                             className={
                               product === prod.id
-                                ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold uppercase border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all min-w-[160px] h-14 text-base"
-                                : "bg-white dark:bg-zinc-800 hover:bg-orange-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-white border-2 border-gray-300 dark:border-zinc-600 hover:border-orange-300 dark:hover:border-orange-500 uppercase min-w-[160px] h-14 text-base font-semibold transition-all hover:scale-105"
+                                ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold uppercase border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                                : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 uppercase min-w-[120px] h-10 text-sm font-medium transition-all"
                             }
                           >
                             {prod.name}
@@ -197,7 +186,7 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
           size="lg"
           onClick={handleStart}
           disabled={!attendanceType || !personType || !product}
-          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold px-16 py-7 text-xl shadow-2xl hover:shadow-orange-500/50 transition-all duration-300 hover:scale-110 border-0 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 text-white font-bold px-16 py-7 text-xl shadow-2xl hover:shadow-orange-500/50 transition-all duration-300 hover:scale-110 border-0 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           Iniciar Atendimento
         </Button>
@@ -205,7 +194,7 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
           size="lg"
           variant="outline"
           onClick={handleReset}
-          className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-gray-700 dark:to-gray-800 dark:hover:from-gray-800 dark:hover:to-gray-900 text-white font-bold px-16 py-7 text-xl shadow-2xl hover:shadow-amber-500/50 transition-all duration-300 hover:scale-110 border-0 rounded-2xl"
+          className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-amber-600 dark:to-orange-600 dark:hover:from-amber-700 dark:hover:to-orange-700 text-white font-bold px-16 py-7 text-xl shadow-2xl hover:shadow-amber-500/50 transition-all duration-300 hover:scale-110 border-0 rounded-2xl"
         >
           Limpar
         </Button>

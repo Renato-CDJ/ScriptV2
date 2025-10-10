@@ -5,8 +5,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { CalendarIcon, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { CalendarIcon, AlertCircle, CheckCircle2, Info } from "lucide-react"
 import { getMaxPromiseDate, isBusinessDay } from "@/lib/business-days"
 
 type ProductType = "cartao" | "comercial" | "habitacional"
@@ -74,13 +74,13 @@ export function PromiseCalendar() {
               disabled={(date) => date.getTime() !== today.getTime()}
               className="rounded-lg border shadow-sm scale-90 origin-top"
               classNames={{
-                day_today: "ring-2 ring-orange-500 dark:ring-orange-400 font-bold text-gray-900 dark:text-gray-100",
+                day_today: "ring-2 ring-orange-500 dark:ring-orange-400 font-bold text-foreground",
                 months: "flex flex-col space-y-2",
                 month: "space-y-2 w-full",
                 table: "w-full border-collapse",
                 head_cell: "text-muted-foreground rounded-md w-8 font-medium text-xs",
                 cell: "h-8 w-8 text-center text-xs p-0 relative",
-                day: "h-8 w-8 p-0 font-normal text-sm text-gray-900 dark:text-gray-100",
+                day: "h-8 w-8 p-0 font-normal text-sm",
               }}
             />
           </div>
@@ -88,34 +88,43 @@ export function PromiseCalendar() {
       </Card>
 
       <Dialog open={showCalendarDialog} onOpenChange={setShowCalendarDialog}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <div className="space-y-4">
+        <DialogContent className="sm:max-w-[420px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="space-y-2 pb-3 border-b">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 text-primary" />
+              Calendário de Promessas
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground">Selecione o tipo de produto e escolha uma data disponível</p>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            {/* Product Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-bold text-foreground flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-orange-500" />
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                 Tipo de Produto
               </label>
               <Select value={selectedProduct} onValueChange={handleProductSelect}>
-                <SelectTrigger className="w-full h-10 text-sm border-2 hover:border-orange-400 transition-colors">
-                  <SelectValue placeholder="Escolha o tipo de produto" />
+                <SelectTrigger className="w-full h-10 text-sm border-2 hover:border-primary/50 transition-colors">
+                  <SelectValue placeholder="Selecione o tipo de produto" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cartao" className="h-12">
+                  <SelectItem value="cartao" className="h-12 cursor-pointer">
                     <div className="flex flex-col items-start gap-0.5">
-                      <span className="font-bold text-sm">Cartão</span>
-                      <span className="text-xs text-muted-foreground">Prazo: até 7 dias úteis</span>
+                      <span className="font-semibold text-sm">Cartão fase 1</span>
+                      <span className="text-xs text-muted-foreground">Prazo: até 6 dias úteis</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="comercial" className="h-12">
+                  <SelectItem value="comercial" className="h-12 cursor-pointer">
                     <div className="flex flex-col items-start gap-0.5">
-                      <span className="font-bold text-sm">Comercial</span>
-                      <span className="text-xs text-muted-foreground">Prazo: até 10 dias úteis</span>
+                      <span className="font-semibold text-sm">Comercial</span>
+                      <span className="text-xs text-muted-foreground">Prazo: até 9 dias úteis</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="habitacional" className="h-12">
+                  <SelectItem value="habitacional" className="h-12 cursor-pointer">
                     <div className="flex flex-col items-start gap-0.5">
-                      <span className="font-bold text-sm">Habitacional</span>
-                      <span className="text-xs text-muted-foreground">Prazo: até 10 dias úteis</span>
+                      <span className="font-semibold text-sm">Habitacional</span>
+                      <span className="text-xs text-muted-foreground">Prazo: até 9 dias úteis</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -123,51 +132,55 @@ export function PromiseCalendar() {
             </div>
 
             {!selectedProduct ? (
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-2">
-                    <CalendarIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                    <p className="text-sm font-bold text-foreground">Data Atual</p>
+              <div className="space-y-3">
+                {/* Current Date Calendar */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 bg-muted/50 rounded-md">
+                    <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                    <p className="text-xs font-semibold text-foreground">Data Atual</p>
                   </div>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center p-3 bg-card rounded-lg border">
                     <Calendar
                       mode="single"
                       selected={today}
                       disabled={(date) => date.getTime() !== today.getTime()}
-                      className="rounded-lg border-2 shadow-md"
+                      className="rounded-lg scale-95"
                       classNames={{
-                        day_today:
-                          "ring-2 ring-orange-500 dark:ring-orange-400 font-bold text-gray-900 dark:text-gray-100",
-                        months: "flex flex-col space-y-3",
-                        month: "space-y-3 w-full",
+                        day_today: "bg-primary text-primary-foreground font-bold ring-2 ring-primary/20",
+                        months: "flex flex-col space-y-2",
+                        month: "space-y-2 w-full",
                         caption: "flex justify-center pt-1 relative items-center",
-                        caption_label: "text-sm font-medium",
+                        caption_label: "text-sm font-semibold",
                         nav: "space-x-1 flex items-center",
-                        nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                        nav_button:
+                          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-accent rounded-md transition-colors",
                         table: "w-full border-collapse",
-                        head_cell: "text-gray-700 dark:text-gray-200 rounded-md w-10 font-semibold text-sm",
-                        cell: "h-10 w-10 text-center text-sm p-0 relative",
-                        day: "h-10 w-10 p-0 font-semibold text-base text-gray-900 dark:text-gray-100",
+                        head_cell: "text-muted-foreground rounded-md w-9 font-semibold text-xs",
+                        cell: "h-9 w-9 text-center text-sm p-0 relative",
+                        day: "h-9 w-9 p-0 font-medium text-sm hover:bg-accent rounded-md transition-colors",
                       }}
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                {/* Info Message */}
+                <div className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-md">
+                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-blue-900 dark:text-blue-100 font-medium">
-                    Selecione um tipo de produto para ver as datas disponíveis
+                    Selecione um tipo de produto acima para visualizar as datas disponíveis
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
+                {/* Max Date Info */}
                 {maxDate && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-l-4 border-green-500 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">
-                      Data Máxima para Agendamento:
+                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border-l-4 border-emerald-500 rounded-md p-2.5">
+                    <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200 mb-1 flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Data Máxima
                     </p>
-                    <p className="text-sm font-bold text-green-600 dark:text-green-400">
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
                       {maxDate.toLocaleDateString("pt-BR", {
                         weekday: "long",
                         year: "numeric",
@@ -178,53 +191,55 @@ export function PromiseCalendar() {
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-2">
-                    <CalendarIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <p className="text-sm font-bold text-foreground">Datas Disponíveis para Promessa</p>
+                {/* Available Dates Calendar */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 bg-muted/50 rounded-md">
+                    <CalendarIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <p className="text-xs font-semibold text-foreground">Datas Disponíveis</p>
                   </div>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center p-3 bg-card rounded-lg border">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
                       onSelect={setSelectedDate}
                       disabled={(date) => !isDateInRange(date)}
-                      className="rounded-lg border-2 shadow-md"
+                      className="rounded-lg scale-95"
                       modifiers={{
                         available: (date) => isDateInRange(date) && date.getTime() !== today.getTime(),
                       }}
                       modifiersClassNames={{
                         available:
-                          "bg-green-100 dark:bg-green-900/50 text-green-900 dark:text-green-100 font-bold hover:bg-green-200 dark:hover:bg-green-800 border-2 border-green-400 dark:border-green-600",
+                          "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-100 font-semibold hover:bg-emerald-200 dark:hover:bg-emerald-800 border-2 border-emerald-400 dark:border-emerald-600",
                       }}
                       classNames={{
-                        day_today:
-                          "ring-2 ring-orange-500 dark:ring-orange-400 font-bold text-gray-900 dark:text-gray-100",
+                        day_today: "bg-primary text-primary-foreground font-bold ring-2 ring-primary/20",
                         day_selected:
-                          "bg-green-600 text-white dark:bg-green-500 dark:text-white font-bold hover:bg-green-700 dark:hover:bg-green-600 ring-2 ring-green-400 dark:ring-green-600",
-                        day_disabled: "text-gray-400 dark:text-gray-600 opacity-40 line-through",
-                        months: "flex flex-col space-y-3",
-                        month: "space-y-3 w-full",
+                          "bg-emerald-600 text-white dark:bg-emerald-500 dark:text-white font-bold hover:bg-emerald-700 dark:hover:bg-emerald-600 ring-2 ring-emerald-400 dark:ring-emerald-600",
+                        day_disabled: "text-muted-foreground opacity-30 line-through cursor-not-allowed",
+                        months: "flex flex-col space-y-2",
+                        month: "space-y-2 w-full",
                         caption: "flex justify-center pt-1 relative items-center",
-                        caption_label: "text-sm font-medium",
+                        caption_label: "text-sm font-semibold",
                         nav: "space-x-1 flex items-center",
-                        nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                        nav_button:
+                          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-accent rounded-md transition-colors",
                         table: "w-full border-collapse",
-                        head_cell: "text-gray-700 dark:text-gray-200 rounded-md w-10 font-semibold text-sm",
-                        cell: "h-10 w-10 text-center text-sm p-0 relative",
-                        day: "h-10 w-10 p-0 font-semibold text-base text-gray-900 dark:text-gray-100",
+                        head_cell: "text-muted-foreground rounded-md w-9 font-semibold text-xs",
+                        cell: "h-9 w-9 text-center text-sm p-0 relative",
+                        day: "h-9 w-9 p-0 font-medium text-sm hover:bg-accent rounded-md transition-colors",
                       }}
                     />
                   </div>
                 </div>
 
+                {/* Selected Date Display */}
                 {selectedDate && (
-                  <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 border-l-4 border-green-500 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      <p className="text-xs font-bold text-green-900 dark:text-green-100">Data Selecionada:</p>
+                  <div className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40 border-l-4 border-emerald-500 rounded-md p-2.5">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <p className="text-xs font-bold text-emerald-900 dark:text-emerald-100">Data Selecionada</p>
                     </div>
-                    <p className="text-sm font-bold text-green-700 dark:text-green-300 ml-6">
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 ml-5">
                       {selectedDate.toLocaleDateString("pt-BR", {
                         weekday: "long",
                         year: "numeric",
@@ -235,26 +250,30 @@ export function PromiseCalendar() {
                   </div>
                 )}
 
-                <div className="bg-muted/30 dark:bg-muted/20 rounded-lg p-3 space-y-2 border">
-                  <p className="font-bold text-xs text-foreground flex items-center gap-2">
-                    <span className="text-sm">📋</span> Legenda:
+                {/* Legend */}
+                <div className="bg-muted/50 rounded-md p-2.5 space-y-2 border">
+                  <p className="font-semibold text-xs text-foreground flex items-center gap-1.5">
+                    <Info className="h-3.5 w-3.5" />
+                    Legenda
                   </p>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 bg-background rounded-md ring-2 ring-orange-500 dark:ring-orange-400 shadow-sm"></div>
-                      <span className="text-xs font-medium">Hoje</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 bg-primary text-primary-foreground rounded-md ring-2 ring-primary/20 flex items-center justify-center text-[10px] font-bold">
+                        H
+                      </div>
+                      <span className="text-[10px] font-medium">Hoje</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 bg-green-100 dark:bg-green-900/50 border-2 border-green-400 dark:border-green-600 rounded-md shadow-sm"></div>
-                      <span className="text-xs font-medium">Disponíveis</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 bg-emerald-100 dark:bg-emerald-900/50 border-2 border-emerald-400 dark:border-emerald-600 rounded-md"></div>
+                      <span className="text-[10px] font-medium">Disponível</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 bg-green-600 dark:bg-green-500 rounded-md ring-2 ring-green-400 dark:ring-green-600 shadow-sm"></div>
-                      <span className="text-xs font-medium">Selecionada</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 bg-emerald-600 dark:bg-emerald-500 rounded-md ring-2 ring-emerald-400 dark:ring-emerald-600"></div>
+                      <span className="text-[10px] font-medium">Selecionada</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 bg-muted line-through rounded-md border-2 shadow-sm"></div>
-                      <span className="text-xs font-medium">Indisponível</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 bg-muted line-through rounded-md border-2 opacity-30"></div>
+                      <span className="text-[10px] font-medium">Indisponível</span>
                     </div>
                   </div>
                 </div>
@@ -262,14 +281,15 @@ export function PromiseCalendar() {
             )}
           </div>
 
-          <div className="flex gap-2 pt-4 border-t">
+          {/* Footer */}
+          <div className="flex gap-2 pt-3 border-t">
             <Button
               onClick={() => {
                 setShowCalendarDialog(false)
                 setSelectedProduct("")
                 setSelectedDate(undefined)
               }}
-              className="flex-1 h-10 bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black font-semibold text-sm"
+              className="flex-1 h-9 font-semibold text-sm"
             >
               Fechar
             </Button>
