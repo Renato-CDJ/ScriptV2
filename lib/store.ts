@@ -24,14 +24,6 @@ const MOCK_USERS: User[] = [
     isOnline: true,
     createdAt: new Date(),
   },
-  {
-    id: "2",
-    username: "operador1",
-    fullName: "João Silva",
-    role: "operator",
-    isOnline: true,
-    createdAt: new Date(),
-  },
 ]
 
 const MOCK_SCRIPT_STEPS: ScriptStep[] = loadHabitacionalScript()
@@ -195,7 +187,16 @@ export function initializeMockData() {
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]))
+    const habitacionalProduct: Product = {
+      id: "prod-habitacional",
+      name: "HABITACIONAL",
+      description: "Financiamento Habitacional",
+      scriptId: habitacionalSteps[0]?.id || "hab_abordagem",
+      category: "habitacional",
+      isActive: true,
+      createdAt: new Date(),
+    }
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([habitacionalProduct]))
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.LAST_UPDATE)) {
@@ -295,9 +296,22 @@ export function getScriptSteps(): ScriptStep[] {
   return JSON.parse(localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS) || "[]")
 }
 
-export function getScriptStepById(id: string): ScriptStep | null {
+export function getScriptStepById(id: string, productId?: string): ScriptStep | null {
   const steps = getScriptSteps()
+
+  // If productId is provided, filter by product first
+  if (productId) {
+    const productSteps = steps.filter((s) => s.productId === productId)
+    return productSteps.find((s) => s.id === id) || null
+  }
+
   return steps.find((s) => s.id === id) || null
+}
+
+export function getScriptStepsByProduct(productId: string): ScriptStep[] {
+  if (typeof window === "undefined") return []
+  const allSteps = getScriptSteps()
+  return allSteps.filter((step) => step.productId === productId)
 }
 
 export function updateScriptStep(step: ScriptStep) {
@@ -456,7 +470,7 @@ export function updateProduct(product: Product) {
   if (index !== -1) {
     products[index] = product
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
-    notifyUpdate() // Notify about update
+    notifyUpdate()
   }
 }
 

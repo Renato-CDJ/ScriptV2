@@ -22,6 +22,7 @@ function OperatorContent() {
   const [showControls, setShowControls] = useState(true)
   const [attendanceConfig, setAttendanceConfig] = useState<AttendanceConfigType | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentProductId, setCurrentProductId] = useState<string | null>(null)
 
   useEffect(() => {
     const checkAutoLogout = () => {
@@ -43,8 +44,8 @@ function OperatorContent() {
 
   useEffect(() => {
     const handleStoreUpdate = () => {
-      if (currentStep) {
-        const updatedStep = getScriptStepById(currentStep.id)
+      if (currentStep && currentProductId) {
+        const updatedStep = getScriptStepById(currentStep.id, currentProductId)
         if (updatedStep) {
           setCurrentStep(updatedStep)
         }
@@ -53,14 +54,14 @@ function OperatorContent() {
 
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [currentStep])
+  }, [currentStep, currentProductId])
 
   const handleSearch = useCallback(
     (query: string) => {
       setSearchQuery(query)
 
-      if (query.trim() && isSessionActive) {
-        const steps = getScriptSteps()
+      if (query.trim() && isSessionActive && currentProductId) {
+        const steps = getScriptSteps().filter((s) => s.productId === currentProductId)
         const foundStep = steps.find((step) => step.title.toLowerCase().includes(query.toLowerCase()))
 
         if (foundStep) {
@@ -68,7 +69,7 @@ function OperatorContent() {
         }
       }
     },
-    [isSessionActive],
+    [isSessionActive, currentProductId],
   )
 
   const handleStartAttendance = useCallback((config: AttendanceConfigType) => {
@@ -77,7 +78,8 @@ function OperatorContent() {
     const product = getProductById(config.product)
 
     if (product) {
-      const firstStep = getScriptStepById(product.scriptId)
+      setCurrentProductId(product.id)
+      const firstStep = getScriptStepById(product.scriptId, product.id)
 
       if (firstStep) {
         setCurrentStep(firstStep)
@@ -92,27 +94,30 @@ function OperatorContent() {
     }
   }, [])
 
-  const handleButtonClick = useCallback((nextStepId: string | null) => {
-    if (nextStepId) {
-      const nextStep = getScriptStepById(nextStepId)
-      if (nextStep) {
-        setStepHistory((prev) => [...prev, nextStep.id])
-        setCurrentStep(nextStep)
-        setSearchQuery("")
+  const handleButtonClick = useCallback(
+    (nextStepId: string | null) => {
+      if (nextStepId && currentProductId) {
+        const nextStep = getScriptStepById(nextStepId, currentProductId)
+        if (nextStep) {
+          setStepHistory((prev) => [...prev, nextStep.id])
+          setCurrentStep(nextStep)
+          setSearchQuery("")
+        }
+      } else {
+        handleBackToStart()
       }
-    } else {
-      handleBackToStart()
-    }
-  }, [])
+    },
+    [currentProductId],
+  )
 
   const handleGoBack = useCallback(() => {
     setStepHistory((prev) => {
-      if (prev.length > 1) {
+      if (prev.length > 1 && currentProductId) {
         const newHistory = [...prev]
         newHistory.pop()
 
         const previousStepId = newHistory[newHistory.length - 1]
-        const previousStep = getScriptStepById(previousStepId)
+        const previousStep = getScriptStepById(previousStepId, currentProductId)
 
         if (previousStep) {
           setCurrentStep(previousStep)
@@ -123,7 +128,7 @@ function OperatorContent() {
       }
       return prev
     })
-  }, [])
+  }, [currentProductId])
 
   const handleBackToStart = useCallback(() => {
     setIsSessionActive(false)
@@ -132,13 +137,15 @@ function OperatorContent() {
     setAttendanceConfig(null)
     setSearchQuery("")
     setStepHistory([])
+    setCurrentProductId(null)
   }, [])
 
   const handleProductSelect = useCallback((productId: string) => {
     const product = getProductById(productId)
 
     if (product) {
-      const firstStep = getScriptStepById(product.scriptId)
+      setCurrentProductId(product.id)
+      const firstStep = getScriptStepById(product.scriptId, product.id)
 
       if (firstStep) {
         setCurrentStep(firstStep)

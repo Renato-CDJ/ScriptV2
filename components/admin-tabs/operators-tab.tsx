@@ -275,7 +275,7 @@ export function OperatorsTab() {
                 id="fullName"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="Ex: João Silva"
+                placeholder="Nome do operador"
               />
               <p className="text-xs text-muted-foreground">O primeiro nome será exibido na abordagem do script</p>
             </div>
@@ -286,7 +286,7 @@ export function OperatorsTab() {
                 id="username"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="Ex: joao.silva"
+                placeholder="nome.usuario"
               />
               <p className="text-xs text-muted-foreground">Será usado para fazer login no sistema</p>
             </div>

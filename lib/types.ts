@@ -28,6 +28,7 @@ export interface ScriptStep {
   buttons: ScriptButton[]
   createdAt: Date
   updatedAt: Date
+  productId?: string // Added productId to track which product this step belongs to
   tabulationInfo?: {
     id: string
     name: string

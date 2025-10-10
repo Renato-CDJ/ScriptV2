@@ -39,6 +39,8 @@ export function loadScriptFromJson(jsonData: any, productName: string): ScriptSt
   const steps: ScriptStep[] = []
   let order = 1
 
+  const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
+
   // Transform each step from JSON to our format
   Object.entries(marca).forEach(([key, value]) => {
     const jsonStep = value as JsonStep
@@ -58,6 +60,7 @@ export function loadScriptFromJson(jsonData: any, productName: string): ScriptSt
       content: jsonStep.body,
       order: order++,
       buttons,
+      productId,
       createdAt: new Date(),
       updatedAt: new Date(),
       tabulationInfo: TABULATION_MAP[jsonStep.id]
