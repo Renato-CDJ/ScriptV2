@@ -48,12 +48,8 @@ export function ScriptsTab() {
 
         console.log("[v0] Importing script data:", data)
 
-        const isPhraseology =
-          data.fraseologias ||
-          (data.marcas &&
-            Object.values(data.marcas).some((marca: any) =>
-              Object.values(marca).some((item: any) => item.title?.toLowerCase().includes("fraseologia")),
-            ))
+        // Script files have "marcas" property, phraseology files have "fraseologias" property
+        const isPhraseology = data.fraseologias && !data.marcas
 
         if (isPhraseology) {
           toast({
