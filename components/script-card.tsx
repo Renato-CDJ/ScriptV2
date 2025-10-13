@@ -29,8 +29,8 @@ export const ScriptCard = memo(function ScriptCard({
   searchQuery = "",
   showControls = true,
 }: ScriptCardProps) {
-  const [textSize, setTextSize] = useState([50])
-  const [buttonSize, setButtonSize] = useState([50])
+  const [textSize, setTextSize] = useState([100])
+  const [buttonSize, setButtonSize] = useState([80])
   const [showTabulation, setShowTabulation] = useState(false)
   const [showTabulationPulse, setShowTabulationPulse] = useState(false)
 
@@ -53,16 +53,14 @@ export const ScriptCard = memo(function ScriptCard({
     return () => window.removeEventListener("keydown", handleKeyPress)
   }, [canGoBack, onGoBack])
 
-  const firstName = useMemo(() => operatorName.split(" ")[0], [operatorName])
-
   const processedContent = useMemo(
     () =>
       step.content
-        .replace(/\[Nome do operador\]/g, `<strong>${firstName}</strong>`)
-        .replace(/\[Primeiro nome do cliente\]/g, `<strong>${customerFirstName}</strong>`)
-        .replace(/\[Nome completo do cliente\]/g, `<strong>${customerFirstName} Silva</strong>`)
-        .replace(/\[CPF do cliente\]/g, "<strong>***.***.***-**</strong>"),
-    [step.content, firstName, customerFirstName],
+        .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
+        .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
+        .replace(/\[Nome completo do cliente\]/gi, `<strong>${customerFirstName} Silva</strong>`)
+        .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>"),
+    [step.content, operatorName, customerFirstName],
   )
 
   const highlightedTitle = useMemo(
@@ -76,9 +74,9 @@ export const ScriptCard = memo(function ScriptCard({
     [searchQuery, step.title],
   )
 
-  const textFontSize = useMemo(() => 14 + (textSize[0] / 100) * 10, [textSize])
-  const buttonFontSize = useMemo(() => 14 + (buttonSize[0] / 100) * 6, [buttonSize])
-  const buttonPadding = useMemo(() => 14 + (buttonSize[0] / 100) * 10, [buttonSize])
+  const textFontSize = useMemo(() => 16 + (textSize[0] / 100) * 16, [textSize])
+  const buttonFontSize = useMemo(() => 12 + (buttonSize[0] / 100) * 8, [buttonSize])
+  const buttonPadding = useMemo(() => 12 + (buttonSize[0] / 100) * 8, [buttonSize])
 
   const handleTabulationOpen = useCallback(() => setShowTabulation(true), [])
   const handleTabulationClose = useCallback(() => setShowTabulation(false), [])
@@ -96,9 +94,9 @@ export const ScriptCard = memo(function ScriptCard({
               <Slider
                 value={textSize}
                 onValueChange={setTextSize}
-                min={40}
-                max={100}
-                step={1}
+                min={50}
+                max={200}
+                step={5}
                 className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
               />
               <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">
@@ -113,9 +111,9 @@ export const ScriptCard = memo(function ScriptCard({
               <Slider
                 value={buttonSize}
                 onValueChange={setButtonSize}
-                min={40}
-                max={100}
-                step={1}
+                min={50}
+                max={150}
+                step={5}
                 className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
               />
               <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">

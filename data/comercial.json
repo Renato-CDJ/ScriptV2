@@ -1,26 +1,35 @@
 {
   "marcas": {
     "COMERCIAL": {
-      "abordagem": {
+      "comercial_abordagem": {
         "id": "comercial_abordagem",
         "title": "Abordagem",
-        "body": "Olá, eu sou <b>[Nome do operador]</b>, falo da Central de Negócios da CAIXA, representada pela Roveri Advogados. Você é ou conhece <b>[Primeiro nome do cliente]</b>?<br><br><i>Caso questione:</i> Esse contato é sobre o seu relacionamento com a CAIXA.",
+        "body": "Olá, falo com [Nome do cliente]?",
         "buttons": [
           { "label": "É O CLIENTE", "next": "comercial_identificacao", "primary": true },
-          { "label": "NÃO É O CLIENTE", "next": "comercial_terceiro" }
+          { "label": "NÃO É O CLIENTE", "next": "comercial_terceiro" },
+          { "label": "SEM RESPOSTA", "next": "comercial_sem_resposta" }
         ]
       },
-      "terceiro": {
+      "comercial_terceiro": {
         "id": "comercial_terceiro",
         "title": "Terceiro",
-        "body": "Você conhece essa pessoa?",
+        "body": "Você conhece [Nome completo do cliente]?",
         "buttons": [
           { "label": "SIM", "next": "comercial_terceiro_conhece", "primary": true },
           { "label": "NÃO CONHECE", "next": "comercial_nao_conhece" },
           { "label": "FALECIDO", "next": "comercial_faleceu" }
         ]
       },
-      "desconhecido": {
+      "comercial_sem_resposta": {
+        "id": "comercial_sem_resposta",
+        "title": "Cliente/Terceiro não responde",
+        "body": "Por falta de comunicação encerro o contato.",
+        "buttons": [
+          { "label": "FINALIZAR", "next": "fim", "primary": true }
+        ]
+      },
+      "comercial_desconhecido": {
         "id": "comercial_nao_conhece",
         "title": "Finalização",
         "body": "Peço desculpas pelo incômodo. A CAIXA agradece, tenha um bom dia/tarde/noite.",
@@ -28,16 +37,16 @@
           { "label": "FINALIZAR", "next": "fim", "primary": true }
         ]
       },
-      "terceiro_conhece": {
+      "comercial_terceiro_conhece": {
         "id": "comercial_terceiro_conhece",
         "title": "Terceiro",
-        "body": "Teria um melhor número ou horário para falar com o (primeiro nome do cliente)?",
+        "body": "Teria um melhor número ou horário para falar com o (Primeiro nome do cliente)?",
         "buttons": [
           { "label": "SIM", "next": "comercial_recado", "primary": true },
-          { "label": "NÃO", "next": "finalizacao_terceiro" }
+          { "label": "NÃO", "next": "comercial_finalizacao_terceiro" }
         ]
       },
-      "falecido": {
+      "comercial_falecido": {
         "id": "comercial_faleceu",
         "title": "Falecido",
         "body": "Peça que o herdeiro ou inventariante leve o atestado de óbito na agência",
@@ -45,7 +54,7 @@
           { "label": "FINALIZAR", "next": "fim", "primary": true }
         ]
       },
-      "terceiro_recado": {
+      "comercial_terceiro_recado": {
         "id": "comercial_recado",
         "title": "Recado",
         "body": "Por favor, solicite que o (Cliente) entre em contato com a Central de Negócios da CAIXA, nos telefones 0800 025 8833 ou 4020-0088<br><br>A CAIXA agradece, tenha um ótimo dia/tarde/noite.",
@@ -53,7 +62,7 @@
           { "label": "FINALIZAR", "next": "fim", "primary": true }
         ]
       },
-      "finalizacao_terceiro": {
+      "comercial_finalizacao_terceiro": {
         "id": "comercial_finalizacao_terceiro",
         "title": "Finalização",
         "body": "OK! A CAIXA agradece, tenha um bom dia/tarde/noite.",
@@ -61,21 +70,29 @@
           { "label": "FINALIZAR", "next": "fim", "primary": true }
         ]
       },
-      "identificacao": {
+      "comercial_identificacao": {
         "id": "comercial_identificacao",
-        "title": "Identificação Positiva CPF",
-        "body": "Para sua segurança a ligação é gravada. Por questões de sigilo bancário, preciso confirmar alguns dados.<br>Eu vou falar os 6 primeiros números do seu CPF e você fala só o restante",
+        "title": "Identifique-se",
+        "body": "Aqui é o [nome do operador] eu falo em nome da CAIXA. Tudo bem?",
         "buttons": [
-          { "label": "CONFIRMOU CPF", "next": "nome_completo_cliente", "primary": true },
+          { "label": "AVANÇAR", "next": "comercial_identificacao_parte2", "primary": true }
+        ]
+      },
+      "comercial_identificacao_parte2": {
+        "id": "comercial_identificacao_parte2",
+        "title": "Identificação Positiva CPF",
+        "body": "Para sua segurança, essa ligação está sendo gravada.<br>Eu sou do Grupo Roveri e, por questões de sigilo bancário, preciso confirmar alguns dados.<br>Vou te dizer os (6) seis primeiros números do seu CPF e você completa com os demais, os primeiros números são: [XXX.XXX], qual o restante?",
+        "buttons": [
+          { "label": "CONFIRMOU CPF", "next": "comercial_nome_completo_cliente", "primary": true },
           { "label": "RECUSOU CONFIRMAR", "next": "comercial_nao_confirma" }
         ]
       },
-      "nao_confirma": {
+      "comercial_nao_confirma": {
         "id": "comercial_nao_confirma",
         "title": "Cliente não quer confirmar o CPF",
         "body": "Esse contato é sobre o relacionamento com a CAIXA, após a confirmação dos dados, irei fornecer todos os detalhes. Os 6 primeiros números do CPF são: (XXX.XXX), qual o restante?",
         "buttons": [
-          { "label": "CONFIRMOU CPF", "next": "nome_completo_cliente", "primary": true },
+          { "label": "CONFIRMOU CPF", "next": "comercial_nome_completo_cliente", "primary": true },
           { "label": "RECUSOU CONFIRMAR", "next": "comercial_nao_confirmou" }
         ]
       },
@@ -84,7 +101,7 @@
         "title": "Finalização",
         "body": "(Nome do cliente), então você pode entrar em contato com esses números que vou te passar para saber o assunto que é: 0800 104 0104, 0800 025 8833 ou 4020 0088.",
         "buttons": [
-          { "label": "CONFIRMOU CPF", "next": "nome_completo_cliente", "primary": true },
+          { "label": "CONFIRMOU CPF", "next": "comercial_nome_completo_cliente", "primary": true },
           { "label": "CLIENTE INSEGURO SOBRE NOSSA EMPRESA", "next": "comercial_questiona_origem" },
           { "label": "FINALIZAR", "next": "fim", "primary": true }
         ]
@@ -97,8 +114,8 @@
           { "label": "FINALIZAR", "next": "fim", "primary": true }
         ]
       },
-      "nome_completo_cliente": {
-        "id": "nome_completo_cliente",
+      "comercial_nome_completo_cliente": {
+        "id": "comercial_nome_completo_cliente",
         "title": "Nome completo do cliente",
         "body": "Obrigado(a), pela confirmação. Seu nome completo é (nome completo do cliente)?",
         "buttons": [
