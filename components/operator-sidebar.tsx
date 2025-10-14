@@ -297,10 +297,10 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </div>
 
       <Dialog open={showTabulationFullView} onOpenChange={setShowTabulationFullView}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-6xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Todas as Tabulações</DialogTitle>
-            <DialogDescription>Lista completa de tabulações disponíveis</DialogDescription>
+            <DialogTitle className="text-xl">Todas as Tabulações</DialogTitle>
+            <DialogDescription className="text-base">Lista completa de tabulações disponíveis</DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto space-y-4 py-4 max-h-[calc(90vh-200px)]">
             <div className="relative">
@@ -372,10 +372,10 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showSituationFullView} onOpenChange={setShowSituationFullView}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-6xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Todas as Situações</DialogTitle>
-            <DialogDescription>Lista completa de situações disponíveis</DialogDescription>
+            <DialogTitle className="text-xl">Todas as Situações</DialogTitle>
+            <DialogDescription className="text-base">Lista completa de situações disponíveis</DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto space-y-4 py-4 max-h-[calc(90vh-200px)]">
             <div className="relative">
@@ -447,10 +447,10 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showChannelFullView} onOpenChange={setShowChannelFullView}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-6xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Todas os Canais</DialogTitle>
-            <DialogDescription>Lista completa de canais disponíveis</DialogDescription>
+            <DialogTitle className="text-xl">Todas os Canais</DialogTitle>
+            <DialogDescription className="text-base">Lista completa de canais disponíveis</DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto space-y-4 py-4 max-h-[calc(90vh-200px)]">
             <div className="relative">
@@ -522,18 +522,20 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showTabulationModal} onOpenChange={setShowTabulationModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-white text-xl">
+            <DialogTitle className="text-orange-600 dark:text-white text-2xl">
               {selectedTabulationForModal?.name}
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-700 dark:text-gray-300">{selectedTabulationForModal?.description}</p>
+          <div className="py-6">
+            <p className="text-base leading-relaxed text-gray-700 dark:text-gray-300">
+              {selectedTabulationForModal?.description}
+            </p>
           </div>
           <Button
             onClick={() => setShowTabulationModal(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
           >
             Fechar
           </Button>
@@ -541,18 +543,20 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showSituationModal} onOpenChange={setShowSituationModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-white text-xl">
+            <DialogTitle className="text-orange-600 dark:text-white text-2xl">
               {selectedSituationForModal?.name}
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-700 dark:text-gray-300">{selectedSituationForModal?.description}</p>
+          <div className="py-6">
+            <p className="text-base leading-relaxed text-gray-700 dark:text-gray-300">
+              {selectedSituationForModal?.description}
+            </p>
           </div>
           <Button
             onClick={() => setShowSituationModal(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
           >
             Fechar
           </Button>
@@ -560,20 +564,20 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showChannelModal} onOpenChange={setShowChannelModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-white text-xl">
+            <DialogTitle className="text-orange-600 dark:text-white text-2xl">
               {selectedChannelForModal?.name}
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+          <div className="py-6">
+            <p className="text-base leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
               {selectedChannelForModal?.contact}
             </p>
           </div>
           <Button
             onClick={() => setShowChannelModal(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
           >
             Fechar
           </Button>
@@ -582,22 +586,24 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
 
       {/* Original situation dialog (from sidebar buttons) */}
       <Dialog open={showSituationDialog} onOpenChange={setShowSituationDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-blue-600" />
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <AlertCircle className="h-6 w-6 text-blue-600" />
               {selectedSituationData?.name}
             </DialogTitle>
-            <DialogDescription>Descrição da situação de atendimento</DialogDescription>
+            <DialogDescription className="text-base">Descrição da situação de atendimento</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <div className="rounded-lg border-2 border-blue-200 bg-blue-50 dark:bg-blue-950/30 p-4">
-              <p className="text-sm text-blue-900 dark:text-blue-100">{selectedSituationData?.description}</p>
+          <div className="py-6">
+            <div className="rounded-lg border-2 border-blue-200 bg-blue-50 dark:bg-blue-950/30 p-6">
+              <p className="text-base leading-relaxed text-blue-900 dark:text-blue-100">
+                {selectedSituationData?.description}
+              </p>
             </div>
           </div>
           <Button
             onClick={() => setShowSituationDialog(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
           >
             Fechar
           </Button>
@@ -606,24 +612,24 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
 
       {/* Original channel dialog (from sidebar buttons) */}
       <Dialog open={showChannelDialog} onOpenChange={setShowChannelDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Radio className="h-5 w-5 text-green-600" />
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Radio className="h-6 w-6 text-green-600" />
               {selectedChannelData?.name}
             </DialogTitle>
-            <DialogDescription>Informações de contato do canal</DialogDescription>
+            <DialogDescription className="text-base">Informações de contato do canal</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <div className="rounded-lg border-2 border-green-200 bg-green-50 dark:bg-green-950/30 p-4">
-              <p className="text-sm font-mono text-green-900 dark:text-green-100 whitespace-pre-wrap">
+          <div className="py-6">
+            <div className="rounded-lg border-2 border-green-200 bg-green-50 dark:bg-green-950/30 p-6">
+              <p className="text-base leading-relaxed font-mono text-green-900 dark:text-green-100 whitespace-pre-wrap">
                 {selectedChannelData?.contact}
               </p>
             </div>
           </div>
           <Button
             onClick={() => setShowChannelDialog(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
           >
             Fechar
           </Button>

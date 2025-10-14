@@ -34,6 +34,12 @@ export interface ScriptStep {
     name: string
     description: string
   }
+  formatting?: {
+    textColor?: string
+    bold?: boolean
+    italic?: boolean
+    textAlign?: "left" | "center" | "right" | "justify"
+  }
 }
 
 export interface ScriptButton {
