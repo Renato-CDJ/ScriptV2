@@ -297,19 +297,21 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </div>
 
       <Dialog open={showTabulationFullView} onOpenChange={setShowTabulationFullView}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Todas as Tabulações</DialogTitle>
-            <DialogDescription className="text-base">Lista completa de tabulações disponíveis</DialogDescription>
+        <DialogContent className="max-w-6xl max-h-[90vh] bg-card border-border">
+          <DialogHeader className="space-y-3 pb-4 border-b border-border">
+            <DialogTitle className="text-2xl font-bold text-foreground">Todas as Tabulações</DialogTitle>
+            <DialogDescription className="text-base text-muted-foreground">
+              Lista completa de tabulações disponíveis
+            </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto space-y-4 py-4 max-h-[calc(90vh-200px)]">
+          <div className="overflow-y-auto space-y-4 py-6 pr-4 max-h-[calc(90vh-200px)]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Pesquisar..."
+                placeholder="Pesquisar tabulações..."
                 value={tabulationSearchQuery}
                 onChange={(e) => setTabulationSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-orange-500 dark:focus:border-primary transition-colors"
               />
             </div>
 
@@ -318,34 +320,28 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 <button
                   key={tab.id}
                   onClick={() => handleTabulationClick(tab)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] ${
                     index === 0
-                      ? "border-orange-500 dark:border-white bg-orange-50 dark:bg-zinc-800"
-                      : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20"
+                      ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md"
+                      : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      <svg
-                        className="h-5 w-5 text-orange-500 dark:text-white"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
+                  <div className="flex items-start gap-4">
+                    <div
+                      className="mt-1.5 w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-background shadow-sm"
+                      style={{ backgroundColor: tab.color }}
+                    />
+                    <div className="flex-1 min-w-0">
                       <h3
-                        className={`font-bold text-base mb-1 ${
-                          index === 0 ? "text-orange-600 dark:text-white" : "text-gray-900 dark:text-gray-100"
+                        className={`font-bold text-lg mb-2 ${
+                          index === 0 ? "text-orange-600 dark:text-primary" : "text-foreground"
                         }`}
                       >
                         {tab.name}
                       </h3>
                       <p
-                        className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-gray-100" : "text-gray-600 dark:text-white"
+                        className={`text-sm leading-relaxed ${
+                          index === 0 ? "text-orange-700/90 dark:text-muted-foreground" : "text-muted-foreground"
                         }`}
                       >
                         {tab.description}
@@ -356,15 +352,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               ))}
             </div>
           </div>
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t border-border">
             <Button
               onClick={() => {
                 setShowTabulationFullView(false)
                 setTabulationSearchQuery("")
               }}
-              className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
             >
-              <span className="mr-2">📋</span>
               Voltar
             </Button>
           </div>
@@ -372,19 +367,21 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showSituationFullView} onOpenChange={setShowSituationFullView}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Todas as Situações</DialogTitle>
-            <DialogDescription className="text-base">Lista completa de situações disponíveis</DialogDescription>
+        <DialogContent className="max-w-6xl max-h-[90vh] bg-card border-border">
+          <DialogHeader className="space-y-3 pb-4 border-b border-border">
+            <DialogTitle className="text-2xl font-bold text-foreground">Todas as Situações</DialogTitle>
+            <DialogDescription className="text-base text-muted-foreground">
+              Lista completa de situações disponíveis
+            </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto space-y-4 py-4 max-h-[calc(90vh-200px)]">
+          <div className="overflow-y-auto space-y-4 py-6 pr-4 max-h-[calc(90vh-200px)]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Pesquisar..."
+                placeholder="Pesquisar situações..."
                 value={situationSearchQuery}
                 onChange={(e) => setSituationSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-orange-500 dark:focus:border-primary transition-colors"
               />
             </div>
 
@@ -393,34 +390,29 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 <button
                   key={situation.id}
                   onClick={() => handleSituationClick(situation)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] ${
                     index === 0
-                      ? "border-orange-500 dark:border-white bg-orange-50 dark:bg-zinc-800"
-                      : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20"
+                      ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md"
+                      : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      <svg
-                        className="h-5 w-5 text-orange-500 dark:text-white"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                      </svg>
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1 p-2 rounded-lg bg-background shadow-sm border border-border">
+                      <AlertCircle
+                        className={`h-5 w-5 ${index === 0 ? "text-orange-500 dark:text-primary" : "text-muted-foreground"}`}
+                      />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <h3
-                        className={`font-bold text-base mb-1 ${
-                          index === 0 ? "text-orange-600 dark:text-white" : "text-gray-900 dark:text-gray-100"
+                        className={`font-bold text-lg mb-2 ${
+                          index === 0 ? "text-orange-600 dark:text-primary" : "text-foreground"
                         }`}
                       >
                         {situation.name}
                       </h3>
                       <p
-                        className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-gray-100" : "text-gray-600 dark:text-white"
+                        className={`text-sm leading-relaxed ${
+                          index === 0 ? "text-orange-700/90 dark:text-muted-foreground" : "text-muted-foreground"
                         }`}
                       >
                         {situation.description}
@@ -431,15 +423,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               ))}
             </div>
           </div>
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t border-border">
             <Button
               onClick={() => {
                 setShowSituationFullView(false)
                 setSituationSearchQuery("")
               }}
-              className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
             >
-              <span className="mr-2">📋</span>
               Voltar
             </Button>
           </div>
@@ -447,19 +438,21 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showChannelFullView} onOpenChange={setShowChannelFullView}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Todas os Canais</DialogTitle>
-            <DialogDescription className="text-base">Lista completa de canais disponíveis</DialogDescription>
+        <DialogContent className="max-w-6xl max-h-[90vh] bg-card border-border">
+          <DialogHeader className="space-y-3 pb-4 border-b border-border">
+            <DialogTitle className="text-2xl font-bold text-foreground">Todos os Canais</DialogTitle>
+            <DialogDescription className="text-base text-muted-foreground">
+              Lista completa de canais disponíveis
+            </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto space-y-4 py-4 max-h-[calc(90vh-200px)]">
+          <div className="overflow-y-auto space-y-4 py-6 pr-4 max-h-[calc(90vh-200px)]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Pesquisar..."
+                placeholder="Pesquisar canais..."
                 value={channelSearchQuery}
                 onChange={(e) => setChannelSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-orange-500 dark:focus:border-primary transition-colors"
               />
             </div>
 
@@ -468,53 +461,41 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 <button
                   key={channel.id}
                   onClick={() => handleChannelClick(channel)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] ${
                     index === 0
-                      ? "border-orange-500 dark:border-white bg-orange-50 dark:bg-zinc-800"
-                      : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20"
+                      ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md"
+                      : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      <svg
-                        className="h-5 w-5 text-orange-500 dark:text-white"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                      </svg>
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1 p-2 rounded-lg bg-background shadow-sm border border-border">
+                      <Radio
+                        className={`h-5 w-5 ${index === 0 ? "text-orange-500 dark:text-primary" : "text-muted-foreground"}`}
+                      />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <h3
-                        className={`font-bold text-base mb-1 ${
-                          index === 0 ? "text-orange-600 dark:text-white" : "text-gray-900 dark:text-gray-100"
+                        className={`font-bold text-lg mb-2 ${
+                          index === 0 ? "text-orange-600 dark:text-primary" : "text-foreground"
                         }`}
                       >
                         {channel.name}
                       </h3>
-                      <p
-                        className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-gray-100" : "text-gray-600 dark:text-white"
-                        }`}
-                      >
-                        {channel.contact}
-                      </p>
+                      <p className={`text-sm leading-relaxed text-foreground whitespace-pre-wrap`}>{channel.contact}</p>
                     </div>
                   </div>
                 </button>
               ))}
             </div>
           </div>
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t border-border">
             <Button
               onClick={() => {
                 setShowChannelFullView(false)
                 setChannelSearchQuery("")
               }}
-              className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
             >
-              <span className="mr-2">📋</span>
               Voltar
             </Button>
           </div>
@@ -522,20 +503,20 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showTabulationModal} onOpenChange={setShowTabulationModal}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-white text-2xl">
+        <DialogContent className="max-w-3xl bg-card border-border">
+          <DialogHeader className="pb-4 border-b border-border">
+            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
               {selectedTabulationForModal?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <p className="text-base leading-relaxed text-gray-700 dark:text-white">
-              {selectedTabulationForModal?.description}
-            </p>
+            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
+              <p className="text-base leading-relaxed text-foreground">{selectedTabulationForModal?.description}</p>
+            </div>
           </div>
           <Button
             onClick={() => setShowTabulationModal(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -543,20 +524,20 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showSituationModal} onOpenChange={setShowSituationModal}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-white text-2xl">
+        <DialogContent className="max-w-3xl bg-card border-border">
+          <DialogHeader className="pb-4 border-b border-border">
+            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
               {selectedSituationForModal?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <p className="text-base leading-relaxed text-gray-700 dark:text-white">
-              {selectedSituationForModal?.description}
-            </p>
+            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
+              <p className="text-base leading-relaxed text-foreground">{selectedSituationForModal?.description}</p>
+            </div>
           </div>
           <Button
             onClick={() => setShowSituationModal(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -564,20 +545,22 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
 
       <Dialog open={showChannelModal} onOpenChange={setShowChannelModal}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-white text-2xl">
+        <DialogContent className="max-w-3xl bg-card border-border">
+          <DialogHeader className="pb-4 border-b border-border">
+            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
               {selectedChannelForModal?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <p className="text-base leading-relaxed text-gray-700 dark:text-white whitespace-pre-wrap">
-              {selectedChannelForModal?.contact}
-            </p>
+            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
+              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
+                {selectedChannelForModal?.contact}
+              </p>
+            </div>
           </div>
           <Button
             onClick={() => setShowChannelModal(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -586,16 +569,18 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
 
       {/* Original situation dialog (from sidebar buttons) */}
       <Dialog open={showSituationDialog} onOpenChange={setShowSituationDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <AlertCircle className="h-6 w-6 text-blue-600" />
+        <DialogContent className="max-w-2xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+          <DialogHeader className="pb-4 border-b border-zinc-200 dark:border-zinc-800">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-zinc-900 dark:text-zinc-100">
+              <AlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               {selectedSituationData?.name}
             </DialogTitle>
-            <DialogDescription className="text-base">Descrição da situação de atendimento</DialogDescription>
+            <DialogDescription className="text-base text-zinc-600 dark:text-zinc-400">
+              Descrição da situação de atendimento
+            </DialogDescription>
           </DialogHeader>
           <div className="py-6">
-            <div className="rounded-lg border-2 border-blue-200 bg-blue-50 dark:bg-blue-950/30 p-6">
+            <div className="rounded-xl border-2 border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-6">
               <p className="text-base leading-relaxed font-mono text-blue-900 dark:text-blue-100">
                 {selectedSituationData?.description}
               </p>
@@ -603,7 +588,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           </div>
           <Button
             onClick={() => setShowSituationDialog(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-black font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -612,24 +597,31 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
 
       {/* Original channel dialog (from sidebar buttons) */}
       <Dialog open={showChannelDialog} onOpenChange={setShowChannelDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Radio className="h-6 w-6 text-green-600" />
+        <DialogContent className="max-w-2xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+          <DialogHeader className="pb-4 border-b border-zinc-200 dark:border-zinc-800">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-zinc-900 dark:text-zinc-100">
+              <Radio className="h-6 w-6 text-green-600 dark:text-green-400" />
               {selectedChannelData?.name}
             </DialogTitle>
-            <DialogDescription className="text-base">Informações de contato do canal</DialogDescription>
+            <DialogDescription className="text-base text-zinc-600 dark:text-zinc-400">
+              Informações de contato do canal
+            </DialogDescription>
           </DialogHeader>
           <div className="py-6">
-            <div className="rounded-lg border-2 border-green-200 bg-green-50 dark:bg-green-950/30 p-6">
-              <p className="text-base leading-relaxed font-mono text-green-900 dark:text-green-100 whitespace-pre-wrap">
-                {selectedChannelData?.contact}
-              </p>
+            <div className="rounded-xl border-2 border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-950/30 p-6">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-green-700 dark:text-green-400 mb-3">
+                  Contato
+                </p>
+                <p className="text-lg font-mono leading-relaxed tracking-wide text-green-900 dark:text-green-100 whitespace-pre-wrap break-all">
+                  {selectedChannelData?.contact}
+                </p>
+              </div>
             </div>
           </div>
           <Button
             onClick={() => setShowChannelDialog(false)}
-            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-base py-6"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-black font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
