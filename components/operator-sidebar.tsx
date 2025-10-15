@@ -345,7 +345,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                       </h3>
                       <p
                         className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-gray-300" : "text-gray-600 dark:text-gray-400"
+                          index === 0 ? "text-orange-700 dark:text-gray-100" : "text-gray-600 dark:text-white"
                         }`}
                       >
                         {tab.description}
@@ -420,7 +420,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                       </h3>
                       <p
                         className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-gray-300" : "text-gray-600 dark:text-gray-400"
+                          index === 0 ? "text-orange-700 dark:text-gray-100" : "text-gray-600 dark:text-white"
                         }`}
                       >
                         {situation.description}
@@ -495,7 +495,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                       </h3>
                       <p
                         className={`text-sm ${
-                          index === 0 ? "text-orange-700 dark:text-gray-300" : "text-gray-600 dark:text-gray-400"
+                          index === 0 ? "text-orange-700 dark:text-gray-100" : "text-gray-600 dark:text-white"
                         }`}
                       >
                         {channel.contact}
@@ -529,7 +529,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             </DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <p className="text-base leading-relaxed text-gray-700 dark:text-gray-300">
+            <p className="text-base leading-relaxed text-gray-700 dark:text-white">
               {selectedTabulationForModal?.description}
             </p>
           </div>
@@ -550,7 +550,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             </DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <p className="text-base leading-relaxed text-gray-700 dark:text-gray-300">
+            <p className="text-base leading-relaxed text-gray-700 dark:text-white">
               {selectedSituationForModal?.description}
             </p>
           </div>
@@ -571,7 +571,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             </DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <p className="text-base leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+            <p className="text-base leading-relaxed text-gray-700 dark:text-white whitespace-pre-wrap">
               {selectedChannelForModal?.contact}
             </p>
           </div>
@@ -596,7 +596,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           </DialogHeader>
           <div className="py-6">
             <div className="rounded-lg border-2 border-blue-200 bg-blue-50 dark:bg-blue-950/30 p-6">
-              <p className="text-base leading-relaxed text-blue-900 dark:text-blue-100">
+              <p className="text-base leading-relaxed font-mono text-blue-900 dark:text-blue-100">
                 {selectedSituationData?.description}
               </p>
             </div>

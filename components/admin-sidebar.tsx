@@ -19,7 +19,7 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
+import { useTheme } from "next-themes"
 
 interface AdminSidebarProps {
   activeTab: string
@@ -41,11 +41,7 @@ const menuItems = [
 export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"))
-  }, [])
+  const { theme, setTheme } = useTheme()
 
   const handleLogout = () => {
     logout()
@@ -53,8 +49,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
   }
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
+    setTheme(theme === "dark" ? "light" : "dark")
   }
 
   return (
@@ -91,7 +86,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
           className="w-full justify-start gap-3 border-2 hover:scale-105 transition-all shadow-sm hover:shadow-md bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 hover:from-orange-100 hover:to-amber-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800"
           onClick={toggleTheme}
         >
-          {isDark ? (
+          {theme === "dark" ? (
             <>
               <Sun className="h-4 w-4 text-orange-500 dark:text-white" />
               Tema Claro

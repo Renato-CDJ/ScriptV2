@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { LoginForm } from "@/components/login-form"
-import { ThemeProvider } from "@/components/theme-provider"
 import { MouseTrail } from "@/components/mouse-trail"
 
 export default function HomePage() {
@@ -30,7 +29,7 @@ export default function HomePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-black">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 dark:bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-500 border-t-transparent mx-auto mb-4 shadow-lg"></div>
           <p className="text-zinc-600 dark:text-zinc-400 font-medium">Carregando...</p>
@@ -44,9 +43,9 @@ export default function HomePage() {
   }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <>
       <MouseTrail />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-white via-orange-50/20 to-amber-50/20 dark:from-black dark:via-zinc-950 dark:to-zinc-900 p-4 md:p-6 relative overflow-hidden">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-white via-orange-50/20 to-amber-50/20 dark:bg-background p-4 md:p-6 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-400/5 dark:bg-orange-500/5 rounded-full blur-3xl animate-float"></div>
           <div
@@ -94,6 +93,6 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-    </ThemeProvider>
+    </>
   )
 }

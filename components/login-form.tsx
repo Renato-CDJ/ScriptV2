@@ -9,6 +9,7 @@ import { authenticateUser } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useTheme } from "next-themes"
 
 export function LoginForm() {
   const [username, setUsername] = useState("")
@@ -16,7 +17,7 @@ export function LoginForm() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [isDark, setIsDark] = useState(false)
+  const { theme, setTheme } = useTheme()
   const { refreshUser } = useAuth()
 
   const handleUsernameChange = (value: string) => {
@@ -48,8 +49,7 @@ export function LoginForm() {
   }
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
+    setTheme(theme === "dark" ? "light" : "dark")
   }
 
   return (
@@ -65,7 +65,7 @@ export function LoginForm() {
           title="Alternar tema"
           className="h-9 w-9 border-2 hover:scale-110 transition-all shadow-md hover:shadow-lg bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 hover:from-orange-100 hover:to-amber-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800"
         >
-          {isDark ? (
+          {theme === "dark" ? (
             <Sun className="h-5 w-5 text-orange-500 dark:text-white" />
           ) : (
             <Moon className="h-5 w-5 text-amber-600" />
@@ -82,6 +82,9 @@ export function LoginForm() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
+            <label htmlFor="username" className="sr-only">
+              Usuário ou e-mail
+            </label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 dark:text-zinc-500" />
               <Input
@@ -100,6 +103,9 @@ export function LoginForm() {
 
           {isAdmin && (
             <div className="space-y-2 animate-fade-in">
+              <label htmlFor="password" className="sr-only">
+                Senha
+              </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 dark:text-zinc-500" />
                 <Input

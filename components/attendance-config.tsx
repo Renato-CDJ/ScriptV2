@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Check } from "lucide-react"
 import { getProducts } from "@/lib/store"
 import type { AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
@@ -65,21 +64,9 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-orange-400/10 to-amber-400/10 dark:from-orange-500/5 dark:to-amber-500/5 rounded-full blur-3xl"></div>
 
           <CardHeader className="pb-6 relative z-10">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent">
-                Configuração de Atendimento
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30 font-semibold"
-              >
-                <div className="h-5 w-5 rounded-full bg-green-600 flex items-center justify-center">
-                  <Check className="h-3 w-3 text-white" />
-                </div>
-                Verificar Tabulação
-              </Button>
-            </div>
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent">
+              Configuração de Atendimento
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-10 pb-10 relative z-10">
             {/* Tipo de atendimento */}
@@ -131,8 +118,8 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
                   onClick={() => setPersonType("juridica")}
                   className={
                     personType === "juridica"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
-                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold uppercase border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 uppercase min-w-[120px] h-10 text-sm font-medium transition-all"
                   }
                 >
                   Jurídica

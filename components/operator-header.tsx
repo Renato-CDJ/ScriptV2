@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation"
 import { getProducts } from "@/lib/store"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useTheme } from "next-themes"
 
 interface OperatorHeaderProps {
   searchQuery?: string
@@ -47,13 +48,9 @@ export function OperatorHeader({
 }: OperatorHeaderProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
-  const [isDark, setIsDark] = useState(false)
+  const { theme, setTheme } = useTheme()
   const [showProductSearch, setShowProductSearch] = useState(false)
   const [products, setProducts] = useState(getProducts().filter((p) => p.isActive))
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"))
-  }, [])
 
   useEffect(() => {
     const handleStoreUpdate = () => {
@@ -70,8 +67,7 @@ export function OperatorHeader({
   }
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
+    setTheme(theme === "dark" ? "light" : "dark")
   }
 
   const handleSearchInput = (value: string) => {
@@ -189,7 +185,7 @@ export function OperatorHeader({
               title="Alternar tema"
               className="h-9 w-9 border-2 hover:scale-110 transition-all shadow-md hover:shadow-lg bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 hover:from-orange-100 hover:to-amber-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800"
             >
-              {isDark ? (
+              {theme === "dark" ? (
                 <Sun className="h-5 w-5 text-orange-500 dark:text-white" />
               ) : (
                 <Moon className="h-5 w-5 text-amber-600" />
