@@ -126,7 +126,7 @@ export const ScriptCard = memo(function ScriptCard({
                 min={50}
                 max={120}
                 step={5}
-                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
+                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-orange-400 dark:[&_[role=slider]]:to-amber-400 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-orange-400 [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-lg [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-orange-500 dark:[&_.bg-primary]:to-amber-500"
               />
               <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">
                 {textSize[0]}%
@@ -143,7 +143,7 @@ export const ScriptCard = memo(function ScriptCard({
                 min={50}
                 max={150}
                 step={5}
-                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
+                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-orange-400 dark:[&_[role=slider]]:to-amber-400 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-orange-400 [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-lg [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-orange-500 dark:[&_.bg-primary]:to-amber-500"
               />
               <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">
                 {buttonSize[0]}%
@@ -164,12 +164,12 @@ export const ScriptCard = memo(function ScriptCard({
         </Button>
       )}
 
-      <Card className="relative shadow-2xl border-2 border-orange-200/80 dark:border-zinc-700/80 w-full overflow-hidden backdrop-blur-sm">
+      <Card className="relative shadow-2xl border-2 border-orange-200/80 dark:border-blue-500/40 w-full overflow-hidden backdrop-blur-sm">
         <Button
           variant="outline"
           size="sm"
           onClick={handleTabulationOpen}
-          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
+          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-blue-500 dark:to-cyan-500 dark:hover:from-blue-600 dark:hover:to-cyan-600 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
             showTabulationPulse ? "animate-bounce" : ""
           }`}
         >
@@ -189,14 +189,14 @@ export const ScriptCard = memo(function ScriptCard({
 
         <CardHeader className="pb-5 pt-7 px-4 md:px-8">
           <CardTitle
-            className="text-2xl md:text-3xl lg:text-4xl text-center font-bold text-balance leading-tight text-orange-900 dark:text-white drop-shadow-sm"
+            className="text-2xl md:text-3xl lg:text-4xl text-center font-bold text-balance leading-tight text-orange-900 dark:text-blue-100 drop-shadow-sm"
             dangerouslySetInnerHTML={{ __html: highlightedTitle }}
           />
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8 px-4 md:px-8">
           <div
-            className="bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-orange-50/60 dark:from-zinc-900/80 dark:via-zinc-900/80 dark:to-zinc-900/80 rounded-2xl p-6 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-zinc-700/60 shadow-inner backdrop-blur-sm"
+            className="bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-orange-50/60 dark:from-blue-950/40 dark:via-slate-900/60 dark:to-blue-950/40 rounded-2xl p-6 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-blue-500/30 shadow-inner backdrop-blur-sm"
             style={contentStyles}
             dangerouslySetInnerHTML={{ __html: processedContent }}
           />
@@ -217,8 +217,8 @@ export const ScriptCard = memo(function ScriptCard({
                   onClick={() => onButtonClick(button.nextStepId)}
                   className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
                     isPrimary
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black"
-                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-gray-700 dark:to-gray-800 dark:hover:from-gray-800 dark:hover:to-gray-900 text-white"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-blue-500 dark:to-cyan-500 dark:hover:from-blue-600 dark:hover:to-cyan-600 text-white"
+                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-slate-600 dark:to-slate-700 dark:hover:from-slate-700 dark:hover:to-slate-800 text-white"
                   }`}
                   style={{
                     fontSize: `${navButtonFontSize}px`,
@@ -264,7 +264,7 @@ export const ScriptCard = memo(function ScriptCard({
           </div>
           <Button
             onClick={handleTabulationClose}
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-blue-500 dark:to-cyan-500 dark:hover:from-blue-600 dark:hover:to-cyan-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
           >
             Entendi
           </Button>

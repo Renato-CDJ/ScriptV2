@@ -22,6 +22,7 @@ import { getProducts } from "@/lib/store"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useTheme } from "next-themes"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface OperatorHeaderProps {
   searchQuery?: string
@@ -137,30 +138,42 @@ export function OperatorHeader({
           </div>
 
           <div className="flex items-center gap-1 md:gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onBackToStart}
-              className="gap-1 md:gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 dark:from-green-600 dark:to-emerald-600 dark:hover:from-green-700 dark:hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all font-semibold"
-              title="Voltar ao Início"
-            >
-              <Home className="h-4 w-4" />
-              <span className="hidden lg:inline text-xs md:text-sm">Voltar ao Início</span>
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onBackToStart}
+                    className="h-9 w-9 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 dark:from-green-600 dark:to-emerald-600 dark:hover:from-green-700 dark:hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                  >
+                    <Home className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Voltar ao Início</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             {isSessionActive && onToggleControls && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onToggleControls}
-                className="gap-1 md:gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all font-semibold"
-                title={showControls ? "Ocultar Controles" : "Exibir Controles"}
-              >
-                {showControls ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="hidden lg:inline text-xs md:text-sm">
-                  {showControls ? "Ocultar Controles" : "Exibir Controles"}
-                </span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={onToggleControls}
+                      className="h-9 w-9 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                    >
+                      {showControls ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{showControls ? "Ocultar Controles" : "Exibir Controles"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
 
             {isSessionActive && onToggleSidebar && (
