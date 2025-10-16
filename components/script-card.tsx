@@ -196,7 +196,7 @@ export const ScriptCard = memo(function ScriptCard({
 
         <CardContent className="space-y-6 pb-8 px-4 md:px-8">
           <div
-            className="bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-orange-50/60 dark:from-blue-950/40 dark:via-slate-900/60 dark:to-blue-950/40 rounded-2xl p-6 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-blue-500/30 shadow-inner backdrop-blur-sm"
+            className="bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-orange-50/60 dark:from-orange-950/40 dark:via-amber-900/60 dark:to-orange-950/40 rounded-2xl p-6 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-orange-500/30 shadow-inner backdrop-blur-sm"
             style={contentStyles}
             dangerouslySetInnerHTML={{ __html: processedContent }}
           />
