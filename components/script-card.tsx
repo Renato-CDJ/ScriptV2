@@ -164,12 +164,12 @@ export const ScriptCard = memo(function ScriptCard({
         </Button>
       )}
 
-      <Card className="relative shadow-2xl border-2 border-orange-200/80 dark:border-blue-500/40 w-full overflow-hidden backdrop-blur-sm">
+      <Card className="relative shadow-2xl border-2 border-orange-200/80 dark:border-orange-500/40 w-full overflow-hidden backdrop-blur-sm">
         <Button
           variant="outline"
           size="sm"
           onClick={handleTabulationOpen}
-          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-blue-500 dark:to-cyan-500 dark:hover:from-blue-600 dark:hover:to-cyan-600 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
+          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-amber-500 dark:hover:from-orange-600 dark:hover:to-amber-600 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
             showTabulationPulse ? "animate-bounce" : ""
           }`}
         >
@@ -189,7 +189,7 @@ export const ScriptCard = memo(function ScriptCard({
 
         <CardHeader className="pb-5 pt-7 px-4 md:px-8">
           <CardTitle
-            className="text-2xl md:text-3xl lg:text-4xl text-center font-bold text-balance leading-tight text-orange-900 dark:text-blue-100 drop-shadow-sm"
+            className="text-2xl md:text-3xl lg:text-4xl text-center font-bold text-balance leading-tight text-orange-900 dark:text-orange-100 drop-shadow-sm"
             dangerouslySetInnerHTML={{ __html: highlightedTitle }}
           />
         </CardHeader>
@@ -217,7 +217,7 @@ export const ScriptCard = memo(function ScriptCard({
                   onClick={() => onButtonClick(button.nextStepId)}
                   className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
                     isPrimary
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-blue-500 dark:to-cyan-500 dark:hover:from-blue-600 dark:hover:to-cyan-600 text-white"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-amber-500 dark:hover:from-orange-600 dark:hover:to-amber-600 text-white"
                       : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-slate-600 dark:to-slate-700 dark:hover:from-slate-700 dark:hover:to-slate-800 text-white"
                   }`}
                   style={{
@@ -264,7 +264,7 @@ export const ScriptCard = memo(function ScriptCard({
           </div>
           <Button
             onClick={handleTabulationClose}
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-blue-500 dark:to-cyan-500 dark:hover:from-blue-600 dark:hover:to-cyan-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-amber-500 dark:hover:from-orange-600 dark:hover:to-amber-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
           >
             Entendi
           </Button>
