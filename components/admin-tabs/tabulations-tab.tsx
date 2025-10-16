@@ -176,7 +176,7 @@ export function TabulationsTab() {
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tab.color }} />
                     <div>
                       <CardTitle>{tab.name}</CardTitle>
-                      <CardDescription className="mt-1">{tab.description}</CardDescription>
+                      <CardDescription className="mt-1 whitespace-pre-wrap">{tab.description}</CardDescription>
                     </div>
                   </div>
                   <div className="flex gap-2">

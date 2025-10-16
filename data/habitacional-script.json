@@ -101,7 +101,7 @@
         "title": "Finalização",
         "body": "(Nome do cliente), então você pode entrar em contato com esses números que vou te passar para saber o assunto que é: 0800 104 0104, 0800 025 8833 ou 4020 0088.",
         "buttons": [
-          { "label": "CONFIRMOU CPF", "next": "hab_nome_completo_cliente", "primary": true },
+          { "label": "CONFIRMOU CPF", "next": "nome_completo_cliente", "primary": true },
           { "label": "CLIENTE INSEGURO SOBRE NOSSA EMPRESA", "next": "hab_questiona_origem" },
           { "label": "FINALIZAR", "next": "fim", "primary": true }
         ]
@@ -115,35 +115,17 @@
         ]
       },
       "nome_completo_cliente": {
-        "id": "hab_nome_completo_cliente",
+        "id": "nome_completo_cliente",
         "title": "Nome completo do cliente",
         "body": "Obrigado(a), pela confirmação. Seu nome completo é (nome completo do cliente)?",
         "buttons": [
-          { "label": "APRESENTAR DIVIDA", "next": "opcao_apresentacao", "primary": true }
+          { "label": "APRESENTAR DIVIDA", "next": "hab_apresentacao", "primary": true }
         ]
       },
-      "opcao_apresentacao": {
-        "id": "opcao_apresentacao",
-        "title": "Faixa de Atraso",
-        "body": "Selecione a opção de acordo com os dias em atraso",
-        "buttons": [
-          { "label": "ATRASO DE ATÉ 15 DIAS", "next": "apresentacao15dias", "primary": true },
-          { "label": "ATRASO ACIMA DE 15 DIAS", "next": "apresentacao30dias" }
-        ]
-      },
-      "apresentacao15dias": {
-        "id": "apresentacao15dias",
+      "apresentacao": {
+        "id": "hab_apresentacao",
         "title": "Apresentação da Dívida",
-        "body": "O motivo do meu contato é para avisar sobre o vencimento do seu financiamento habitacional, vencido há XX dias no valor aproximado de R$XX,XX.<br>Já houve o pagamento?",
-        "buttons": [
-          { "label": "SIM", "next": "hab_pagamento_efetuado", "primary": true },
-          { "label": "NÃO", "next": "hab_negociacao" }
-        ]
-      },
-      "apresentacao30dias": {
-        "id": "apresentacao30dias",
-        "title": "Apresentação da Dívida",
-        "body": "O motivo do meu contato é para confirmar o pagamento do seu financiamento habitacional, vencido há XX dias no valor aproximado de R$XX,XX.<br>Já houve o pagamento?",
+        "body": "ATRASO DE ATÉ 15 DIAS:<br>O motivo do meu contato é para avisar sobre o vencimento do seu financiamento habitacional, vencido há XX dias no valor aproximado de R$XX,XX.<br>Já houve o pagamento?<br><br>ATRASO ACIMA DE 15 DIAS:<br>O motivo do meu contato é para confirmar o pagamento do seu financiamento habitacional, vencido há XX dias no valor aproximado de R$XX,XX.<br>Já houve o pagamento?",
         "buttons": [
           { "label": "SIM", "next": "hab_pagamento_efetuado", "primary": true },
           { "label": "NÃO", "next": "hab_negociacao" }

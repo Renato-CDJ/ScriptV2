@@ -119,31 +119,13 @@
         "title": "Nome completo do cliente",
         "body": "Obrigado(a), pela confirmação. Seu nome completo é (nome completo do cliente)?",
         "buttons": [
-          { "label": "APRESENTAR DIVIDA", "next": "opcao_apresentacao", "primary": true }
+          { "label": "APRESENTAR DIVIDA", "next": "comercial_apresentacao", "primary": true }
         ]
       },
-      "opcao_apresentacao": {
-        "id": "opcao_apresentacao",
-        "title": "Faixa de Atraso",
-        "body": "Selecione a opção de acordo com os dias em atraso",
-        "buttons": [
-          { "label": "ATRASO DE ATÉ 15 DIAS", "next": "apresentacao15dias", "primary": true },
-          { "label": "ATRASO ACIMA DE 15 DIAS", "next": "apresentacao30dias" }
-        ]
-      },
-      "apresentacao15dias": {
-        "id": "apresentacao15dias",
+      "apresentacao": {
+        "id": "comercial_apresentacao",
         "title": "Apresentação da Dívida",
-        "body": "O motivo do meu contato é para avisar sobre o vencimento do seu [nome do contrato], há XX dias no valor aproximado de R$ XX, XX.<br>Já houve o pagamento?",
-        "buttons": [
-          { "label": "SIM", "next": "comercial_pagamento_efetuado", "primary": true },
-          { "label": "NÃO", "next": "comercial_negociacao" }
-        ]
-      },
-      "apresentacao30dias": {
-        "id": "apresentacao30dias",
-        "title": "Apresentação da Dívida",
-        "body": "O motivo do meu contato é para confirmar o pagamento do seu [nome do contrato], vencido há XX dias no valor aproximado de R$ XX, XX.<br>Já houve o pagamento?",
+        "body": "ATRASO DE ATÉ 15 DIAS:<br>O motivo do meu contato é para avisar sobre o vencimento do seu [nome do contrato], há XX dias no valor aproximado de R$ XX, XX.<br>Já houve o pagamento?<br><br>ATRASO ACIMA DE 15 DIAS:<br>O motivo do meu contato é para confirmar o pagamento do seu [nome do contrato], vencido há XX dias no valor aproximado de R$ XX, XX.<br>Já houve o pagamento?",
         "buttons": [
           { "label": "SIM", "next": "comercial_pagamento_efetuado", "primary": true },
           { "label": "NÃO", "next": "comercial_negociacao" }

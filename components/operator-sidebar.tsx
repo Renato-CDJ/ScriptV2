@@ -212,7 +212,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                   <p className="text-sm font-medium break-words">
                     {tabulations.find((t) => t.id === selectedTabulation)?.name}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1 break-words">
+                  <p className="text-xs text-muted-foreground mt-1 break-words whitespace-pre-wrap">
                     {tabulations.find((t) => t.id === selectedTabulation)?.description}
                   </p>
                 </div>
@@ -340,7 +340,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                         {tab.name}
                       </h3>
                       <p
-                        className={`text-sm leading-relaxed ${
+                        className={`text-sm leading-relaxed whitespace-pre-wrap ${
                           index === 0 ? "text-orange-700/90 dark:text-muted-foreground" : "text-muted-foreground"
                         }`}
                       >
@@ -411,7 +411,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                         {situation.name}
                       </h3>
                       <p
-                        className={`text-sm leading-relaxed ${
+                        className={`text-sm leading-relaxed whitespace-pre-wrap ${
                           index === 0 ? "text-orange-700/90 dark:text-muted-foreground" : "text-muted-foreground"
                         }`}
                       >
@@ -511,7 +511,9 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           </DialogHeader>
           <div className="py-6">
             <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
-              <p className="text-base leading-relaxed text-foreground">{selectedTabulationForModal?.description}</p>
+              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
+                {selectedTabulationForModal?.description}
+              </p>
             </div>
           </div>
           <Button
@@ -532,7 +534,9 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           </DialogHeader>
           <div className="py-6">
             <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
-              <p className="text-base leading-relaxed text-foreground">{selectedSituationForModal?.description}</p>
+              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
+                {selectedSituationForModal?.description}
+              </p>
             </div>
           </div>
           <Button
@@ -581,7 +585,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           </DialogHeader>
           <div className="py-6">
             <div className="rounded-xl border-2 border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-6">
-              <p className="text-base leading-relaxed font-mono text-blue-900 dark:text-blue-100">
+              <p className="text-base leading-relaxed font-mono text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
                 {selectedSituationData?.description}
               </p>
             </div>

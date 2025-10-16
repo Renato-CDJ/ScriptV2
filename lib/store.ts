@@ -29,26 +29,202 @@ const MOCK_USERS: User[] = [
 const MOCK_SCRIPT_STEPS: ScriptStep[] = loadHabitacionalScript()
 
 const MOCK_TABULATIONS: Tabulation[] = [
+  // Identification Issues
   {
     id: "tab-1",
-    name: "Acordo Fechado",
-    description: "Cliente aceitou a proposta",
+    name: "PESSOA NÃO CONFIRMA OS DADOS",
+    description:
+      "Pessoa informa os números do CPF, porém os dados não conferem com os números registrados no CRM ou a pessoa se recusa a informar os números do CPF para realização da identificação positiva ou pessoa não.",
+    color: "#f59e0b",
+    createdAt: new Date(),
+  },
+
+  // Third Party Contact
+  {
+    id: "tab-2",
+    name: "RECADO COM TERCEIRO",
+    description:
+      "Terceiro/cliente informa que a empresa entrou em falência/concordata ou terceiro informa que conhece o cliente, anota o recado ou não, ou terceiro pede para ligar outro dia/horário ou em outro telefone.",
+    color: "#3b82f6",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-3",
+    name: "FALECIDO",
+    description: "Terceiro informa que o titular faleceu.",
+    color: "#ef4444",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-4",
+    name: "FALÊNCIA OU CONCORDATA",
+    description: "Utilizamos quando o sócio ou responsável financeiro informar que a empresa entrou em falência.",
+    color: "#dc2626",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-5",
+    name: "DESCONHECIDO",
+    description: "Terceiro informa que não conhece ninguém com o nome do cliente no telefone do cadastro.",
+    color: "#6b7280",
+    createdAt: new Date(),
+  },
+
+  // Contact Without Negotiation
+  {
+    id: "tab-6",
+    name: "CONTATO SEM NEGOCIAÇÃO",
+    description:
+      "Cliente impossibilitado de falar no momento, faz promessa de pagamento para uma data que ultrapassa o período permitido (data definida para ações especiais, data fixa de boleto, etc). Ou informa que não se lembra se foi feito o pagamento ou débito.",
+    color: "#8b5cf6",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-7",
+    name: "CONTATO INTERROMPIDO APÓS IP, MAS SEM RESULTADO",
+    description: "Se após identificação positiva a ligação for interrompida.",
+    color: "#f97316",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-8",
+    name: "PESSOA SOLICITA RETORNO EM OUTRO MOMENTO",
+    description: "Cliente pede para o operador retornar a ligação em outro dia/horário.",
+    color: "#06b6d4",
+    createdAt: new Date(),
+  },
+
+  // Payment Related
+  {
+    id: "tab-9",
+    name: "PAGAMENTO JÁ EFETUADO",
+    description: "Cliente informa que já efetuou o pagamento.",
     color: "#10b981",
     createdAt: new Date(),
   },
   {
-    id: "tab-2",
-    name: "Retorno Agendado",
-    description: "Cliente pediu para ligar depois",
+    id: "tab-10",
+    name: "RECUSA AÇÃO/CAMPANHA",
+    description: "Cliente não aceita a ação/campanha ofertada.",
+    color: "#ef4444",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-11",
+    name: "TRANSBORDO PARA ATENDIMENTO ENTRE CANAIS",
+    description:
+      "Quando o atendimento é iniciado em um canal e precisa ser transbordado para resolução por outro canal.",
+    color: "#8b5cf6",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-12",
+    name: "SEM CAPACIDADE DE PAGAMENTO",
+    description:
+      "Cliente se recusa a efetuar o pagamento por qualquer motivo: não tem recurso disponível, desemprego, mudanças econômicas ou não pode fazer o pagamento naquele momento.",
+    color: "#f59e0b",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-13",
+    name: "NEGOCIAÇÃO EM OUTRO CANAL",
+    description: "Cliente informa que já está negociando em outro canal.",
     color: "#3b82f6",
     createdAt: new Date(),
   },
-  { id: "tab-3", name: "Recusa", description: "Cliente recusou a proposta", color: "#ef4444", createdAt: new Date() },
+
+  // Contract and Debt Issues
   {
-    id: "tab-4",
-    name: "Número Errado",
-    description: "Contato não pertence ao cliente",
+    id: "tab-14",
+    name: "SEM CONTRATO EM COBRANÇA",
+    description: "O cliente está na base da Telecobrança, mas não constam contratos ativos (em cobrança).",
     color: "#6b7280",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-15",
+    name: "DÍVIDA NÃO RECONHECIDA",
+    description: "Cliente alega que desconhece a dívida.",
+    color: "#f59e0b",
+    createdAt: new Date(),
+  },
+
+  // Payment Promises
+  {
+    id: "tab-16",
+    name: "PROMESSA DE PAGAMENTO SEM EMISSÃO DE BOLETO",
+    description: "Cliente informa que irá depositar o valor para regularização do atraso dentro do prazo estabelecido.",
+    color: "#10b981",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-17",
+    name: "PROMESSA DE PAGAMENTO COM EMISSÃO DE BOLETO",
+    description: "Cliente solicita boleto e informa data de pagamento.",
+    color: "#22c55e",
+    createdAt: new Date(),
+  },
+
+  // Campaign Acceptance
+  {
+    id: "tab-18",
+    name: "ACEITA AÇÃO/CAMPANHA SEM EMISSÃO DE BOLETO",
+    description: "Cliente aceita ação/ campanha sem emissão de boleto.",
+    color: "#10b981",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-19",
+    name: "ACEITA AÇÃO/CAMPANHA COM EMISSÃO DE BOLETO",
+    description: "Cliente aceita ação/ campanha com emissão de boleto.",
+    color: "#22c55e",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-20",
+    name: "CLIENTE COM ACORDO ATIVO RETORNA NO RECEPTIVO",
+    description:
+      "Quando o cliente retorna no receptivo tendo acordo vigente para solicitar esclarecimentos ou solicitar o boleto.",
+    color: "#06b6d4",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-21",
+    name: "PROMESSA DE PAGAMENTO ACORDO DE PARCELAMENTO",
+    description: "Cliente confirma o pagamento parcelado do CARTÃO DE CRÉDITO.",
+    color: "#10b981",
+    createdAt: new Date(),
+  },
+
+  // Technical Issues
+  {
+    id: "tab-22",
+    name: "SINAL DE FAX",
+    description: "Ligação direcionada: sinal de FAX.",
+    color: "#6b7280",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-23",
+    name: "CAIXA POSTAL",
+    description: "Devemos utilizar quando a ligação é direcionada diretamente à caixa postal.",
+    color: "#6b7280",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-24",
+    name: "LIGAÇÃO CAIU",
+    description:
+      "São ligações que não conseguimos extrair uma informação para usar outra tabulação durante o atendimento.",
+    color: "#f97316",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-25",
+    name: "LIGAÇÃO MUDA",
+    description:
+      "Devemos utilizar quando a ligação se iniciar muda. Lembrando que se a pessoa atender e houver ruídos ou vozes que não se direcionar a você será considerada uma ligação muda.",
+    color: "#f97316",
     createdAt: new Date(),
   },
 ]
@@ -56,36 +232,105 @@ const MOCK_TABULATIONS: Tabulation[] = [
 const MOCK_SITUATIONS: ServiceSituation[] = [
   {
     id: "sit-1",
-    name: "Atendimento Ativo",
-    description: "Operador está em ligação ativa com o cliente, realizando o atendimento conforme o script.",
+    name: "EM CASOS DE FALÊNCIA/CONCORDATA",
+    description:
+      "É necessário que o sócio ou responsável entre em contato com a CAIXA acessando www.caixa.gov.br/negociar e pelo WhatsApp 0800 104 0104.\n\nTabulação correta: Recado com terceiro",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "sit-2",
-    name: "Pausa",
-    description: "Operador está em pausa para descanso, alimentação ou necessidades pessoais.",
+    name: "FALECIDO",
+    description:
+      "Pessoa informa que o titular faleceu. É necessário que compareça à agência levando a certidão de óbito para que as ligações de cobrança sejam interrompidas.\n\nTabulação correta: FALECIDO",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "sit-3",
-    name: "Pós-Atendimento",
-    description: "Operador está finalizando registros, anotações e tabulação do atendimento anterior.",
+    name: "SE O CLIENTE CITAR A LGPD OU PERGUNTAR POR QUE TEMOS OS SEUS DADOS",
+    description:
+      '"(NOME DO CLIENTE), seguindo a lei LGPD, n°13.709, possuímos alguns dados representando a CAIXA ECONÔMICA FEDERAL, para garantir sua segurança. Caso você possua qualquer dúvida ou solicitação em relação a isso, pedimos que entre em contato conosco enviando um e-mail para: dpo@gruporoveri.com.br ."\n\nEXEMPLOS DE QUESTIONAMENTOS FEITOS PELOS CLIENTES:\n- Como você possui meus dados pessoais?\n- Vocês têm o direito de me ligar?\n- Isso está conforme a LGPD?\n- Quero que excluam meus dados!',
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "sit-4",
-    name: "Disponível",
-    description: "Operador está disponível e aguardando novo atendimento.",
+    name: "O CLIENTE SOLICITA O PROTOCOLO DA LIGAÇÃO",
+    description:
+      "Informar que nós somos uma central de negócios, ou seja, nosso atendimento não possui caráter de SAC. Entretanto, como mencionamos no início do contato, todas as ligações são gravadas e para que você tenha acesso a elas é necessário que as solicite na sua agência de relacionamento.\n\nPORQUE NÃO PODEMOS REPASSAR ESSA INFORMAÇÃO PARA O CLIENTE?\nNossa assessoria não é SAC.",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "sit-5",
-    name: "Treinamento",
-    description: "Operador está participando de treinamento ou capacitação.",
+    name: 'Se o cliente informar que "Não reside no Imóvel"',
+    description:
+      "Orientação - Embora o senhor(a) não resida no local, a dívida está registrada em seu nome e CPF, o que o(a) mantém como responsável pela regularização. Para resolver essa situação de forma rápida e eficiente, sugerimos que entre em contato com a pessoa que realiza o pagamento dessa dívida. Isso pode ajudar a esclarecer se o pagamento já foi efetuado, se há uma data prevista para a quitação ou outras informações relevantes.",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-6",
+    name: "CLIENTE SOLICITOU A LIGAÇÃO DO ATENDIMENTO",
+    description:
+      'CASO O CONTRATO SEJA DOS ESTADOS:\nPARANÁ - DDD (41,42,43,44,45 e 46)\nRIO DE JANEIRO - DDD (21)\nSÃO PAULO - DDD (11)\nMATO GROSSO - DDD (65)\n\nDevemos informar: "A solicitação será repassada à CAIXA para verificação e atendimento no prazo de até 7 (sete) dias úteis."\n\n(PARA OUTROS ESTADOS)\nNesses casos, o que deve ser repassado para o cliente é: "Você pode solicitar a escuta da ligação na sua agência de relacionamento."',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-7",
+    name: "QUANDO O CLIENTE DO FIES DISSER QUE QUER PAUSAR O PAGAMENTO DAS SUAS PARCELAS",
+    description:
+      'Caso o cliente do FIES questione a possibilidade de renegociar ou solicite o desconto para seu contrato, informar:\n\n1. "Você pode verificar se o seu contrato tem a possibilidade de realizar renegociação no site http://sifesweb.caixa.gov.br, APP FIES CAIXA ou na sua agência."\n\nATENÇÃO! Lembrando que essa orientação só deve ser repassada para aqueles clientes que já fizeram a confirmação positiva.',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-8",
+    name: "CONTRATOS DE EMPRÉSTIMO CONSIGNADO",
+    description:
+      'Devemos orientar o cliente pedindo para que ele verifique novamente se o valor foi de fato descontado da folha de pagamento. Caso ele fale que vai verificar, podemos aguardar em linha este retorno. Se o cliente disser que não pode fazer essa verificação durante o atendimento, podemos solicitar o melhor horário e telefone para realizar um contato futuro.\n\nQUESTIONAMENTO NORMALMENTE REALIZADO PELO CLIENTE:\n"Isso é descontado na minha folha de pagamento, não está aparecendo no sistema?"',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-9",
+    name: "NÃO RECONHECE A DÍVIDA",
+    description:
+      "Orientações: Orientar o cliente a procurar uma agência da CAIXA para mais informações ou ligar no 0800 101 0104. Para cartão de crédito, indicar a central de atendimento que está no verso do cartão para contestação das despesas.",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-10",
+    name: "O QUE FAZER QUANDO CAIR UM PRODUTO QUE NÃO ATENDO?",
+    description:
+      'PASSO A PASSO:\n1. ABORDAGEM PADRÃO;\n2. CONFIRMAÇÃO DE DADOS - IDENTIFICAÇÃO POSITIVA;\n3. INFORMAR AO CLIENTE: "PEÇO QUE AGUARDE UM INSTANTE QUE IREI TRANSFERIR AO SETOR RESPONSÁVEL";\n4. TRANSFERIR NA SEGUNDA ABA DO WEDOO EM "CAMPANHA RECEPTIVO";\n5. TABULAR: TRANSFERÊNCIA DE LIGAÇÃO.',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-11",
+    name: "O QUE FAZER QUANDO CAIR ATENDIMENTO CNPJ?",
+    description:
+      "ABORDAGEM PADRÃO: FALAR NOME DO SÓCIO QUE CONSTA EM DADOS DO CLIENTE;\n\n● SE CONSTAR NOME DA EMPRESA EM DADOS DO CLIENTE, SOLICITE PARA FALAR COM SÓCIO OU RESPONSÁVEL FINANCEIRO DA EMPRESA;\n\n● VERIFIQUE O NOME DO SÓCIO OU RESPONSÁVEL FINANCEIRO DA EMPRESA EM: DETALHES DO CLIENTE;\n\n● SE NÃO CONSTAR ESSA INFORMAÇÃO SOLICITE O NOME COMPLETO E REALIZE A INCLUSÃO.",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-12",
+    name: "EM CASOS DE SINEB 2.0",
+    description:
+      'A CAIXA está te oferecendo a proposta de renegociar o contrato para que você possa quitar seu(s) contrato(s) vencido(s).\n\n"Lembramos que o pagamento efetuado permite a exclusão do seu CPF dos cadastros restritivos dentro de até 10 dias úteis."\n\n- Alerto que as ligações terão continuidade e que os juros do(s) seu(s) contrato(s) são corrigidos diariamente.\n\n- "A CAIXA não garante que as condições dessa proposta serão mantidas para um acordo futuro."\n\n- "É importante regularizar a sua dívida para a exclusão do seu CPF dos cadastros restritivos."',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-13",
+    name: "A Lei 12395/2024 do Estado do Mato Grosso e a Lei 16276/2025 do Rio Grande Sul",
+    description:
+      "A Lei 12395/2024 do Estado do Mato Grosso e a Lei 16276/2025 do Rio Grande Sul também determinam que deve ser informado a composição dos valores cobrados quanto ao que efetivamente correspondem, destacando-se o valor originário e seus adicionais (juros, multas, taxas, custas, honorários e outros que, somados, correspondam ao valor total cobrado do consumidor) ao cliente desse estado que solicitar.",
     isActive: true,
     createdAt: new Date(),
   },
@@ -170,15 +415,14 @@ export function initializeMockData() {
     localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(habitacionalSteps))
   }
 
-  if (!localStorage.getItem(STORAGE_KEYS.TABULATIONS)) {
-    localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(MOCK_TABULATIONS))
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.SITUATIONS)) {
-    localStorage.setItem(STORAGE_KEYS.SITUATIONS, JSON.stringify(MOCK_SITUATIONS))
-  }
+  localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(MOCK_TABULATIONS))
+
+  localStorage.setItem(STORAGE_KEYS.SITUATIONS, JSON.stringify(MOCK_SITUATIONS))
+
   if (!localStorage.getItem(STORAGE_KEYS.CHANNELS)) {
     localStorage.setItem(STORAGE_KEYS.CHANNELS, JSON.stringify(MOCK_CHANNELS))
   }
+
   if (!localStorage.getItem(STORAGE_KEYS.NOTES)) {
     localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify([]))
   }
