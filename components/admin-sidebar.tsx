@@ -53,10 +53,10 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-card border-r">
+    <div className="flex flex-col h-full bg-card border-r border-orange-500/30 dark:border-orange-500/40">
       {/* Header */}
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-bold">Painel Admin</h2>
+      <div className="p-4 border-b border-orange-500/30 dark:border-orange-500/40">
+        <h2 className="text-lg font-bold text-foreground">Painel Admin</h2>
         {user && <p className="text-sm text-muted-foreground mt-1">{user.fullName}</p>}
       </div>
 
@@ -69,7 +69,11 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
               <Button
                 key={item.id}
                 variant={activeTab === item.id ? "secondary" : "ghost"}
-                className={cn("w-full justify-start gap-3", activeTab === item.id && "bg-primary/10 text-primary")}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  activeTab === item.id &&
+                    "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-semibold border-0",
+                )}
                 onClick={() => onTabChange(item.id)}
               >
                 <Icon className="h-4 w-4" />
@@ -80,15 +84,15 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
         </nav>
       </ScrollArea>
 
-      <div className="p-3 border-t space-y-2">
+      <div className="p-3 border-t border-orange-500/30 dark:border-orange-500/40 space-y-2">
         <Button
           variant="outline"
-          className="w-full justify-start gap-3 border-2 hover:scale-105 transition-all shadow-sm hover:shadow-md bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 hover:from-orange-100 hover:to-amber-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800"
+          className="w-full justify-start gap-3 border-2 border-orange-500/30 dark:border-orange-500/40 hover:scale-105 transition-all shadow-sm hover:shadow-md bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-700 dark:to-zinc-800 hover:from-orange-100 hover:to-amber-100 dark:hover:from-orange-500/20 dark:hover:to-orange-500/20 text-foreground dark:text-white"
           onClick={toggleTheme}
         >
           {theme === "dark" ? (
             <>
-              <Sun className="h-4 w-4 text-orange-500 dark:text-white" />
+              <Sun className="h-4 w-4 text-orange-500" />
               Tema Claro
             </>
           ) : (
@@ -98,7 +102,11 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
             </>
           )}
         </Button>
-        <Button variant="ghost" className="w-full justify-start gap-3 text-destructive" onClick={handleLogout}>
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 text-white dark:text-white hover:bg-orange-500/20 dark:hover:bg-orange-500/30 border-0"
+          onClick={handleLogout}
+        >
           <LogOut className="h-4 w-4" />
           Sair
         </Button>
