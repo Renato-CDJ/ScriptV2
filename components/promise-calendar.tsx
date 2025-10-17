@@ -4,9 +4,8 @@ import { useState } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { CalendarIcon, AlertCircle, CheckCircle2, Info } from "lucide-react"
+import { CalendarIcon, AlertCircle, CheckCircle2, Info, CreditCard, Building2, Home } from "lucide-react"
 import { getMaxPromiseDate, isBusinessDay } from "@/lib/business-days"
 
 type ProductType = "cartao" | "comercial" | "habitacional"
@@ -19,8 +18,8 @@ export function PromiseCalendar() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const handleProductSelect = (value: string) => {
-    setSelectedProduct(value as ProductType)
+  const handleProductSelect = (value: ProductType) => {
+    setSelectedProduct(value)
     setSelectedDate(undefined)
   }
 
@@ -44,6 +43,30 @@ export function PromiseCalendar() {
 
     return isBusinessDay(dateTime)
   }
+
+  const productOptions = [
+    {
+      value: "cartao" as ProductType,
+      name: "Cartão fase 1",
+      deadline: "até 6 dias úteis",
+      icon: CreditCard,
+      color: "blue",
+    },
+    {
+      value: "comercial" as ProductType,
+      name: "Comercial",
+      deadline: "até 9 dias úteis",
+      icon: Building2,
+      color: "purple",
+    },
+    {
+      value: "habitacional" as ProductType,
+      name: "Habitacional",
+      deadline: "até 9 dias úteis",
+      icon: Home,
+      color: "green",
+    },
+  ]
 
   return (
     <>
@@ -98,37 +121,57 @@ export function PromiseCalendar() {
           </DialogHeader>
 
           <div className="space-y-4 py-3">
-            {/* Product Selection */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                 Tipo de Produto
               </label>
-              <Select value={selectedProduct} onValueChange={handleProductSelect}>
-                <SelectTrigger className="w-full h-10 text-sm border-2 hover:border-primary/50 transition-colors">
-                  <SelectValue placeholder="Selecione o tipo de produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cartao" className="h-12 cursor-pointer">
-                    <div className="flex flex-col items-start gap-0.5">
-                      <span className="font-semibold text-sm">Cartão fase 1</span>
-                      <span className="text-xs text-muted-foreground">Prazo: até 6 dias úteis</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="comercial" className="h-12 cursor-pointer">
-                    <div className="flex flex-col items-start gap-0.5">
-                      <span className="font-semibold text-sm">Comercial</span>
-                      <span className="text-xs text-muted-foreground">Prazo: até 9 dias úteis</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="habitacional" className="h-12 cursor-pointer">
-                    <div className="flex flex-col items-start gap-0.5">
-                      <span className="font-semibold text-sm">Habitacional</span>
-                      <span className="text-xs text-muted-foreground">Prazo: até 9 dias úteis</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-1 gap-2">
+                {productOptions.map((product) => {
+                  const Icon = product.icon
+                  const isSelected = selectedProduct === product.value
+                  return (
+                    <button
+                      key={product.value}
+                      onClick={() => handleProductSelect(product.value)}
+                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 hover:shadow-md ${
+                        isSelected
+                          ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md scale-[1.02]"
+                          : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isSelected ? "bg-orange-500 dark:bg-primary" : "bg-muted"}`}>
+                          <Icon
+                            className={`h-5 w-5 ${
+                              isSelected ? "text-white dark:text-primary-foreground" : "text-muted-foreground"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p
+                            className={`font-semibold text-sm ${
+                              isSelected ? "text-orange-600 dark:text-primary" : "text-foreground"
+                            }`}
+                          >
+                            {product.name}
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              isSelected ? "text-orange-700 dark:text-muted-foreground" : "text-muted-foreground"
+                            }`}
+                          >
+                            Prazo: {product.deadline}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle2 className="h-5 w-5 text-orange-500 dark:text-primary flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {!selectedProduct ? (

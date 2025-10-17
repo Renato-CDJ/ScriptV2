@@ -36,13 +36,15 @@ export const ScriptCard = memo(function ScriptCard({
   const [showTabulation, setShowTabulation] = useState(false)
   const [showTabulationPulse, setShowTabulationPulse] = useState(false)
 
+  const hasTabulations = (step.tabulations && step.tabulations.length > 0) || step.tabulationInfo
+
   useEffect(() => {
-    if (step.tabulationInfo) {
+    if (hasTabulations) {
       setShowTabulationPulse(true)
       const timer = setTimeout(() => setShowTabulationPulse(false), 3000)
       return () => clearTimeout(timer)
     }
-  }, [step.id, step.tabulationInfo])
+  }, [step.id, hasTabulations])
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -126,7 +128,7 @@ export const ScriptCard = memo(function ScriptCard({
                 min={50}
                 max={120}
                 step={5}
-                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-orange-400 dark:[&_[role=slider]]:to-amber-400 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-orange-400 [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-lg [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-orange-500 dark:[&_.bg-primary]:to-amber-500"
+                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
               />
               <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">
                 {textSize[0]}%
@@ -143,7 +145,7 @@ export const ScriptCard = memo(function ScriptCard({
                 min={50}
                 max={150}
                 step={5}
-                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-orange-400 dark:[&_[role=slider]]:to-amber-400 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-orange-400 [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-lg [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-orange-500 dark:[&_.bg-primary]:to-amber-500"
+                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-white dark:[&_[role=slider]]:to-gray-100 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-white [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-gray-400 dark:[&_.bg-primary]:to-gray-500"
               />
               <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">
                 {buttonSize[0]}%
@@ -164,22 +166,22 @@ export const ScriptCard = memo(function ScriptCard({
         </Button>
       )}
 
-      <Card className="relative shadow-2xl border-2 border-orange-200/80 dark:border-orange-500/40 w-full overflow-hidden backdrop-blur-sm">
+      <Card className="relative shadow-2xl border-2 border-orange-200/80 dark:border-zinc-700/80 w-full overflow-hidden backdrop-blur-sm">
         <Button
           variant="outline"
           size="sm"
           onClick={handleTabulationOpen}
-          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-amber-500 dark:hover:from-orange-600 dark:hover:to-amber-600 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
+          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
             showTabulationPulse ? "animate-bounce" : ""
           }`}
         >
-          {step.tabulationInfo ? (
+          {hasTabulations ? (
             <AlertCircle className="h-4 w-4 md:h-5 md:w-5 md:mr-2 animate-pulse" />
           ) : (
             <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 md:mr-2" />
           )}
           <span className="hidden md:inline">Verificar Tabulação</span>
-          {step.tabulationInfo && showTabulationPulse && (
+          {hasTabulations && showTabulationPulse && (
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
@@ -189,14 +191,14 @@ export const ScriptCard = memo(function ScriptCard({
 
         <CardHeader className="pb-5 pt-7 px-4 md:px-8">
           <CardTitle
-            className="text-2xl md:text-3xl lg:text-4xl text-center font-bold text-balance leading-tight text-orange-900 dark:text-orange-100 drop-shadow-sm"
+            className="text-2xl md:text-3xl lg:text-4xl text-center font-bold text-balance leading-tight text-orange-900 dark:text-white drop-shadow-sm"
             dangerouslySetInnerHTML={{ __html: highlightedTitle }}
           />
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8 px-4 md:px-8">
           <div
-            className="bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-orange-50/60 dark:from-orange-950/40 dark:via-amber-900/60 dark:to-orange-950/40 rounded-2xl p-6 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-orange-500/30 shadow-inner backdrop-blur-sm"
+            className="bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-orange-50/60 dark:from-zinc-900/80 dark:via-zinc-900/80 dark:to-zinc-900/80 rounded-2xl p-6 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-zinc-700/60 shadow-inner backdrop-blur-sm"
             style={contentStyles}
             dangerouslySetInnerHTML={{ __html: processedContent }}
           />
@@ -217,8 +219,8 @@ export const ScriptCard = memo(function ScriptCard({
                   onClick={() => onButtonClick(button.nextStepId)}
                   className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
                     isPrimary
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-amber-500 dark:hover:from-orange-600 dark:hover:to-amber-600 text-white"
-                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-slate-600 dark:to-slate-700 dark:hover:from-slate-700 dark:hover:to-slate-800 text-white"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black"
+                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-gray-700 dark:to-gray-800 dark:hover:from-gray-800 dark:hover:to-gray-900 text-white"
                   }`}
                   style={{
                     fontSize: `${navButtonFontSize}px`,
@@ -234,23 +236,35 @@ export const ScriptCard = memo(function ScriptCard({
       </div>
 
       <Dialog open={showTabulation} onOpenChange={setShowTabulation}>
-        <DialogContent className="sm:max-w-md shadow-2xl">
+        <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <CheckCircle2 className="h-5 w-5 text-green-600" />
               Tabulação Recomendada
             </DialogTitle>
             <DialogDescription className="text-sm">
-              Se você encerrar o atendimento nesta tela, utilize a seguinte tabulação:
+              Se você encerrar o atendimento nesta tela, utilize a(s) seguinte(s) tabulação(ões):
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {step.tabulationInfo ? (
+            {step.tabulations && step.tabulations.length > 0 ? (
+              step.tabulations.map((tabulation, index) => (
+                <div
+                  key={tabulation.id || index}
+                  className="rounded-xl border-2 border-green-200 bg-green-50 dark:bg-green-950/30 p-5 shadow-sm"
+                >
+                  <h4 className="font-bold text-lg text-green-900 dark:text-green-100 mb-2">{tabulation.name}</h4>
+                  <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed whitespace-pre-wrap">
+                    {tabulation.description}
+                  </p>
+                </div>
+              ))
+            ) : step.tabulationInfo ? (
               <div className="rounded-xl border-2 border-green-200 bg-green-50 dark:bg-green-950/30 p-5 shadow-sm">
                 <h4 className="font-bold text-lg text-green-900 dark:text-green-100 mb-2">
                   {step.tabulationInfo.name}
                 </h4>
-                <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed">
+                <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed whitespace-pre-wrap">
                   {step.tabulationInfo.description}
                 </p>
               </div>
@@ -264,7 +278,7 @@ export const ScriptCard = memo(function ScriptCard({
           </div>
           <Button
             onClick={handleTabulationClose}
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-amber-500 dark:hover:from-orange-600 dark:hover:to-amber-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black border-0 shadow-lg hover:shadow-xl transition-all duration-200"
           >
             Entendi
           </Button>

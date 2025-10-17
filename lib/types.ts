@@ -29,11 +29,11 @@ export interface ScriptStep {
   createdAt: Date
   updatedAt: Date
   productId?: string // Added productId to track which product this step belongs to
-  tabulationInfo?: {
+  tabulations?: Array<{
     id: string
     name: string
     description: string
-  }
+  }> // Changed from single tabulationInfo to array of tabulations
   formatting?: {
     textColor?: string
     bold?: boolean

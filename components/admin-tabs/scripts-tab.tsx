@@ -227,21 +227,32 @@ export function ScriptsTab() {
     setEditingStep({ ...editingStep, buttons: updatedButtons })
   }
 
-  const updateTabulation = (field: "name" | "description", value: string) => {
+  const addTabulation = () => {
     if (!editingStep) return
+    const newTabulation = {
+      id: `tab-${Date.now()}`,
+      name: "",
+      description: "",
+    }
     setEditingStep({
       ...editingStep,
-      tabulationInfo: editingStep.tabulationInfo
-        ? { ...editingStep.tabulationInfo, [field]: value }
-        : { id: `tab-${editingStep.id}`, name: value, description: "" },
+      tabulations: [...(editingStep.tabulations || []), newTabulation],
     })
   }
 
-  const removeTabulation = () => {
+  const updateTabulation = (index: number, field: "name" | "description", value: string) => {
+    if (!editingStep || !editingStep.tabulations) return
+    const updatedTabulations = [...editingStep.tabulations]
+    updatedTabulations[index] = { ...updatedTabulations[index], [field]: value }
+    setEditingStep({ ...editingStep, tabulations: updatedTabulations })
+  }
+
+  const removeTabulation = (index: number) => {
     if (!editingStep) return
+    const updatedTabulations = editingStep.tabulations?.filter((_, i) => i !== index) || []
     setEditingStep({
       ...editingStep,
-      tabulationInfo: undefined,
+      tabulations: updatedTabulations.length > 0 ? updatedTabulations : undefined,
     })
   }
 
@@ -312,7 +323,7 @@ export function ScriptsTab() {
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
                 <TabsTrigger value="buttons">Botões ({editingStep.buttons.length})</TabsTrigger>
-                <TabsTrigger value="tabulation">Tabulação</TabsTrigger>
+                <TabsTrigger value="tabulation">Tabulações</TabsTrigger>
                 <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
               </TabsList>
 
@@ -562,39 +573,61 @@ export function ScriptsTab() {
 
               <TabsContent value="tabulation" className="space-y-4 mt-6">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Tabulação Recomendada</Label>
-                  {editingStep.tabulationInfo && (
-                    <Button size="sm" variant="ghost" onClick={removeTabulation}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remover Tabulação
-                    </Button>
-                  )}
+                  <Label className="text-base font-semibold">Tabulações Recomendadas</Label>
+                  <Button size="sm" onClick={addTabulation}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Tabulação
+                  </Button>
                 </div>
 
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="tab-name">Nome da Tabulação</Label>
-                      <Input
-                        id="tab-name"
-                        value={editingStep.tabulationInfo?.name || ""}
-                        onChange={(e) => updateTabulation("name", e.target.value)}
-                        placeholder="Ex: Acordo Fechado"
-                      />
-                    </div>
+                {!editingStep.tabulations || editingStep.tabulations.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                      Nenhuma tabulação adicionada ainda. Clique em "Adicionar Tabulação" para criar a primeira.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {editingStep.tabulations.map((tabulation, index) => (
+                      <Card key={tabulation.id}>
+                        <CardContent className="pt-6 space-y-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-muted-foreground">Tabulação {index + 1}</span>
+                            <Button size="sm" variant="ghost" onClick={() => removeTabulation(index)}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover
+                            </Button>
+                          </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="tab-description">Descrição / Orientação</Label>
-                      <Textarea
-                        id="tab-description"
-                        value={editingStep.tabulationInfo?.description || ""}
-                        onChange={(e) => updateTabulation("description", e.target.value)}
-                        placeholder="Ex: Cliente aceitou a proposta de pagamento"
-                        rows={4}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                          <div className="space-y-2">
+                            <Label htmlFor={`tab-name-${index}`}>Nome da Tabulação</Label>
+                            <Input
+                              id={`tab-name-${index}`}
+                              value={tabulation.name}
+                              onChange={(e) => updateTabulation(index, "name", e.target.value)}
+                              placeholder="Ex: Acordo Fechado"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`tab-description-${index}`}>Descrição / Orientação</Label>
+                            <Textarea
+                              id={`tab-description-${index}`}
+                              value={tabulation.description}
+                              onChange={(e) => updateTabulation(index, "description", e.target.value)}
+                              placeholder="Ex: Cliente aceitou a proposta de pagamento&#10;Pressione Enter para quebrar linha"
+                              rows={4}
+                              className="whitespace-pre-wrap"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Pressione Enter para criar quebras de linha no texto
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="preview" className="mt-6">
@@ -655,10 +688,17 @@ export function ScriptsTab() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xs font-mono bg-muted px-2 py-1 rounded">{step.id}</span>
-                                {step.tabulationInfo && (
-                                  <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                    {step.tabulationInfo.name}
-                                  </span>
+                                {step.tabulations && step.tabulations.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {step.tabulations.map((tab) => (
+                                      <span
+                                        key={tab.id}
+                                        className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded"
+                                      >
+                                        {tab.name}
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                               <CardTitle className="text-lg">{step.title}</CardTitle>

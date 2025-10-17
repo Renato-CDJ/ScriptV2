@@ -340,92 +340,49 @@ const MOCK_CHANNELS: Channel[] = [
   {
     id: "ch-1",
     name: "Alô CAIXA",
-    contact: `☎ 4004 0 104 - Capitais e Regiões Metropolitanas
-☎ 0800 104 0 104 - Demais regiões
-
-Pessoa Física, jurídica ou Ente Público
-Conta corrente, poupança e empréstimos comerciais
-Cartão de Crédito Habitação
-Suporte na utilização dos sites e aplicativos CAIXA e Caixa Eletrônico
-Negociação de dívidas em atraso, renovação de penhor e contratos cedidos pela CAIXA
-Resultado de Loterias
-De Olho na Qualidade (Exclusivo Minha Casa Minha Vida)
-
-O atendimento eletrônico está disponível 24 horas por dia, 7 dias por semana.
-O atendimento humano ocorre de segunda a sexta-feira, das 8h às 21h, e aos sábados, das 10h às 16h.`,
+    contact: "4004 0 104 (Capitais e Regiões Metropolitanas) | 0800 104 0 104 (Demais regiões)",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "ch-2",
     name: "Atendimento CAIXA Cidadão",
-    contact: `☎ 0800 726 0207
-
-Atendimento referente a PIS, Benefícios Sociais, FGTS e Cartão Social
-
-O atendimento eletrônico está disponível 24 horas por dia, 7 dias por semana.
-O atendimento humano ocorre de segunda a sexta-feira, das 8h às 21h, e aos sábados, das 10h às 16h.`,
+    contact: "0800 726 0207",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "ch-3",
     name: "Agência Digital",
-    contact: `☎ 4004 0 104 - Capitais e regiões metropolitanas
-☎ 0800 104 0 104 - Demais regiões
-
-Canal de relacionamento que oferece serviços e consultoria financeira com comodidade e segurança. Com a Agência Digital CAIXA você vai receber atendimento personalizado pelo telefone ou e-mail, em horário estendido.
-
-O atendimento da Agência Digital CAIXA ocorre das 08h às 18h, exceto finais de semana e feriados, inclusive pelo WhatsApp.`,
+    contact: "4004 0 104 (Capitais) | 0800 104 0 104 (Demais regiões)",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "ch-4",
-    name: "Atendimento para pessoas surdas/com deficiência auditiva",
-    contact: `Para esclarecer suas dúvidas sobre produtos e serviços, suporte tecnológico, informações, reclamações, sugestões e elogios.
-
-O atendimento ocorre 24 horas por dia, 7 dias por semana.
-
-Atendimento com Intérprete de Libras:
-Acesse https://icom.app/8AG8Z e você será direcionado ao site da ICOM, parceiro da CAIXA.
-
-Para saber mais sobre o atendimento, acesse www.caixa.gov.br/libras.`,
+    name: "Atendimento para Pessoas Surdas",
+    contact: "https://icom.app/8AG8Z | www.caixa.gov.br/libras",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "ch-5",
     name: "SAC CAIXA",
-    contact: `☎ 0800 726 0101
-
-Reclamações, sugestões, elogios, pedidos de cancelamento, informações sobre produtos e serviços da CAIXA.
-
-O atendimento ocorre 24 horas por dia, 7 dias por semana.`,
+    contact: "0800 726 0101",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "ch-6",
     name: "Ouvidoria CAIXA",
-    contact: `☎ 0800 725 7474
-
-Reclamações não solucionadas.
-
-O atendimento ocorre em dias úteis, das 09:00 às 18:00.`,
+    contact: "0800 725 7474",
     isActive: true,
     createdAt: new Date(),
   },
   {
     id: "ch-7",
     name: "Canal de Denúncias",
-    contact: `☎ 0800 721 0738
-
-Demandas com indícios de fatos irregulares e atos ilícitos praticados contra a CAIXA e empresas do Conglomerado.
-
-Atendimento de equipe especializada, 24 horas por dia, 7 dias por semana.
-
-Página: www.caixa.gov.br/denuncia`,
+    contact: "0800 721 0738 | https://www.caixa.gov.br/denuncia",
     isActive: true,
     createdAt: new Date(),
   },
@@ -462,7 +419,9 @@ export function initializeMockData() {
 
   localStorage.setItem(STORAGE_KEYS.SITUATIONS, JSON.stringify(MOCK_SITUATIONS))
 
-  localStorage.setItem(STORAGE_KEYS.CHANNELS, JSON.stringify(MOCK_CHANNELS))
+  if (!localStorage.getItem(STORAGE_KEYS.CHANNELS)) {
+    localStorage.setItem(STORAGE_KEYS.CHANNELS, JSON.stringify(MOCK_CHANNELS))
+  }
 
   if (!localStorage.getItem(STORAGE_KEYS.NOTES)) {
     localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify([]))
@@ -881,7 +840,6 @@ export function importScriptFromJson(jsonData: any): { productCount: number; ste
         const product: Product = {
           id: productId,
           name: productName,
-          description: "Financiamento Habitacional",
           scriptId: steps[0].id, // First step is the start
           category: productName.toLowerCase(),
           isActive: true,

@@ -38,10 +38,30 @@ export function AdminScriptPreview({ step, onEdit, onDelete, onAddButton }: Admi
               ID: {step.id}
             </Badge>
             <CardTitle className="text-3xl text-center font-bold">{step.title}</CardTitle>
-            {step.tabulationInfo && (
-              <div className="flex items-center justify-center gap-2 text-sm text-green-600">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Tabulação: {step.tabulationInfo.name}</span>
+            {step.tabulations && step.tabulations.length > 0 && (
+              <div className="flex flex-col items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-semibold">
+                    Tabulaç{step.tabulations.length === 1 ? "ão" : "ões"} Recomendada
+                    {step.tabulations.length > 1 ? "s" : ""}:
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {step.tabulations.map((tab, index) => (
+                    <div
+                      key={tab.id}
+                      className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 max-w-md"
+                    >
+                      <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-1">{tab.name}</p>
+                      {tab.description && (
+                        <p className="text-xs text-green-600 dark:text-green-400 whitespace-pre-wrap">
+                          {tab.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
