@@ -14,6 +14,7 @@ export function PromiseCalendar() {
   const [selectedProduct, setSelectedProduct] = useState<ProductType | "">("")
   const [showCalendarDialog, setShowCalendarDialog] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date>()
+  const [hoveredProduct, setHoveredProduct] = useState<ProductType | null>(null)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -126,49 +127,51 @@ export function PromiseCalendar() {
                 <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                 Tipo de Produto
               </label>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {productOptions.map((product) => {
                   const Icon = product.icon
                   const isSelected = selectedProduct === product.value
+                  const isHovered = hoveredProduct === product.value
                   return (
-                    <button
-                      key={product.value}
-                      onClick={() => handleProductSelect(product.value)}
-                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 hover:shadow-md ${
-                        isSelected
-                          ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md scale-[1.02]"
-                          : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${isSelected ? "bg-orange-500 dark:bg-primary" : "bg-muted"}`}>
-                          <Icon
-                            className={`h-5 w-5 ${
-                              isSelected ? "text-white dark:text-primary-foreground" : "text-muted-foreground"
-                            }`}
-                          />
-                        </div>
-                        <div className="flex-1 text-left">
+                    <div key={product.value} className="relative">
+                      <button
+                        onClick={() => handleProductSelect(product.value)}
+                        onMouseEnter={() => setHoveredProduct(product.value)}
+                        onMouseLeave={() => setHoveredProduct(null)}
+                        className={`w-full p-2 rounded-lg border-2 transition-all duration-200 hover:shadow-md ${
+                          isSelected
+                            ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md scale-[1.02]"
+                            : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center gap-1.5">
+                          <div
+                            className={`p-1.5 rounded-lg ${isSelected ? "bg-orange-500 dark:bg-primary" : "bg-muted"}`}
+                          >
+                            <Icon
+                              className={`h-4 w-4 ${
+                                isSelected ? "text-white dark:text-primary-foreground" : "text-muted-foreground"
+                              }`}
+                            />
+                          </div>
                           <p
-                            className={`font-semibold text-sm ${
+                            className={`font-semibold text-xs text-center ${
                               isSelected ? "text-orange-600 dark:text-primary" : "text-foreground"
                             }`}
                           >
                             {product.name}
                           </p>
-                          <p
-                            className={`text-xs ${
-                              isSelected ? "text-orange-700 dark:text-muted-foreground" : "text-muted-foreground"
-                            }`}
-                          >
-                            Prazo: {product.deadline}
-                          </p>
+                          {isSelected && (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-orange-500 dark:text-primary absolute top-1 right-1" />
+                          )}
                         </div>
-                        {isSelected && (
-                          <CheckCircle2 className="h-5 w-5 text-orange-500 dark:text-primary flex-shrink-0" />
-                        )}
-                      </div>
-                    </button>
+                      </button>
+                      {isHovered && (
+                        <div className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 w-max max-w-[200px] p-2 bg-popover border border-border rounded-md shadow-lg animate-in fade-in-0 zoom-in-95">
+                          <p className="text-xs text-popover-foreground font-medium">Prazo: {product.deadline}</p>
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </div>

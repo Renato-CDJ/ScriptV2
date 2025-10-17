@@ -236,52 +236,85 @@ export const ScriptCard = memo(function ScriptCard({
       </div>
 
       <Dialog open={showTabulation} onOpenChange={setShowTabulation}>
-        <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-              Tabulação Recomendada
+        <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto border-2 border-orange-200 dark:border-zinc-700">
+          <DialogHeader className="space-y-3 pb-4 border-b border-border">
+            <DialogTitle className="flex items-center gap-3 text-xl font-bold">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-400 dark:to-orange-500">
+                <CheckCircle2 className="h-6 w-6 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                Tabulação Recomendada
+              </span>
             </DialogTitle>
-            <DialogDescription className="text-sm">
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
               Se você encerrar o atendimento nesta tela, utilize a(s) seguinte(s) tabulação(ões):
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-4">
             {step.tabulations && step.tabulations.length > 0 ? (
               step.tabulations.map((tabulation, index) => (
                 <div
                   key={tabulation.id || index}
-                  className="rounded-xl border-2 border-green-200 bg-green-50 dark:bg-green-950/30 p-5 shadow-sm"
+                  className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-500/30 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01]"
                 >
-                  <h4 className="font-bold text-lg text-green-900 dark:text-green-100 mb-2">{tabulation.name}</h4>
-                  <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed whitespace-pre-wrap">
-                    {tabulation.description}
-                  </p>
+                  <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <CheckCircle2 className="h-12 w-12 text-orange-500" />
+                  </div>
+                  <div className="relative">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
+                        <CheckCircle2 className="h-4 w-4 text-white" />
+                      </div>
+                      <h4 className="font-bold text-lg text-orange-900 dark:text-orange-100 leading-tight">
+                        {tabulation.name}
+                      </h4>
+                    </div>
+                    <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed whitespace-pre-wrap pl-9">
+                      {tabulation.description}
+                    </p>
+                  </div>
                 </div>
               ))
             ) : step.tabulationInfo ? (
-              <div className="rounded-xl border-2 border-green-200 bg-green-50 dark:bg-green-950/30 p-5 shadow-sm">
-                <h4 className="font-bold text-lg text-green-900 dark:text-green-100 mb-2">
-                  {step.tabulationInfo.name}
-                </h4>
-                <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed whitespace-pre-wrap">
-                  {step.tabulationInfo.description}
-                </p>
+              <div className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-500/30 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01]">
+                <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <CheckCircle2 className="h-12 w-12 text-orange-500" />
+                </div>
+                <div className="relative">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
+                      <CheckCircle2 className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="font-bold text-lg text-orange-900 dark:text-orange-100 leading-tight">
+                      {step.tabulationInfo.name}
+                    </h4>
+                  </div>
+                  <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed whitespace-pre-wrap pl-9">
+                    {step.tabulationInfo.description}
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="rounded-xl border-2 border-muted bg-muted/30 p-5 text-center shadow-sm">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Nenhuma tabulação específica recomendada para esta tela. Continue o atendimento normalmente.
-                </p>
+              <div className="rounded-xl border-2 border-muted bg-muted/30 p-6 text-center shadow-sm">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="p-3 rounded-full bg-muted">
+                    <CheckCircle2 className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
+                    Nenhuma tabulação específica recomendada para esta tela. Continue o atendimento normalmente.
+                  </p>
+                </div>
               </div>
             )}
           </div>
-          <Button
-            onClick={handleTabulationClose}
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black border-0 shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            Entendi
-          </Button>
+          <div className="pt-4 border-t border-border">
+            <Button
+              onClick={handleTabulationClose}
+              className="w-full h-11 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base"
+            >
+              Entendi
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

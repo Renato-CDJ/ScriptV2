@@ -579,26 +579,22 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
 
       {/* Original situation dialog (from sidebar buttons) */}
       <Dialog open={showSituationDialog} onOpenChange={setShowSituationDialog}>
-        <DialogContent className="max-w-2xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-          <DialogHeader className="pb-4 border-b border-zinc-200 dark:border-zinc-800">
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              <AlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+        <DialogContent className="max-w-3xl bg-card border-border">
+          <DialogHeader className="pb-4 border-b border-border">
+            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
               {selectedSituationData?.name}
             </DialogTitle>
-            <DialogDescription className="text-base text-zinc-600 dark:text-zinc-400">
-              Descrição da situação de atendimento
-            </DialogDescription>
           </DialogHeader>
           <div className="py-6">
-            <div className="rounded-xl border-2 border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-6">
-              <p className="text-base leading-relaxed font-mono text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
+            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
+              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
                 {selectedSituationData?.description}
               </p>
             </div>
           </div>
           <Button
             onClick={() => setShowSituationDialog(false)}
-            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-black font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -607,14 +603,11 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
 
       {/* Original channel dialog (from sidebar buttons) */}
       <Dialog open={showChannelDialog} onOpenChange={setShowChannelDialog}>
-        <DialogContent className="max-w-2xl bg-card border-border">
+        <DialogContent className="max-w-3xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
             <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
               {selectedChannelData?.name}
             </DialogTitle>
-            <DialogDescription className="text-base text-muted-foreground">
-              Informações de contato do canal
-            </DialogDescription>
           </DialogHeader>
           <div className="py-6">
             <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
