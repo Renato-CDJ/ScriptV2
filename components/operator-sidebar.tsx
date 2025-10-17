@@ -17,7 +17,7 @@ interface OperatorSidebarProps {
 
 export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
   const [activeSection, setActiveSection] = useState<"notes" | "tabulation" | "situation" | "channel" | "calendar">(
-    "notes",
+    "calendar",
   )
 
   const [notes, setNotes] = useState("")
@@ -90,18 +90,19 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
   return (
     <aside className="w-80 border-l bg-card flex flex-col h-full">
       <div className="border-b p-2 grid grid-cols-5 gap-1">
+        {/* Calendar first, then Notes */}
         <Button
-          variant={activeSection === "notes" ? "default" : "outline"}
+          variant={activeSection === "calendar" ? "default" : "outline"}
           size="sm"
-          onClick={() => setActiveSection("notes")}
+          onClick={() => setActiveSection("calendar")}
           className={`flex-col h-auto py-2 ${
-            activeSection === "notes"
-              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+            activeSection === "calendar"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
               : ""
           }`}
         >
-          <StickyNote className="h-4 w-4 mb-1" />
-          <span className="text-xs truncate w-full">Notas</span>
+          <CalendarIcon className="h-4 w-4 mb-1" />
+          <span className="text-xs truncate w-full">Calendario</span>
         </Button>
         <Button
           variant={activeSection === "tabulation" ? "default" : "outline"}
@@ -109,7 +110,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           onClick={() => setActiveSection("tabulation")}
           className={`flex-col h-auto py-2 ${
             activeSection === "tabulation"
-              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
               : ""
           }`}
         >
@@ -122,7 +123,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           onClick={() => setActiveSection("situation")}
           className={`flex-col h-auto py-2 ${
             activeSection === "situation"
-              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
               : ""
           }`}
         >
@@ -135,7 +136,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           onClick={() => setActiveSection("channel")}
           className={`flex-col h-auto py-2 ${
             activeSection === "channel"
-              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
               : ""
           }`}
         >
@@ -143,17 +144,17 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
           <span className="text-xs truncate w-full">Canal</span>
         </Button>
         <Button
-          variant={activeSection === "calendar" ? "default" : "outline"}
+          variant={activeSection === "notes" ? "default" : "outline"}
           size="sm"
-          onClick={() => setActiveSection("calendar")}
+          onClick={() => setActiveSection("notes")}
           className={`flex-col h-auto py-2 ${
-            activeSection === "calendar"
-              ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+            activeSection === "notes"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
               : ""
           }`}
         >
-          <CalendarIcon className="h-4 w-4 mb-1" />
-          <span className="text-xs truncate w-full">Calendario</span>
+          <StickyNote className="h-4 w-4 mb-1" />
+          <span className="text-xs truncate w-full">Notas</span>
         </Button>
       </div>
 
@@ -242,7 +243,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                   variant={selectedSituation === situation.id ? "default" : "outline"}
                   className={`w-full justify-start text-left ${
                     selectedSituation === situation.id
-                      ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+                      ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
                       : ""
                   }`}
                   onClick={() => {
@@ -278,7 +279,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                   variant={selectedChannel === channel.id ? "default" : "outline"}
                   className={`w-full justify-start text-left ${
                     selectedChannel === channel.id
-                      ? "bg-orange-500 hover:bg-orange-600 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black"
+                      ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
                       : ""
                   }`}
                   onClick={() => {

@@ -71,7 +71,7 @@ export function PromiseCalendar() {
 
   return (
     <>
-      <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setShowCalendarDialog(true)}>
+      <Card className="cursor-pointer transition-colors" onClick={() => setShowCalendarDialog(true)}>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
             <CalendarIcon className="h-4 w-4" />
