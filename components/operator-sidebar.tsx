@@ -317,15 +317,11 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             </div>
 
             <div className="space-y-3">
-              {filteredTabulations.map((tab, index) => (
+              {filteredTabulations.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabulationClick(tab)}
-                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] ${
-                    index === 0
-                      ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md"
-                      : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
-                  }`}
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-border bg-card hover:border-orange-300 dark:hover:border-muted`}
                 >
                   <div className="flex items-start gap-4">
                     <div
@@ -333,18 +329,8 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                       style={{ backgroundColor: tab.color }}
                     />
                     <div className="flex-1 min-w-0">
-                      <h3
-                        className={`font-bold text-lg mb-2 ${
-                          index === 0 ? "text-orange-600 dark:text-primary" : "text-foreground"
-                        }`}
-                      >
-                        {tab.name}
-                      </h3>
-                      <p
-                        className={`text-sm leading-relaxed whitespace-pre-wrap ${
-                          index === 0 ? "text-orange-700/90 dark:text-muted-foreground" : "text-muted-foreground"
-                        }`}
-                      >
+                      <h3 className="font-bold text-lg mb-2 text-foreground">{tab.name}</h3>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
                         {tab.description}
                       </p>
                     </div>
@@ -387,35 +373,19 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             </div>
 
             <div className="space-y-3">
-              {filteredSituations.map((situation, index) => (
+              {filteredSituations.map((situation) => (
                 <button
                   key={situation.id}
                   onClick={() => handleSituationClick(situation)}
-                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] ${
-                    index === 0
-                      ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md"
-                      : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
-                  }`}
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-border bg-card hover:border-orange-300 dark:hover:border-muted`}
                 >
                   <div className="flex items-start gap-4">
                     <div className="mt-1 p-2 rounded-lg bg-background shadow-sm border border-border">
-                      <AlertCircle
-                        className={`h-5 w-5 ${index === 0 ? "text-orange-500 dark:text-primary" : "text-muted-foreground"}`}
-                      />
+                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3
-                        className={`font-bold text-lg mb-2 ${
-                          index === 0 ? "text-orange-600 dark:text-primary" : "text-foreground"
-                        }`}
-                      >
-                        {situation.name}
-                      </h3>
-                      <p
-                        className={`text-sm leading-relaxed whitespace-pre-wrap ${
-                          index === 0 ? "text-orange-700/90 dark:text-muted-foreground" : "text-muted-foreground"
-                        }`}
-                      >
+                      <h3 className="font-bold text-lg mb-2 text-foreground">{situation.name}</h3>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
                         {situation.description}
                       </p>
                     </div>
@@ -458,35 +428,19 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
             </div>
 
             <div className="space-y-3">
-              {filteredChannels.map((channel, index) => (
+              {filteredChannels.map((channel) => (
                 <button
                   key={channel.id}
                   onClick={() => handleChannelClick(channel)}
-                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] ${
-                    index === 0
-                      ? "border-orange-500 dark:border-primary bg-orange-50 dark:bg-accent shadow-md"
-                      : "border-border bg-card hover:border-orange-300 dark:hover:border-muted"
-                  }`}
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-border bg-card hover:border-orange-300 dark:hover:border-muted`}
                 >
                   <div className="flex items-start gap-4">
                     <div className="mt-1 p-2 rounded-lg bg-background shadow-sm border border-border">
-                      <Radio
-                        className={`h-5 w-5 ${index === 0 ? "text-orange-500 dark:text-primary" : "text-muted-foreground"}`}
-                      />
+                      <Radio className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3
-                        className={`font-bold text-lg mb-2 ${
-                          index === 0 ? "text-orange-600 dark:text-primary" : "text-foreground"
-                        }`}
-                      >
-                        {channel.name}
-                      </h3>
-                      <p
-                        className={`text-sm leading-relaxed whitespace-pre-wrap ${
-                          index === 0 ? "text-orange-900 dark:text-orange-100" : "text-gray-700 dark:text-gray-300"
-                        }`}
-                      >
+                      <h3 className="font-bold text-lg mb-2 text-foreground">{channel.name}</h3>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
                         {channel.contact}
                       </p>
                     </div>
