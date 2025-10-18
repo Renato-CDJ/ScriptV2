@@ -12,7 +12,12 @@ export default function HomePage() {
   const [showTitle, setShowTitle] = useState(false)
 
   useEffect(() => {
+    console.log("[v0] HomePage - isLoading:", isLoading, "user:", user)
+  }, [isLoading, user])
+
+  useEffect(() => {
     if (!isLoading && user) {
+      console.log("[v0] Redirecionando usuário:", user.role)
       // Redirect based on role
       if (user.role === "admin") {
         router.push("/admin")
@@ -28,6 +33,7 @@ export default function HomePage() {
   }, [])
 
   if (isLoading) {
+    console.log("[v0] Mostrando tela de carregamento")
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950">
         <div className="text-center">
@@ -39,9 +45,11 @@ export default function HomePage() {
   }
 
   if (user) {
+    console.log("[v0] Usuário autenticado, aguardando redirecionamento")
     return null // Will redirect
   }
 
+  console.log("[v0] Mostrando tela de login")
   return (
     <>
       <MouseTrail />
