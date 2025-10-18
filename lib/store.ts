@@ -24,6 +24,38 @@ const MOCK_USERS: User[] = [
     isOnline: true,
     createdAt: new Date(),
   },
+  {
+    id: "2",
+    username: "Monitoria1",
+    fullName: "Monitoria 1",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "3",
+    username: "Monitoria2",
+    fullName: "Monitoria 2",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "4",
+    username: "Monitoria3",
+    fullName: "Monitoria 3",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "5",
+    username: "Monitoria4",
+    fullName: "Monitoria 4",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+  },
 ]
 
 const MOCK_SCRIPT_STEPS: ScriptStep[] = loadHabitacionalScript()
@@ -406,9 +438,11 @@ const STORAGE_KEYS = {
 export function initializeMockData() {
   if (typeof window === "undefined") return
 
-  if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(MOCK_USERS))
-  }
+  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(MOCK_USERS))
+  console.log(
+    "[v0] Users initialized:",
+    MOCK_USERS.map((u) => u.username),
+  )
 
   const habitacionalSteps = loadHabitacionalScript()
   if (!localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS)) {
@@ -454,34 +488,46 @@ export function authenticateUser(username: string, password: string): User | nul
 
   const users: User[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
 
-  const user = users.find((u) => u.username === username)
+  console.log(
+    "[v0] Available users in storage:",
+    users.map((u) => u.username),
+  )
+  console.log("[v0] Searching for user:", username)
+
+  const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
+
+  console.log("[v0] User found:", !!user, user?.username)
 
   if (user) {
-    // Admin must provide correct password
     if (user.role === "admin") {
-      if (password === "rcp@$") {
-        // Track login session
-        const session: LoginSession = {
-          id: `session-${Date.now()}`,
-          loginAt: new Date(),
-        }
+      const validPasswords = ["rcp@$", "#qualidade@$"]
+      console.log("[v0] Validating admin password")
 
-        user.lastLoginAt = new Date()
-        user.loginSessions = user.loginSessions || []
-        user.loginSessions.push(session)
-
-        // Update user in storage
-        const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
-
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
-        return user
+      if (!validPasswords.includes(password)) {
+        console.log("[v0] Invalid password")
+        return null
       }
-      return null // Wrong password for admin
+
+      // Track login session
+      const session: LoginSession = {
+        id: `session-${Date.now()}`,
+        loginAt: new Date(),
+      }
+
+      user.lastLoginAt = new Date()
+      user.loginSessions = user.loginSessions || []
+      user.loginSessions.push(session)
+
+      // Update user in storage
+      const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
+      console.log("[v0] User authenticated successfully:", user.username)
+      return user
     }
 
     // Operators don't need password
-    // Track login session
     const session: LoginSession = {
       id: `session-${Date.now()}`,
       loginAt: new Date(),
@@ -496,9 +542,11 @@ export function authenticateUser(username: string, password: string): User | nul
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
 
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
+    console.log("[v0] Operator authenticated successfully:", user.username)
     return user
   }
 
+  console.log("[v0] User not found in storage")
   return null
 }
 

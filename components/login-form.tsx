@@ -16,13 +16,15 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [showPasswordField, setShowPasswordField] = useState(false)
   const { theme, setTheme } = useTheme()
   const { refreshUser } = useAuth()
 
+  const validUsers = ["admin", "monitoria1", "monitoria2", "monitoria3", "monitoria4"]
+
   const handleUsernameChange = (value: string) => {
     setUsername(value)
-    setIsAdmin(value.toLowerCase() === "admin")
+    setShowPasswordField(validUsers.includes(value.toLowerCase()))
     setError("")
   }
 
@@ -38,8 +40,8 @@ export function LoginForm() {
     if (user) {
       refreshUser()
     } else {
-      if (isAdmin) {
-        setError("Senha incorreta para administrador")
+      if (showPasswordField) {
+        setError("Senha incorreta")
       } else {
         setError("Usuário não encontrado")
       }
@@ -101,7 +103,7 @@ export function LoginForm() {
             </div>
           </div>
 
-          {isAdmin && (
+          {showPasswordField && (
             <div className="space-y-2 animate-fade-in">
               <label htmlFor="password" className="sr-only">
                 Senha
