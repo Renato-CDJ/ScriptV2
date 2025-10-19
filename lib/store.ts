@@ -625,7 +625,7 @@ export function createScriptStep(step: Omit<ScriptStep, "id" | "createdAt" | "up
 
   const newStep: ScriptStep = {
     ...step,
-    id: step.id || `step-${Date.now()}`, // Use provided ID if available
+    id: `step-${Date.now()}`,
     createdAt: new Date(),
     updatedAt: new Date(),
   }
@@ -741,7 +741,7 @@ export function createProduct(product: Omit<Product, "id" | "createdAt">): Produ
 
   const newProduct: Product = {
     ...product,
-    id: product.id || `prod-${Date.now()}`, // Use provided ID if available
+    id: `prod-${Date.now()}`,
     createdAt: new Date(),
   }
 
@@ -783,40 +783,52 @@ export function getAllUsers(): User[] {
 export function updateUser(user: User) {
   if (typeof window === "undefined") return
 
-  const users = getAllUsers()
-  const index = users.findIndex((u) => u.id === user.id)
+  try {
+    const users = getAllUsers()
+    const index = users.findIndex((u) => u.id === user.id)
 
-  if (index !== -1) {
-    users[index] = user
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
-    notifyUpdate()
+    if (index !== -1) {
+      users[index] = user
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+      notifyUpdate()
+    }
+  } catch (error) {
+    console.error("[v0] Error updating user:", error)
   }
 }
 
 export function deleteUser(userId: string) {
   if (typeof window === "undefined") return
 
-  const users = getAllUsers().filter((u) => u.id !== userId)
-  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
-  notifyUpdate()
+  try {
+    const users = getAllUsers().filter((u) => u.id !== userId)
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+    notifyUpdate()
+  } catch (error) {
+    console.error("[v0] Error deleting user:", error)
+  }
 }
 
 export function forceLogoutUser(userId: string) {
   if (typeof window === "undefined") return
 
-  const users = getAllUsers()
-  const user = users.find((u) => u.id === userId)
+  try {
+    const users = getAllUsers()
+    const user = users.find((u) => u.id === userId)
 
-  if (user && user.loginSessions && user.loginSessions.length > 0) {
-    const lastSession = user.loginSessions[user.loginSessions.length - 1]
-    if (!lastSession.logoutAt) {
-      lastSession.logoutAt = new Date()
-      lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
+    if (user && user.loginSessions && user.loginSessions.length > 0) {
+      const lastSession = user.loginSessions[user.loginSessions.length - 1]
+      if (!lastSession.logoutAt) {
+        lastSession.logoutAt = new Date()
+        lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
 
-      const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
-      notifyUpdate()
+        const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+        notifyUpdate()
+      }
     }
+  } catch (error) {
+    console.error("[v0] Error forcing logout:", error)
   }
 }
 
@@ -865,51 +877,53 @@ export function getLastUpdate(): number {
   return Number.parseInt(localStorage.getItem(STORAGE_KEYS.LAST_UPDATE) || "0")
 }
 
-export function importScriptFromJson(jsonData: any): { productCount: number; stepCount: number } {
+interface JsonData {
+  marcas?: Record<string, Record<string, any>>
+}
+
+export function importScriptFromJson(jsonData: JsonData): { productCount: number; stepCount: number } {
   if (typeof window === "undefined") return { productCount: 0, stepCount: 0 }
 
   let productCount = 0
   let stepCount = 0
 
-  if (jsonData.marcas) {
-    Object.entries(jsonData.marcas).forEach(([productName, productSteps]: [string, any]) => {
-      // Load steps for this product
-      const steps = loadScriptFromJson(jsonData, productName)
+  try {
+    if (jsonData.marcas) {
+      Object.entries(jsonData.marcas).forEach(([productName, productSteps]: [string, any]) => {
+        const steps = loadScriptFromJson(jsonData, productName)
 
-      if (steps.length > 0) {
-        // Add all steps to storage
-        const existingSteps = getScriptSteps()
-        const newSteps = [...existingSteps, ...steps]
-        localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(newSteps))
-        stepCount += steps.length
+        if (steps.length > 0) {
+          const existingSteps = getScriptSteps()
+          const newSteps = [...existingSteps, ...steps]
+          localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(newSteps))
+          stepCount += steps.length
 
-        // Create product
-        const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
-        const product: Product = {
-          id: productId,
-          name: productName,
-          scriptId: steps[0].id, // First step is the start
-          category: productName.toLowerCase(),
-          isActive: true,
-          createdAt: new Date(),
+          const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
+          const product: Product = {
+            id: productId,
+            name: productName,
+            scriptId: steps[0].id,
+            category: productName.toLowerCase(),
+            isActive: true,
+            createdAt: new Date(),
+          }
+
+          const existingProducts = getProducts()
+          const existingIndex = existingProducts.findIndex((p) => p.name === productName)
+          if (existingIndex !== -1) {
+            existingProducts[existingIndex] = product
+          } else {
+            existingProducts.push(product)
+            productCount++
+          }
+          localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(existingProducts))
         }
+      })
 
-        const existingProducts = getProducts()
-        // Check if product already exists
-        const existingIndex = existingProducts.findIndex((p) => p.name === productName)
-        if (existingIndex !== -1) {
-          // Update existing product
-          existingProducts[existingIndex] = product
-        } else {
-          // Add new product
-          existingProducts.push(product)
-          productCount++
-        }
-        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(existingProducts))
-      }
-    })
-
-    notifyUpdate() // Notify about update
+      notifyUpdate()
+    }
+  } catch (error) {
+    console.error("[v0] Error importing script from JSON:", error)
   }
 
   return { productCount, stepCount }

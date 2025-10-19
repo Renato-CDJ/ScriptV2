@@ -29,7 +29,11 @@ const TABULATION_MAP: Record<string, { name: string; description: string }> = {
   hab_pesquisa_satisfacao: { name: "Finalizado - Informativo", description: "Atendimento informativo concluído" },
 }
 
-export function loadScriptFromJson(jsonData: any, productName: string): ScriptStep[] {
+interface JsonData {
+  marcas?: Record<string, Record<string, JsonStep>>
+}
+
+export function loadScriptFromJson(jsonData: JsonData, productName: string): ScriptStep[] {
   if (!jsonData.marcas || !jsonData.marcas[productName]) {
     console.error(`[v0] Product ${productName} not found in JSON`)
     return []
@@ -41,40 +45,44 @@ export function loadScriptFromJson(jsonData: any, productName: string): ScriptSt
 
   const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
 
-  // Transform each step from JSON to our format
-  Object.entries(marca).forEach(([key, value]) => {
-    const jsonStep = value as JsonStep
+  try {
+    Object.entries(marca).forEach(([key, value]) => {
+      const jsonStep = value as JsonStep
 
-    const buttons: ScriptButton[] = jsonStep.buttons.map((btn, index) => ({
-      id: `${jsonStep.id}-btn-${index}`,
-      label: btn.label,
-      nextStepId: btn.next === "fim" ? null : btn.next,
-      variant: btn.primary ? "default" : btn.label.includes("VOLTAR") ? "secondary" : "default",
-      order: index + 1,
-      primary: btn.primary,
-    }))
+      const buttons: ScriptButton[] = jsonStep.buttons.map((btn, index) => ({
+        id: `${jsonStep.id}-btn-${index}`,
+        label: btn.label,
+        nextStepId: btn.next === "fim" ? null : btn.next,
+        variant: btn.primary ? "default" : btn.label.includes("VOLTAR") ? "secondary" : "default",
+        order: index + 1,
+        primary: btn.primary,
+      }))
 
-    const step: ScriptStep = {
-      id: jsonStep.id,
-      title: jsonStep.title,
-      content: jsonStep.body,
-      order: order++,
-      buttons,
-      productId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      tabulationInfo: TABULATION_MAP[jsonStep.id]
-        ? {
-            id: `tab-${jsonStep.id}`,
-            ...TABULATION_MAP[jsonStep.id],
-          }
-        : undefined,
-    }
+      const step: ScriptStep = {
+        id: jsonStep.id,
+        title: jsonStep.title,
+        content: jsonStep.body,
+        order: order++,
+        buttons,
+        productId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        tabulationInfo: TABULATION_MAP[jsonStep.id]
+          ? {
+              id: `tab-${jsonStep.id}`,
+              ...TABULATION_MAP[jsonStep.id],
+            }
+          : undefined,
+      }
 
-    steps.push(step)
-  })
+      steps.push(step)
+    })
 
-  console.log(`[v0] Loaded ${steps.length} steps for product ${productName}`)
+    console.log(`[v0] Loaded ${steps.length} steps for product ${productName}`)
+  } catch (error) {
+    console.error(`[v0] Error loading script for product ${productName}:`, error)
+  }
+
   return steps
 }
 

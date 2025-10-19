@@ -21,6 +21,33 @@ interface ScriptCardProps {
   showControls?: boolean
 }
 
+const ACCESSIBILITY_STORAGE_KEY = "callcenter_accessibility_settings"
+
+function loadAccessibilitySettings(): { textSize: number; buttonSize: number } {
+  if (typeof window === "undefined") return { textSize: 100, buttonSize: 80 }
+
+  try {
+    const saved = localStorage.getItem(ACCESSIBILITY_STORAGE_KEY)
+    if (saved) {
+      return JSON.parse(saved)
+    }
+  } catch (error) {
+    console.error("[v0] Error loading accessibility settings:", error)
+  }
+
+  return { textSize: 100, buttonSize: 80 }
+}
+
+function saveAccessibilitySettings(textSize: number, buttonSize: number) {
+  if (typeof window === "undefined") return
+
+  try {
+    localStorage.setItem(ACCESSIBILITY_STORAGE_KEY, JSON.stringify({ textSize, buttonSize }))
+  } catch (error) {
+    console.error("[v0] Error saving accessibility settings:", error)
+  }
+}
+
 export const ScriptCard = memo(function ScriptCard({
   step,
   onButtonClick,
@@ -31,12 +58,22 @@ export const ScriptCard = memo(function ScriptCard({
   searchQuery = "",
   showControls = true,
 }: ScriptCardProps) {
-  const [textSize, setTextSize] = useState([100])
-  const [buttonSize, setButtonSize] = useState([80])
+  const [textSize, setTextSize] = useState<number[]>(() => {
+    const settings = loadAccessibilitySettings()
+    return [settings.textSize]
+  })
+  const [buttonSize, setButtonSize] = useState<number[]>(() => {
+    const settings = loadAccessibilitySettings()
+    return [settings.buttonSize]
+  })
   const [showTabulation, setShowTabulation] = useState(false)
   const [showTabulationPulse, setShowTabulationPulse] = useState(false)
 
   const hasTabulations = (step.tabulations && step.tabulations.length > 0) || step.tabulationInfo
+
+  useEffect(() => {
+    saveAccessibilitySettings(textSize[0], buttonSize[0])
+  }, [textSize, buttonSize])
 
   useEffect(() => {
     if (hasTabulations) {
@@ -255,7 +292,7 @@ export const ScriptCard = memo(function ScriptCard({
               step.tabulations.map((tabulation, index) => (
                 <div
                   key={tabulation.id || index}
-                  className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-500/30 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01]"
+                  className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-400/50 bg-gradient-to-br from-orange-50 to-amber-50 dark:bg-card p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden"
                 >
                   <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
                     <CheckCircle2 className="h-12 w-12 text-orange-500" />
@@ -265,18 +302,18 @@ export const ScriptCard = memo(function ScriptCard({
                       <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
                         <CheckCircle2 className="h-4 w-4 text-white" />
                       </div>
-                      <h4 className="font-bold text-lg text-orange-900 dark:text-orange-100 leading-tight">
+                      <h4 className="font-bold text-lg text-orange-900 dark:text-orange-100 leading-tight break-words">
                         {tabulation.name}
                       </h4>
                     </div>
-                    <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed whitespace-pre-wrap pl-9">
+                    <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed whitespace-pre-wrap pl-9 break-words">
                       {tabulation.description}
                     </p>
                   </div>
                 </div>
               ))
             ) : step.tabulationInfo ? (
-              <div className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-500/30 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01]">
+              <div className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-400/50 bg-gradient-to-br from-orange-50 to-amber-50 dark:bg-card p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden">
                 <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
                   <CheckCircle2 className="h-12 w-12 text-orange-500" />
                 </div>
@@ -285,11 +322,11 @@ export const ScriptCard = memo(function ScriptCard({
                     <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
                       <CheckCircle2 className="h-4 w-4 text-white" />
                     </div>
-                    <h4 className="font-bold text-lg text-orange-900 dark:text-orange-100 leading-tight">
+                    <h4 className="font-bold text-lg text-orange-900 dark:text-orange-100 leading-tight break-words">
                       {step.tabulationInfo.name}
                     </h4>
                   </div>
-                  <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed whitespace-pre-wrap pl-9">
+                  <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed whitespace-pre-wrap pl-9 break-words">
                     {step.tabulationInfo.description}
                   </p>
                 </div>

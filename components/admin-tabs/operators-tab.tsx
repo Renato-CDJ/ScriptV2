@@ -36,6 +36,7 @@ export function OperatorsTab() {
     fullName: "",
     username: "",
   })
+  const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -59,6 +60,10 @@ export function OperatorsTab() {
       clearInterval(interval)
       window.removeEventListener("store-updated", handleStoreUpdate)
     }
+  }, [])
+
+  useEffect(() => {
+    setMounted(true)
   }, [])
 
   const handleOpenDialog = () => {
@@ -240,14 +245,16 @@ export function OperatorsTab() {
                   <div>
                     <p className="text-muted-foreground">Último Login</p>
                     <p className="font-semibold">
-                      {operator.lastLoginAt
-                        ? new Date(operator.lastLoginAt).toLocaleString("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "Nunca"}
+                      {!mounted
+                        ? "..."
+                        : operator.lastLoginAt
+                          ? new Date(operator.lastLoginAt).toLocaleString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "Nunca"}
                     </p>
                   </div>
                 </div>
