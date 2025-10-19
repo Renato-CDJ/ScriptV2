@@ -63,6 +63,23 @@ function renderContentWithSegments(
       .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
       .replace(/$$nome completo do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
       .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>")
+      .replace(/\n/g, "<br>")
+  }
+
+  const textToElements = (text: string, keyPrefix: string): React.ReactNode[] => {
+    const lines = text.split("\n")
+    const elements: React.ReactNode[] = []
+
+    lines.forEach((line, lineIdx) => {
+      if (lineIdx > 0) {
+        elements.push(<br key={`${keyPrefix}-br-${lineIdx}`} />)
+      }
+      if (line) {
+        elements.push(<span key={`${keyPrefix}-line-${lineIdx}`}>{line}</span>)
+      }
+    })
+
+    return elements
   }
 
   // Build a map of segments by their text for quick lookup
@@ -78,9 +95,10 @@ function renderContentWithSegments(
   segments.forEach((segment, idx) => {
     const index = content.indexOf(segment.text, lastIndex)
     if (index !== -1) {
-      // Add text before segment
+      // Add text before segment (with line breaks)
       if (index > lastIndex) {
-        elements.push(<span key={`text-${idx}`}>{content.substring(lastIndex, index)}</span>)
+        const textBefore = content.substring(lastIndex, index)
+        elements.push(...textToElements(textBefore, `text-${idx}`))
       }
 
       // Add formatted segment
@@ -101,19 +119,32 @@ function renderContentWithSegments(
         borderRadius: segment.formatting.backgroundColor ? "4px" : "0",
       }
 
-      elements.push(
-        <span key={`segment-${idx}`} style={segmentStyle}>
-          {segment.text}
-        </span>,
-      )
+      const segmentLines = segment.text.split("\n")
+      const segmentElements: React.ReactNode[] = []
+
+      segmentLines.forEach((line, lineIdx) => {
+        if (lineIdx > 0) {
+          segmentElements.push(<br key={`segment-${idx}-br-${lineIdx}`} />)
+        }
+        if (line) {
+          segmentElements.push(
+            <span key={`segment-${idx}-line-${lineIdx}`} style={segmentStyle}>
+              {line}
+            </span>,
+          )
+        }
+      })
+
+      elements.push(...segmentElements)
 
       lastIndex = index + segment.text.length
     }
   })
 
-  // Add remaining text
+  // Add remaining text (with line breaks)
   if (lastIndex < content.length) {
-    elements.push(<span key="text-end">{content.substring(lastIndex)}</span>)
+    const remainingText = content.substring(lastIndex)
+    elements.push(...textToElements(remainingText, "text-end"))
   }
 
   return elements
@@ -172,7 +203,8 @@ export const ScriptCard = memo(function ScriptCard({
         .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/$$nome completo do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
-        .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>"),
+        .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>")
+        .replace(/\n/g, "<br>"),
     [step.content, operatorName, customerFirstName],
   )
 

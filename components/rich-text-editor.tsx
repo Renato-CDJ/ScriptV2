@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Bold, Italic, Trash2, Plus } from "lucide-react"
+import { Bold, Italic, Trash2, Plus, CornerDownLeft } from "lucide-react"
 import type { ContentSegment } from "@/lib/types"
 
 interface RichTextEditorProps {
@@ -113,6 +113,25 @@ export function RichTextEditor({
     [applyFormatting],
   )
 
+  const insertLineBreak = useCallback(() => {
+    if (!textareaRef.current) return
+
+    const start = textareaRef.current.selectionStart
+    const end = textareaRef.current.selectionEnd
+    const newValue = value.substring(0, start) + "\n" + value.substring(end)
+
+    onChange(newValue, segments)
+
+    // Set cursor position after the inserted line break
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.selectionStart = start + 1
+        textareaRef.current.selectionEnd = start + 1
+        textareaRef.current.focus()
+      }
+    }, 0)
+  }, [value, segments, onChange])
+
   const getSegmentStyle = useMemo(
     () => (segment: ContentSegment) => ({
       fontWeight: segment.formatting.bold ? "bold" : "normal",
@@ -134,7 +153,13 @@ export function RichTextEditor({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="content">Conteúdo do Script</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="content">Conteúdo do Script</Label>
+          <Button type="button" size="sm" variant="outline" onClick={insertLineBreak} className="h-8 bg-transparent">
+            <CornerDownLeft className="h-4 w-4 mr-2" />
+            Quebrar Linha
+          </Button>
+        </div>
         <textarea
           ref={textareaRef}
           id="content"
