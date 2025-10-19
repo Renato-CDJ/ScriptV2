@@ -295,18 +295,18 @@ export const ScriptCard = memo(function ScriptCard({
                   className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-400/50 bg-gradient-to-br from-orange-50 to-amber-50 dark:bg-card p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden"
                 >
                   <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <CheckCircle2 className="h-12 w-12 text-orange-500" />
+                    <CheckCircle2 className="h-12 w-12 text-orange-500 dark:text-orange-400" />
                   </div>
                   <div className="relative">
                     <div className="flex items-start gap-3 mb-3">
                       <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
                         <CheckCircle2 className="h-4 w-4 text-white" />
                       </div>
-                      <h4 className="font-bold text-lg text-orange-900 dark:text-orange-100 leading-tight break-words">
+                      <h4 className="font-bold text-lg text-orange-900 dark:text-white leading-tight break-words">
                         {tabulation.name}
                       </h4>
                     </div>
-                    <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed whitespace-pre-wrap pl-9 break-words">
+                    <p className="text-sm text-orange-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap pl-9 break-words">
                       {tabulation.description}
                     </p>
                   </div>
@@ -315,18 +315,18 @@ export const ScriptCard = memo(function ScriptCard({
             ) : step.tabulationInfo ? (
               <div className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-400/50 bg-gradient-to-br from-orange-50 to-amber-50 dark:bg-card p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden">
                 <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <CheckCircle2 className="h-12 w-12 text-orange-500" />
+                  <CheckCircle2 className="h-12 w-12 text-orange-500 dark:text-orange-400" />
                 </div>
                 <div className="relative">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
                       <CheckCircle2 className="h-4 w-4 text-white" />
                     </div>
-                    <h4 className="font-bold text-lg text-orange-900 dark:text-orange-100 leading-tight break-words">
+                    <h4 className="font-bold text-lg text-orange-900 dark:text-white leading-tight break-words">
                       {step.tabulationInfo.name}
                     </h4>
                   </div>
-                  <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed whitespace-pre-wrap pl-9 break-words">
+                  <p className="text-sm text-orange-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap pl-9 break-words">
                     {step.tabulationInfo.description}
                   </p>
                 </div>
