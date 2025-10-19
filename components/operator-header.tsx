@@ -139,7 +139,7 @@ export const OperatorHeader = memo(function OperatorHeader({
                       placeholder="Pesquisar produtos..."
                       value={searchQuery}
                       onChange={(e) => handleSearchInput(e.target.value)}
-                      className="pl-9 text-sm"
+                      className="pl-9 text-sm focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                     />
                   </div>
                 </PopoverTrigger>
@@ -261,8 +261,8 @@ export const OperatorHeader = memo(function OperatorHeader({
                             >
                               <div className="flex items-center gap-3 w-full">
                                 <div className="flex-shrink-0">
-                                  <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
-                                    <Hash className="h-4 w-4 text-primary" />
+                                  <div className="h-8 w-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                                    <Hash className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                   </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
