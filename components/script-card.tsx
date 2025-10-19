@@ -171,7 +171,7 @@ export const ScriptCard = memo(function ScriptCard({
   const [showTabulation, setShowTabulation] = useState(false)
   const [showTabulationPulse, setShowTabulationPulse] = useState(false)
 
-  const hasTabulations = (step.tabulations && step.tabulations.length > 0) || step.tabulationInfo
+  const hasTabulations = step.tabulations && step.tabulations.length > 0
 
   useEffect(() => {
     saveAccessibilitySettings(textSize[0], buttonSize[0])
@@ -433,25 +433,6 @@ export const ScriptCard = memo(function ScriptCard({
                   </div>
                 </div>
               ))
-            ) : step.tabulationInfo ? (
-              <div className="group relative rounded-xl border-2 border-slate-600 dark:border-slate-600 bg-white dark:bg-slate-700 p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden">
-                <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <CheckCircle2 className="h-12 w-12 text-orange-500 dark:text-orange-400" />
-                </div>
-                <div className="relative">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
-                      <CheckCircle2 className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="font-bold text-lg text-gray-900 dark:text-white leading-tight break-words">
-                      {step.tabulationInfo.name}
-                    </h4>
-                  </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-100 leading-relaxed whitespace-pre-wrap pl-9 break-words">
-                    {step.tabulationInfo.description}
-                  </p>
-                </div>
-              </div>
             ) : (
               <div className="rounded-xl border-2 border-muted bg-muted/30 p-6 text-center shadow-sm">
                 <div className="flex flex-col items-center gap-3">

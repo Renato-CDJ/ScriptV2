@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,7 +17,26 @@ interface OperatorSidebarProps {
   isOpen: boolean
 }
 
-export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
+const FilteredList = memo(function FilteredList({
+  items,
+  searchQuery,
+  onItemClick,
+  renderItem,
+}: {
+  items: any[]
+  searchQuery: string
+  onItemClick: (item: any) => void
+  renderItem: (item: any, onClick: () => void) => React.ReactNode
+}) {
+  const filteredItems = useMemo(
+    () => items.filter((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [items, searchQuery],
+  )
+
+  return <div className="space-y-3">{filteredItems.map((item) => renderItem(item, () => onItemClick(item)))}</div>
+})
+
+export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
   const [activeSection, setActiveSection] = useState<"notes" | "tabulation" | "situation" | "channel" | "calendar">(
     "calendar",
   )
@@ -47,43 +68,57 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
   const [channels, setChannels] = useState(getChannels().filter((c) => c.isActive))
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
     const handleStoreUpdate = () => {
-      console.log("[v0] Operator sidebar: Store updated, refreshing data")
-      setTabulations(getTabulations())
-      setSituations(getSituations().filter((s) => s.isActive))
-      setChannels(getChannels().filter((c) => c.isActive))
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        console.log("[v0] Operator sidebar: Store updated, refreshing data")
+        setTabulations(getTabulations())
+        setSituations(getSituations().filter((s) => s.isActive))
+        setChannels(getChannels().filter((c) => c.isActive))
+      }, 150)
     }
+
     window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener("store-updated", handleStoreUpdate)
+    }
   }, [])
 
   const selectedSituationData = situations.find((s) => s.id === selectedSituation)
   const selectedChannelData = channels.find((c) => c.id === selectedChannel)
 
-  const filteredTabulations = tabulations.filter((tab) =>
-    tab.name.toLowerCase().includes(tabulationSearchQuery.toLowerCase()),
+  const filteredTabulations = useMemo(
+    () => tabulations.filter((tab) => tab.name.toLowerCase().includes(tabulationSearchQuery.toLowerCase())),
+    [tabulations, tabulationSearchQuery],
   )
 
-  const filteredSituations = situations.filter((sit) =>
-    sit.name.toLowerCase().includes(situationSearchQuery.toLowerCase()),
+  const filteredSituations = useMemo(
+    () => situations.filter((sit) => sit.name.toLowerCase().includes(situationSearchQuery.toLowerCase())),
+    [situations, situationSearchQuery],
   )
 
-  const filteredChannels = channels.filter((ch) => ch.name.toLowerCase().includes(channelSearchQuery.toLowerCase()))
+  const filteredChannels = useMemo(
+    () => channels.filter((ch) => ch.name.toLowerCase().includes(channelSearchQuery.toLowerCase())),
+    [channels, channelSearchQuery],
+  )
 
-  const handleTabulationClick = (tabulation: any) => {
+  const handleTabulationClick = useCallback((tabulation: any) => {
     setSelectedTabulationForModal(tabulation)
     setShowTabulationModal(true)
-  }
+  }, [])
 
-  const handleSituationClick = (situation: any) => {
+  const handleSituationClick = useCallback((situation: any) => {
     setSelectedSituationForModal(situation)
     setShowSituationModal(true)
-  }
+  }, [])
 
-  const handleChannelClick = (channel: any) => {
+  const handleChannelClick = useCallback((channel: any) => {
     setSelectedChannelForModal(channel)
     setShowChannelModal(true)
-  }
+  }, [])
 
   if (!isOpen) return null
 
@@ -237,7 +272,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 <span className="truncate">Visualizar todo conteúdo</span>
               </Button>
 
-              {situations.map((situation) => (
+              {filteredSituations.map((situation) => (
                 <Button
                   key={situation.id}
                   variant={selectedSituation === situation.id ? "default" : "outline"}
@@ -273,7 +308,7 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 <span className="truncate">Visualizar todo conteúdo</span>
               </Button>
 
-              {channels.map((channel) => (
+              {filteredChannels.map((channel) => (
                 <Button
                   key={channel.id}
                   variant={selectedChannel === channel.id ? "default" : "outline"}
@@ -316,11 +351,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               />
             </div>
 
-            <div className="space-y-3">
-              {filteredTabulations.map((tab) => (
+            <FilteredList
+              items={tabulations}
+              searchQuery={tabulationSearchQuery}
+              onItemClick={handleTabulationClick}
+              renderItem={(tab, onClick) => (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabulationClick(tab)}
+                  onClick={onClick}
                   className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-slate-600 bg-slate-700 dark:bg-slate-800 hover:border-slate-500 dark:hover:border-slate-600`}
                 >
                   <div className="flex items-start gap-4">
@@ -334,8 +372,8 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                     </div>
                   </div>
                 </button>
-              ))}
-            </div>
+              )}
+            />
           </div>
           <div className="pt-4 border-t border-border">
             <Button
@@ -370,11 +408,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               />
             </div>
 
-            <div className="space-y-3">
-              {filteredSituations.map((situation) => (
+            <FilteredList
+              items={situations}
+              searchQuery={situationSearchQuery}
+              onItemClick={handleSituationClick}
+              renderItem={(situation, onClick) => (
                 <button
                   key={situation.id}
-                  onClick={() => handleSituationClick(situation)}
+                  onClick={onClick}
                   className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-slate-600 bg-slate-700 dark:bg-slate-800 hover:border-slate-500 dark:hover:border-slate-600`}
                 >
                   <div className="flex items-start gap-4">
@@ -389,8 +430,8 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                     </div>
                   </div>
                 </button>
-              ))}
-            </div>
+              )}
+            />
           </div>
           <div className="pt-4 border-t border-border">
             <Button
@@ -425,11 +466,14 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               />
             </div>
 
-            <div className="space-y-3">
-              {filteredChannels.map((channel) => (
+            <FilteredList
+              items={channels}
+              searchQuery={channelSearchQuery}
+              onItemClick={handleChannelClick}
+              renderItem={(channel, onClick) => (
                 <button
                   key={channel.id}
-                  onClick={() => handleChannelClick(channel)}
+                  onClick={onClick}
                   className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-slate-600 bg-slate-700 dark:bg-slate-800 hover:border-slate-500 dark:hover:border-slate-600`}
                 >
                   <div className="flex items-start gap-4">
@@ -442,8 +486,8 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                     </div>
                   </div>
                 </button>
-              ))}
-            </div>
+              )}
+            />
           </div>
           <div className="pt-4 border-t border-border">
             <Button
@@ -577,4 +621,4 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
       </Dialog>
     </aside>
   )
-}
+})

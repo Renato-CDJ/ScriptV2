@@ -15,18 +15,83 @@ interface JsonStep {
 }
 
 // Tabulation mapping for each screen
-const TABULATION_MAP: Record<string, { name: string; description: string }> = {
-  hab_nao_conhece: { name: "Número Errado", description: "Contato não conhece o cliente" },
-  hab_faleceu: { name: "Cliente Falecido", description: "Informar sobre procedimentos de inventário" },
-  hab_recado: { name: "Recado Deixado", description: "Solicitado retorno do cliente" },
-  hab_finalizacao_terceiro: { name: "Terceiro - Sem Informação", description: "Terceiro não forneceu informações" },
-  hab_nao_confirmou: { name: "Recusa de Identificação", description: "Cliente não confirmou dados" },
-  hab_questiona_origem: { name: "Dúvida sobre Empresa", description: "Cliente questionou legitimidade" },
-  hab_pagamento_efetuado: { name: "Pagamento Já Realizado", description: "Cliente informou pagamento" },
-  hab_fgts_recusa: { name: "Recusa de Negociação", description: "Cliente recusou proposta" },
-  hab_pesquisa_satisfacao_recusa: { name: "Finalizado - Recusa", description: "Atendimento finalizado sem acordo" },
-  hab_pesquisa_satisfacao_aceite: { name: "Acordo Fechado", description: "Cliente aceitou proposta de pagamento" },
-  hab_pesquisa_satisfacao: { name: "Finalizado - Informativo", description: "Atendimento informativo concluído" },
+const TABULATION_MAP: Record<string, Array<{ name: string; description: string }>> = {
+  hab_nao_conhece: [
+    {
+      name: "DESCONHECIDO",
+      description: "Terceiro informa que não conhece ninguém com o nome do cliente no telefone do cadastro.",
+    },
+  ],
+  hab_faleceu: [
+    {
+      name: "FALECIDO",
+      description: "Terceiro informa que o titular faleceu.",
+    },
+  ],
+  hab_recado: [
+    {
+      name: "RECADO COM TERCEIRO",
+      description:
+        "Terceiro/cliente informa que a empresa entrou em falência/concordata ou terceiro informa que conhece o cliente, anota o recado ou não, ou terceiro pede para ligar outro dia/horário ou em outro telefone.",
+    },
+  ],
+  hab_finalizacao_terceiro: [
+    {
+      name: "RECADO COM TERCEIRO",
+      description:
+        "Terceiro/cliente informa que a empresa entrou em falência/concordata ou terceiro informa que conhece o cliente, anota o recado ou não, ou terceiro pede para ligar outro dia/horário ou em outro telefone.",
+    },
+  ],
+  hab_nao_confirmou: [
+    {
+      name: "PESSOA NÃO CONFIRMA OS DADOS",
+      description:
+        "Pessoa informa os números do CPF, porém os dados não conferem com os números registrados no CRM ou a pessoa se recusa a informar os números do CPF para realização da identificação positiva ou pessoa não.",
+    },
+  ],
+  hab_questiona_origem: [
+    {
+      name: "CONTATO SEM NEGOCIAÇÃO",
+      description:
+        "Cliente impossibilitado de falar no momento, faz promessa de pagamento para uma data que ultrapassa o período permitido (data definida para ações especiais, data fixa de boleto, etc). Ou informa que não se lembra se foi feito o pagamento ou débito.",
+    },
+  ],
+  hab_pagamento_efetuado: [
+    {
+      name: "PAGAMENTO JÁ EFETUADO",
+      description: "Cliente informa que já efetuou o pagamento.",
+    },
+  ],
+  hab_fgts_recusa: [
+    {
+      name: "RECUSA AÇÃO/CAMPANHA",
+      description: "Cliente não aceita a ação/campanha ofertada.",
+    },
+  ],
+  hab_pesquisa_satisfacao_recusa: [
+    {
+      name: "SEM CAPACIDADE DE PAGAMENTO",
+      description:
+        "Cliente se recusa a efetuar o pagamento por qualquer motivo: não tem recurso disponível, desemprego, mudanças econômicas ou não pode fazer o pagamento naquele momento.",
+    },
+  ],
+  hab_pesquisa_satisfacao_aceite: [
+    {
+      name: "PROMESSA DE PAGAMENTO COM EMISSÃO DE BOLETO",
+      description: "Cliente solicita boleto e informa data de pagamento.",
+    },
+    {
+      name: "ACEITA AÇÃO/CAMPANHA COM EMISSÃO DE BOLETO",
+      description: "Cliente aceita ação/ campanha com emissão de boleto.",
+    },
+  ],
+  hab_pesquisa_satisfacao: [
+    {
+      name: "CONTATO SEM NEGOCIAÇÃO",
+      description:
+        "Cliente impossibilitado de falar no momento, faz promessa de pagamento para uma data que ultrapassa o período permitido (data definida para ações especiais, data fixa de boleto, etc). Ou informa que não se lembra se foi feito o pagamento ou débito.",
+    },
+  ],
 }
 
 interface JsonData {
@@ -58,6 +123,12 @@ export function loadScriptFromJson(jsonData: JsonData, productName: string): Scr
         primary: btn.primary,
       }))
 
+      const tabulations = TABULATION_MAP[jsonStep.id]?.map((tab, idx) => ({
+        id: `tab-${jsonStep.id}-${idx}`,
+        name: tab.name,
+        description: tab.description,
+      }))
+
       const step: ScriptStep = {
         id: jsonStep.id,
         title: jsonStep.title,
@@ -67,12 +138,7 @@ export function loadScriptFromJson(jsonData: JsonData, productName: string): Scr
         productId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tabulationInfo: TABULATION_MAP[jsonStep.id]
-          ? {
-              id: `tab-${jsonStep.id}`,
-              ...TABULATION_MAP[jsonStep.id],
-            }
-          : undefined,
+        tabulations,
       }
 
       steps.push(step)

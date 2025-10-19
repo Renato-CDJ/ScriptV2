@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useCallback, useMemo, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +11,7 @@ import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
 
-export function LoginForm() {
+export const LoginForm = memo(function LoginForm() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -20,43 +20,48 @@ export function LoginForm() {
   const { theme, setTheme } = useTheme()
   const { refreshUser } = useAuth()
 
-  const validUsers = ["admin", "monitoria1", "monitoria2", "monitoria3", "monitoria4"]
+  const validUsers = useMemo(() => ["admin", "monitoria1", "monitoria2", "monitoria3", "monitoria4"], [])
 
-  const handleUsernameChange = (value: string) => {
-    setUsername(value)
-    setShowPasswordField(validUsers.includes(value.toLowerCase()))
-    setError("")
-  }
+  const handleUsernameChange = useCallback(
+    (value: string) => {
+      setUsername(value)
+      setShowPasswordField(validUsers.includes(value.toLowerCase()))
+      setError("")
+    },
+    [validUsers],
+  )
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      setError("")
+      setIsLoading(true)
 
-    await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
-    const user = authenticateUser(username, password)
+      const user = authenticateUser(username, password)
 
-    if (user) {
-      refreshUser()
-    } else {
-      if (showPasswordField) {
-        setError("Senha incorreta")
+      if (user) {
+        refreshUser()
       } else {
-        setError("Usuário não encontrado")
+        if (showPasswordField) {
+          setError("Senha incorreta")
+        } else {
+          setError("Usuário não encontrado")
+        }
       }
-    }
 
-    setIsLoading(false)
-  }
+      setIsLoading(false)
+    },
+    [username, password, showPasswordField, refreshUser],
+  )
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(theme === "dark" ? "light" : "dark")
-  }
+  }, [theme, setTheme])
 
   return (
     <Card className="w-full max-w-md bg-gradient-to-br from-white to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl backdrop-blur-sm transition-all duration-300 hover:shadow-[0_20px_60px_rgba(249,115,22,0.4)] hover:scale-[1.02] relative overflow-hidden">
-      {/* Decorative gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-amber-500/5 pointer-events-none"></div>
 
       <div className="absolute top-4 right-4 z-20">
@@ -150,11 +155,10 @@ export function LoginForm() {
                 "Entrar"
               )}
             </span>
-            {/* Shine effect on hover */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
           </Button>
         </form>
       </CardContent>
     </Card>
   )
-}
+})

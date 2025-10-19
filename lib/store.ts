@@ -600,10 +600,38 @@ export function getScriptStepById(id: string, productId?: string): ScriptStep | 
   return steps.find((s) => s.id === id) || null
 }
 
+// Memoization for expensive operations
+const scriptStepsCache = new Map<string, ScriptStep[]>()
+const productCache = new Map<string, Product>()
+
 export function getScriptStepsByProduct(productId: string): ScriptStep[] {
   if (typeof window === "undefined") return []
+
+  if (scriptStepsCache.has(productId)) {
+    return scriptStepsCache.get(productId)!
+  }
+
   const allSteps = getScriptSteps()
-  return allSteps.filter((step) => step.productId === productId)
+  const filtered = allSteps.filter((step) => step.productId === productId)
+
+  scriptStepsCache.set(productId, filtered)
+
+  return filtered
+}
+
+export function getProductById(id: string): Product | null {
+  if (productCache.has(id)) {
+    return productCache.get(id)!
+  }
+
+  const products = getProducts()
+  const product = products.find((p) => p.id === id) || null
+
+  if (product) {
+    productCache.set(id, product)
+  }
+
+  return product
 }
 
 export function updateScriptStep(step: ScriptStep) {
@@ -615,7 +643,8 @@ export function updateScriptStep(step: ScriptStep) {
   if (index !== -1) {
     steps[index] = { ...step, updatedAt: new Date() }
     localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
-    notifyUpdate() // Notify about update
+    clearCaches() // Clear cache
+    notifyUpdate()
     console.log("[v0] Script step updated:", step.id)
   }
 }
@@ -731,11 +760,6 @@ export function getProducts(): Product[] {
   return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || "[]")
 }
 
-export function getProductById(id: string): Product | null {
-  const products = getProducts()
-  return products.find((p) => p.id === id) || null
-}
-
 export function createProduct(product: Omit<Product, "id" | "createdAt">): Product {
   if (typeof window === "undefined") return { ...product, id: "", createdAt: new Date() }
 
@@ -762,6 +786,7 @@ export function updateProduct(product: Product) {
   if (index !== -1) {
     products[index] = product
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
+    clearCaches() // Clear cache
     notifyUpdate()
   }
 }
@@ -864,12 +889,21 @@ export function getTodayConnectedTime(userId: string): number {
   }, 0)
 }
 
+// Debouncing utility for localStorage operations
+let updateTimeout: NodeJS.Timeout | null = null
+
 function notifyUpdate() {
   if (typeof window === "undefined") return
-  localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
-  // Dispatch custom event for components to listen to
-  window.dispatchEvent(new CustomEvent("store-updated"))
-  console.log("[v0] Store updated, notifying all listeners")
+
+  if (updateTimeout) {
+    clearTimeout(updateTimeout)
+  }
+
+  updateTimeout = setTimeout(() => {
+    localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
+    window.dispatchEvent(new CustomEvent("store-updated"))
+    console.log("[v0] Store updated, notifying all listeners")
+  }, 100)
 }
 
 export function getLastUpdate(): number {
@@ -927,4 +961,9 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
   }
 
   return { productCount, stepCount }
+}
+
+export function clearCaches() {
+  scriptStepsCache.clear()
+  productCache.clear()
 }

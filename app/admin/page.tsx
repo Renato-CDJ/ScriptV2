@@ -1,22 +1,43 @@
 "use client"
 
-import { useState } from "react"
+import { useState, lazy, Suspense, memo } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { AdminSidebar } from "@/components/admin-sidebar"
-import { DashboardTab } from "@/components/admin-tabs/dashboard-tab"
-import { ScriptsTab } from "@/components/admin-tabs/scripts-tab"
-import { ProductsTab } from "@/components/admin-tabs/products-tab"
-import { OperatorsTab } from "@/components/admin-tabs/operators-tab"
-import { TabulationsTab } from "@/components/admin-tabs/tabulations-tab"
-import { SituationsTab } from "@/components/admin-tabs/situations-tab"
-import { ChannelsTab } from "@/components/admin-tabs/channels-tab"
-import { NotesTab } from "@/components/admin-tabs/notes-tab"
-import SettingsPage from "@/app/admin/settings/page"
 import { Toaster } from "@/components/ui/toaster"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { Loader2 } from "lucide-react"
 
-function AdminContent() {
+const DashboardTab = lazy(() =>
+  import("@/components/admin-tabs/dashboard-tab").then((m) => ({ default: m.DashboardTab })),
+)
+const ScriptsTab = lazy(() => import("@/components/admin-tabs/scripts-tab").then((m) => ({ default: m.ScriptsTab })))
+const ProductsTab = lazy(() => import("@/components/admin-tabs/products-tab").then((m) => ({ default: m.ProductsTab })))
+const OperatorsTab = lazy(() =>
+  import("@/components/admin-tabs/operators-tab").then((m) => ({ default: m.OperatorsTab })),
+)
+const TabulationsTab = lazy(() =>
+  import("@/components/admin-tabs/tabulations-tab").then((m) => ({ default: m.TabulationsTab })),
+)
+const SituationsTab = lazy(() =>
+  import("@/components/admin-tabs/situations-tab").then((m) => ({ default: m.SituationsTab })),
+)
+const ChannelsTab = lazy(() => import("@/components/admin-tabs/channels-tab").then((m) => ({ default: m.ChannelsTab })))
+const NotesTab = lazy(() => import("@/components/admin-tabs/notes-tab").then((m) => ({ default: m.NotesTab })))
+const SettingsPage = lazy(() => import("@/app/admin/settings/page"))
+
+const LoadingFallback = memo(function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      </div>
+    </div>
+  )
+})
+
+const AdminContent = memo(function AdminContent() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const router = useRouter()
   const { logout } = useAuth()
@@ -29,25 +50,65 @@ function AdminContent() {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <DashboardTab />
+          </Suspense>
+        )
       case "scripts":
-        return <ScriptsTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <ScriptsTab />
+          </Suspense>
+        )
       case "products":
-        return <ProductsTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProductsTab />
+          </Suspense>
+        )
       case "operators":
-        return <OperatorsTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <OperatorsTab />
+          </Suspense>
+        )
       case "tabulations":
-        return <TabulationsTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <TabulationsTab />
+          </Suspense>
+        )
       case "situations":
-        return <SituationsTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <SituationsTab />
+          </Suspense>
+        )
       case "channels":
-        return <ChannelsTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <ChannelsTab />
+          </Suspense>
+        )
       case "notes":
-        return <NotesTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <NotesTab />
+          </Suspense>
+        )
       case "settings":
-        return <SettingsPage />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <SettingsPage />
+          </Suspense>
+        )
       default:
-        return <DashboardTab />
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <DashboardTab />
+          </Suspense>
+        )
     }
   }
 
@@ -64,7 +125,7 @@ function AdminContent() {
       <Toaster />
     </div>
   )
-}
+})
 
 export default function AdminPage() {
   return (

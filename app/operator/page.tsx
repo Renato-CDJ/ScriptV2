@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, memo } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { OperatorHeader } from "@/components/operator-header"
 import { OperatorSidebar } from "@/components/operator-sidebar"
@@ -11,7 +11,7 @@ import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/store"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { useRouter } from "next/navigation"
 
-function OperatorContent() {
+const OperatorContent = memo(function OperatorContent() {
   const { user, logout } = useAuth()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<ScriptStep | null>(null)
@@ -31,29 +31,39 @@ function OperatorContent() {
       const minutes = now.getMinutes()
 
       if (hours === 21 && minutes === 0) {
+        console.log("[v0] Auto logout triggered at 21:00")
         logout()
         router.push("/")
       }
     }
 
-    const interval = setInterval(checkAutoLogout, 60000)
     checkAutoLogout()
+
+    const interval = setInterval(checkAutoLogout, 30000)
 
     return () => clearInterval(interval)
   }, [logout, router])
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
     const handleStoreUpdate = () => {
       if (currentStep && currentProductId) {
-        const updatedStep = getScriptStepById(currentStep.id, currentProductId)
-        if (updatedStep) {
-          setCurrentStep(updatedStep)
-        }
+        clearTimeout(timeoutId)
+        timeoutId = setTimeout(() => {
+          const updatedStep = getScriptStepById(currentStep.id, currentProductId)
+          if (updatedStep) {
+            setCurrentStep(updatedStep)
+          }
+        }, 150)
       }
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener("store-updated", handleStoreUpdate)
+    }
   }, [currentStep, currentProductId])
 
   const handleSearch = useCallback(
@@ -86,10 +96,13 @@ function OperatorContent() {
         setStepHistory([firstStep.id])
         setIsSessionActive(true)
         setShowConfig(false)
+        console.log("[v0] Attendance started with product:", product.name)
       } else {
+        console.error("[v0] First step not found for product:", product.id)
         alert("Erro: Script não encontrado para este produto. Entre em contato com o administrador.")
       }
     } else {
+      console.error("[v0] Product not found:", config.product)
       alert("Erro: Produto não encontrado. Entre em contato com o administrador.")
     }
   }, [])
@@ -214,7 +227,7 @@ function OperatorContent() {
       </div>
     </div>
   )
-}
+})
 
 export default function OperatorPage() {
   return (

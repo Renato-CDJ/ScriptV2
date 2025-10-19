@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode, useMemo, useCallback } from "react"
 import type { User } from "./types"
 import { getCurrentUser, logout as logoutUser, initializeMockData } from "./store"
 
@@ -27,17 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     logoutUser()
     setUser(null)
-  }
+  }, [])
 
-  const refreshUser = () => {
+  const refreshUser = useCallback(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
-  }
+  }, [])
 
-  return <AuthContext.Provider value={{ user, isLoading, logout, refreshUser }}>{children}</AuthContext.Provider>
+  const contextValue = useMemo(() => ({ user, isLoading, logout, refreshUser }), [user, isLoading, logout, refreshUser])
+
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

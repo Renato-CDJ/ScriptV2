@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
@@ -39,7 +39,7 @@ interface OperatorHeaderProps {
   onProductSelect?: (productId: string) => void
 }
 
-export function OperatorHeader({
+export const OperatorHeader = memo(function OperatorHeader({
   searchQuery = "",
   onSearchChange,
   isSidebarOpen = true,
@@ -67,50 +67,55 @@ export function OperatorHeader({
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout()
     router.push("/")
-  }
+  }, [logout, router])
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(theme === "dark" ? "light" : "dark")
-  }
+  }, [theme, setTheme])
 
-  const handleSearchInput = (value: string) => {
+  const handleSearchInput = useCallback((value: string) => {
     setShowProductSearch(value.length > 0)
-  }
+  }, [])
 
-  const handleProductSelect = (productId: string) => {
-    setShowProductSearch(false)
-    onSearchChange?.("")
-    onProductSelect?.(productId)
-    setSelectedAttendanceTypes([])
-    setSelectedPersonTypes([])
-  }
+  const handleProductSelect = useCallback(
+    (productId: string) => {
+      setShowProductSearch(false)
+      onSearchChange?.("")
+      onProductSelect?.(productId)
+      setSelectedAttendanceTypes([])
+      setSelectedPersonTypes([])
+    },
+    [onSearchChange, onProductSelect],
+  )
 
-  const toggleAttendanceType = (type: string) => {
+  const toggleAttendanceType = useCallback((type: string) => {
     setSelectedAttendanceTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]))
-  }
+  }, [])
 
-  const togglePersonType = (type: string) => {
+  const togglePersonType = useCallback((type: string) => {
     setSelectedPersonTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]))
-  }
+  }, [])
 
-  const filteredProducts = products.filter((product) => {
-    if (selectedAttendanceTypes.length === 0 && selectedPersonTypes.length === 0) {
-      return false
-    }
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      if (selectedAttendanceTypes.length === 0 && selectedPersonTypes.length === 0) {
+        return false
+      }
 
-    const matchesAttendance =
-      selectedAttendanceTypes.length === 0 ||
-      (product.attendanceTypes && product.attendanceTypes.some((type) => selectedAttendanceTypes.includes(type)))
+      const matchesAttendance =
+        selectedAttendanceTypes.length === 0 ||
+        (product.attendanceTypes && product.attendanceTypes.some((type) => selectedAttendanceTypes.includes(type)))
 
-    const matchesPerson =
-      selectedPersonTypes.length === 0 ||
-      (product.personTypes && product.personTypes.some((type) => selectedPersonTypes.includes(type)))
+      const matchesPerson =
+        selectedPersonTypes.length === 0 ||
+        (product.personTypes && product.personTypes.some((type) => selectedPersonTypes.includes(type)))
 
-    return matchesAttendance && matchesPerson
-  })
+      return matchesAttendance && matchesPerson
+    })
+  }, [products, selectedAttendanceTypes, selectedPersonTypes])
 
   const hasFiltersSelected = selectedAttendanceTypes.length > 0 || selectedPersonTypes.length > 0
 
@@ -345,4 +350,4 @@ export function OperatorHeader({
       </div>
     </header>
   )
-}
+})
