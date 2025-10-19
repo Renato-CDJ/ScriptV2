@@ -40,7 +40,6 @@
 }
 
 .dark {
-  /* Dark theme with charcoal background (cinza chumbo) and consistent orange/white colors */
   --background: oklch(0.22 0.01 260);
   --foreground: oklch(0.98 0.01 90);
   --card: oklch(0.25 0.015 260);
@@ -76,6 +75,7 @@
 }
 
 @theme inline {
+  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

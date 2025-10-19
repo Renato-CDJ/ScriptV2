@@ -51,13 +51,11 @@ export function AdminScriptPreview({ step, onEdit, onDelete, onAddButton }: Admi
                   {step.tabulations.map((tab, index) => (
                     <div
                       key={tab.id}
-                      className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 max-w-md"
+                      className="bg-slate-700 dark:bg-slate-800 border border-slate-600 dark:border-slate-700 rounded-lg p-3 max-w-md"
                     >
-                      <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-1">{tab.name}</p>
+                      <p className="text-sm font-semibold text-white mb-1">{tab.name}</p>
                       {tab.description && (
-                        <p className="text-xs text-green-600 dark:text-green-400 whitespace-pre-wrap">
-                          {tab.description}
-                        </p>
+                        <p className="text-xs text-slate-200 whitespace-pre-wrap">{tab.description}</p>
                       )}
                     </div>
                   ))}

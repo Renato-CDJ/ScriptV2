@@ -209,11 +209,11 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
               </Select>
 
               {selectedTabulation && (
-                <div className="p-3 bg-muted rounded-lg">
+                <div className="p-3 bg-slate-700 dark:bg-slate-800 rounded-lg text-white">
                   <p className="text-sm font-medium break-words">
                     {tabulations.find((t) => t.id === selectedTabulation)?.name}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1 break-words whitespace-pre-wrap">
+                  <p className="text-xs text-slate-200 mt-1 break-words whitespace-pre-wrap">
                     {tabulations.find((t) => t.id === selectedTabulation)?.description}
                   </p>
                 </div>
@@ -321,18 +321,16 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 <button
                   key={tab.id}
                   onClick={() => handleTabulationClick(tab)}
-                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-border bg-card hover:border-orange-300 dark:hover:border-muted`}
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-slate-600 bg-slate-700 dark:bg-slate-800 hover:border-slate-500 dark:hover:border-slate-600`}
                 >
                   <div className="flex items-start gap-4">
                     <div
-                      className="mt-1.5 w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-background shadow-sm"
+                      className="mt-1.5 w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-slate-600 shadow-sm"
                       style={{ backgroundColor: tab.color }}
                     />
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg mb-2 text-foreground">{tab.name}</h3>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
-                        {tab.description}
-                      </p>
+                      <h3 className="font-bold text-lg mb-2 text-white">{tab.name}</h3>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-200">{tab.description}</p>
                     </div>
                   </div>
                 </button>
@@ -377,15 +375,15 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 <button
                   key={situation.id}
                   onClick={() => handleSituationClick(situation)}
-                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-border bg-card hover:border-orange-300 dark:hover:border-muted`}
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-slate-600 bg-slate-700 dark:bg-slate-800 hover:border-slate-500 dark:hover:border-slate-600`}
                 >
                   <div className="flex items-start gap-4">
                     <div className="mt-1 p-2 rounded-lg bg-background shadow-sm border border-border">
                       <AlertCircle className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg mb-2 text-foreground">{situation.name}</h3>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                      <h3 className="font-bold text-lg mb-2 text-white">{situation.name}</h3>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-200">
                         {situation.description}
                       </p>
                     </div>
@@ -432,17 +430,15 @@ export function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
                 <button
                   key={channel.id}
                   onClick={() => handleChannelClick(channel)}
-                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-border bg-card hover:border-orange-300 dark:hover:border-muted`}
+                  className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] border-slate-600 bg-slate-700 dark:bg-slate-800 hover:border-slate-500 dark:hover:border-slate-600`}
                 >
                   <div className="flex items-start gap-4">
                     <div className="mt-1 p-2 rounded-lg bg-background shadow-sm border border-border">
                       <Radio className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg mb-2 text-foreground">{channel.name}</h3>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
-                        {channel.contact}
-                      </p>
+                      <h3 className="font-bold text-lg mb-2 text-white">{channel.name}</h3>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-200">{channel.contact}</p>
                     </div>
                   </div>
                 </button>
