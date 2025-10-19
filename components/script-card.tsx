@@ -292,7 +292,7 @@ export const ScriptCard = memo(function ScriptCard({
               step.tabulations.map((tabulation, index) => (
                 <div
                   key={tabulation.id || index}
-                  className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-400/50 bg-gradient-to-br from-orange-50 to-amber-50 dark:bg-card p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden"
+                  className="group relative rounded-xl border-2 border-slate-600 dark:border-slate-600 bg-white dark:bg-slate-700 p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden"
                 >
                   <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
                     <CheckCircle2 className="h-12 w-12 text-orange-500 dark:text-orange-400" />
@@ -302,18 +302,18 @@ export const ScriptCard = memo(function ScriptCard({
                       <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
                         <CheckCircle2 className="h-4 w-4 text-white" />
                       </div>
-                      <h4 className="font-bold text-lg text-orange-900 dark:text-white leading-tight break-words">
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-white leading-tight break-words">
                         {tabulation.name}
                       </h4>
                     </div>
-                    <p className="text-sm text-orange-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap pl-9 break-words">
+                    <p className="text-sm text-gray-700 dark:text-gray-100 leading-relaxed whitespace-pre-wrap pl-9 break-words">
                       {tabulation.description}
                     </p>
                   </div>
                 </div>
               ))
             ) : step.tabulationInfo ? (
-              <div className="group relative rounded-xl border-2 border-orange-200 dark:border-orange-400/50 bg-gradient-to-br from-orange-50 to-amber-50 dark:bg-card p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden">
+              <div className="group relative rounded-xl border-2 border-slate-600 dark:border-slate-600 bg-white dark:bg-slate-700 p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden">
                 <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
                   <CheckCircle2 className="h-12 w-12 text-orange-500 dark:text-orange-400" />
                 </div>
@@ -322,11 +322,11 @@ export const ScriptCard = memo(function ScriptCard({
                     <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
                       <CheckCircle2 className="h-4 w-4 text-white" />
                     </div>
-                    <h4 className="font-bold text-lg text-orange-900 dark:text-white leading-tight break-words">
+                    <h4 className="font-bold text-lg text-gray-900 dark:text-white leading-tight break-words">
                       {step.tabulationInfo.name}
                     </h4>
                   </div>
-                  <p className="text-sm text-orange-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap pl-9 break-words">
+                  <p className="text-sm text-gray-700 dark:text-gray-100 leading-relaxed whitespace-pre-wrap pl-9 break-words">
                     {step.tabulationInfo.description}
                   </p>
                 </div>
