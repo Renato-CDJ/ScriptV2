@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react"
-import type { ScriptStep } from "@/lib/types"
+import type { ScriptStep, ContentSegment } from "@/lib/types"
 import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
@@ -46,6 +46,77 @@ function saveAccessibilitySettings(textSize: number, buttonSize: number) {
   } catch (error) {
     console.error("[v0] Error saving accessibility settings:", error)
   }
+}
+
+function renderContentWithSegments(
+  content: string,
+  segments: ContentSegment[] | undefined,
+  textFontSize: number,
+  operatorName: string,
+  customerFirstName: string,
+): React.ReactNode {
+  if (!segments || segments.length === 0) {
+    // Fallback to original HTML rendering if no segments
+    return content
+      .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
+      .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
+      .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
+      .replace(/$$nome completo do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
+      .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>")
+  }
+
+  // Build a map of segments by their text for quick lookup
+  const segmentMap = new Map<string, ContentSegment>()
+  segments.forEach((seg) => {
+    segmentMap.set(seg.text, seg)
+  })
+
+  // Split content by segments and render with formatting
+  let lastIndex = 0
+  const elements: React.ReactNode[] = []
+
+  segments.forEach((segment, idx) => {
+    const index = content.indexOf(segment.text, lastIndex)
+    if (index !== -1) {
+      // Add text before segment
+      if (index > lastIndex) {
+        elements.push(<span key={`text-${idx}`}>{content.substring(lastIndex, index)}</span>)
+      }
+
+      // Add formatted segment
+      const segmentStyle: React.CSSProperties = {
+        fontWeight: segment.formatting.bold ? "bold" : "normal",
+        fontStyle: segment.formatting.italic ? "italic" : "normal",
+        color: segment.formatting.color || "inherit",
+        backgroundColor: segment.formatting.backgroundColor || "transparent",
+        fontSize:
+          segment.formatting.fontSize === "sm"
+            ? `${textFontSize * 0.875}px`
+            : segment.formatting.fontSize === "lg"
+              ? `${textFontSize * 1.125}px`
+              : segment.formatting.fontSize === "xl"
+                ? `${textFontSize * 1.25}px`
+                : `${textFontSize}px`,
+        padding: segment.formatting.backgroundColor ? "2px 4px" : "0",
+        borderRadius: segment.formatting.backgroundColor ? "4px" : "0",
+      }
+
+      elements.push(
+        <span key={`segment-${idx}`} style={segmentStyle}>
+          {segment.text}
+        </span>,
+      )
+
+      lastIndex = index + segment.text.length
+    }
+  })
+
+  // Add remaining text
+  if (lastIndex < content.length) {
+    elements.push(<span key="text-end">{content.substring(lastIndex)}</span>)
+  }
+
+  return elements
 }
 
 export const ScriptCard = memo(function ScriptCard({
@@ -149,6 +220,19 @@ export const ScriptCard = memo(function ScriptCard({
     return styles
   }, [textFontSize, step.formatting])
 
+  const renderedContent = useMemo(() => {
+    if (step.contentSegments && step.contentSegments.length > 0) {
+      return renderContentWithSegments(
+        step.content,
+        step.contentSegments,
+        textFontSize,
+        operatorName,
+        customerFirstName,
+      )
+    }
+    return processedContent
+  }, [step.content, step.contentSegments, textFontSize, operatorName, customerFirstName, processedContent])
+
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto">
       {showControls && (
@@ -237,8 +321,13 @@ export const ScriptCard = memo(function ScriptCard({
           <div
             className="bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-orange-50/60 dark:from-gray-600/40 dark:via-gray-600/40 dark:to-gray-600/40 rounded-2xl p-6 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-orange-500/40 shadow-inner backdrop-blur-sm"
             style={contentStyles}
-            dangerouslySetInnerHTML={{ __html: processedContent }}
-          />
+          >
+            {typeof renderedContent === "string" ? (
+              <div dangerouslySetInnerHTML={{ __html: renderedContent }} />
+            ) : (
+              renderedContent
+            )}
+          </div>
         </CardContent>
       </Card>
 

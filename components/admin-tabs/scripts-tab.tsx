@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RichTextEditor } from "@/components/rich-text-editor"
 import {
   Plus,
   Edit,
@@ -150,6 +151,7 @@ export function ScriptsTab() {
       id: "",
       title: "",
       content: "",
+      contentSegments: [],
       order: steps.length + 1,
       buttons: [],
       createdAt: new Date(),
@@ -353,29 +355,26 @@ export function ScriptsTab() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="content">Conteúdo do Script</Label>
-                  <Textarea
-                    id="content"
-                    value={editingStep.content}
-                    onChange={(e) => setEditingStep({ ...editingStep, content: e.target.value })}
-                    placeholder="Digite o texto do roteiro. Use <b> para negrito, <br> para quebra de linha, <i> para itálico."
-                    rows={10}
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Placeholders disponíveis:</strong> [Nome do operador], [Primeiro nome do cliente], [Nome
-                    completo do cliente]
-                  </p>
-                </div>
+                <RichTextEditor
+                  value={editingStep.content}
+                  segments={editingStep.contentSegments}
+                  onChange={(content, segments) =>
+                    setEditingStep({
+                      ...editingStep,
+                      content,
+                      contentSegments: segments,
+                    })
+                  }
+                  placeholder="Digite o texto do roteiro. Selecione trechos para aplicar formatação específica."
+                />
 
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <Palette className="h-4 w-4" />
-                      Formatação do Texto
+                      Formatação Global do Texto
                     </CardTitle>
-                    <CardDescription>Configure a aparência do texto no roteiro</CardDescription>
+                    <CardDescription>Configure a aparência padrão do texto no roteiro</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">

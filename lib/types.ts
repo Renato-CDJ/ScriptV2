@@ -34,11 +34,24 @@ export interface ScriptStep {
     name: string
     description: string
   }> // Changed from single tabulationInfo to array of tabulations
+  contentSegments?: ContentSegment[]
   formatting?: {
     textColor?: string
     bold?: boolean
     italic?: boolean
     textAlign?: "left" | "center" | "right" | "justify"
+  }
+}
+
+export interface ContentSegment {
+  id: string
+  text: string
+  formatting: {
+    bold?: boolean
+    italic?: boolean
+    color?: string
+    backgroundColor?: string
+    fontSize?: "sm" | "base" | "lg" | "xl"
   }
 }
 
