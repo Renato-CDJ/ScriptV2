@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,13 +15,9 @@ export function PromiseCalendar() {
   const [showCalendarDialog, setShowCalendarDialog] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [hoveredProduct, setHoveredProduct] = useState<ProductType | null>(null)
-  const [today, setToday] = useState<Date | undefined>(undefined)
 
-  useEffect(() => {
-    const now = new Date()
-    now.setHours(0, 0, 0, 0)
-    setToday(now)
-  }, [])
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
   const handleProductSelect = (value: ProductType) => {
     setSelectedProduct(value)
@@ -31,7 +27,7 @@ export function PromiseCalendar() {
   const maxDate = selectedProduct ? getMaxPromiseDate(selectedProduct) : undefined
 
   const isDateInRange = (date: Date) => {
-    if (!selectedProduct || !today) return false
+    if (!selectedProduct) return false
 
     const dateTime = new Date(date)
     dateTime.setHours(0, 0, 0, 0)
@@ -72,24 +68,6 @@ export function PromiseCalendar() {
       color: "green",
     },
   ]
-
-  if (!today) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4" />
-            Prazo para Promessa
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
 
   return (
     <>
@@ -177,7 +155,7 @@ export function PromiseCalendar() {
                             />
                           </div>
                           <p
-                            className={`font-semibold text-xs text-center break-words ${
+                            className={`font-semibold text-xs text-center ${
                               isSelected ? "text-orange-600 dark:text-primary" : "text-foreground"
                             }`}
                           >
