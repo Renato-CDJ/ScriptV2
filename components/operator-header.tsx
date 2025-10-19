@@ -16,12 +16,16 @@ import {
   EyeOff,
   Home,
   Hash,
+  Filter,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { getProducts } from "@/lib/store"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useTheme } from "next-themes"
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 
 interface OperatorHeaderProps {
   searchQuery?: string
@@ -51,6 +55,8 @@ export function OperatorHeader({
   const { theme, setTheme } = useTheme()
   const [showProductSearch, setShowProductSearch] = useState(false)
   const [products, setProducts] = useState(getProducts().filter((p) => p.isActive))
+  const [selectedAttendanceTypes, setSelectedAttendanceTypes] = useState<string[]>([])
+  const [selectedPersonTypes, setSelectedPersonTypes] = useState<string[]>([])
 
   useEffect(() => {
     const handleStoreUpdate = () => {
@@ -71,19 +77,42 @@ export function OperatorHeader({
   }
 
   const handleSearchInput = (value: string) => {
-    if (value.startsWith("#")) {
-      setShowProductSearch(true)
-    } else {
-      setShowProductSearch(false)
-      onSearchChange?.(value)
-    }
+    setShowProductSearch(value.length > 0)
   }
 
   const handleProductSelect = (productId: string) => {
     setShowProductSearch(false)
     onSearchChange?.("")
     onProductSelect?.(productId)
+    setSelectedAttendanceTypes([])
+    setSelectedPersonTypes([])
   }
+
+  const toggleAttendanceType = (type: string) => {
+    setSelectedAttendanceTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]))
+  }
+
+  const togglePersonType = (type: string) => {
+    setSelectedPersonTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]))
+  }
+
+  const filteredProducts = products.filter((product) => {
+    if (selectedAttendanceTypes.length === 0 && selectedPersonTypes.length === 0) {
+      return false
+    }
+
+    const matchesAttendance =
+      selectedAttendanceTypes.length === 0 ||
+      (product.attendanceTypes && product.attendanceTypes.some((type) => selectedAttendanceTypes.includes(type)))
+
+    const matchesPerson =
+      selectedPersonTypes.length === 0 ||
+      (product.personTypes && product.personTypes.some((type) => selectedPersonTypes.includes(type)))
+
+    return matchesAttendance && matchesPerson
+  })
+
+  const hasFiltersSelected = selectedAttendanceTypes.length > 0 || selectedPersonTypes.length > 0
 
   return (
     <header className="border-b bg-card shadow-sm">
@@ -102,33 +131,145 @@ export function OperatorHeader({
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Pesquisar títulos ou #produto..."
+                      placeholder="Pesquisar produtos..."
                       value={searchQuery}
                       onChange={(e) => handleSearchInput(e.target.value)}
-                      className="pl-9 pr-9 text-sm"
+                      className="pl-9 text-sm"
                     />
-                    {searchQuery.startsWith("#") && (
-                      <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-500 animate-pulse" />
-                    )}
                   </div>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Digite o nome do produto..." />
-                    <CommandList>
-                      <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                      <CommandGroup heading="Produtos Disponíveis">
-                        {products.map((product) => (
-                          <CommandItem
-                            key={product.id}
-                            onSelect={() => handleProductSelect(product.id)}
-                            className="cursor-pointer"
-                          >
-                            <Hash className="mr-2 h-4 w-4 text-orange-500" />
-                            <span className="font-semibold">{product.name}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
+                <PopoverContent className="w-[650px] p-0 border-border shadow-lg" align="start">
+                  <Command className="bg-popover">
+                    <CommandList className="max-h-[500px]">
+                      <div className="p-4 border-b bg-muted/30 space-y-4">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <Filter className="h-4 w-4 text-primary" />
+                          <span>Filtrar Produtos</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-3">
+                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              Tipo de Atendimento
+                            </div>
+                            <div className="space-y-2.5">
+                              <div className="flex items-center gap-2.5 group">
+                                <Checkbox
+                                  id="ativo"
+                                  checked={selectedAttendanceTypes.includes("ativo")}
+                                  onCheckedChange={() => toggleAttendanceType("ativo")}
+                                  className="data-[state=checked]:bg-chart-2 data-[state=checked]:border-chart-2"
+                                />
+                                <Label
+                                  htmlFor="ativo"
+                                  className="text-sm font-medium cursor-pointer group-hover:text-foreground transition-colors"
+                                >
+                                  Ativo
+                                </Label>
+                              </div>
+                              <div className="flex items-center gap-2.5 group">
+                                <Checkbox
+                                  id="receptivo"
+                                  checked={selectedAttendanceTypes.includes("receptivo")}
+                                  onCheckedChange={() => toggleAttendanceType("receptivo")}
+                                  className="data-[state=checked]:bg-chart-2 data-[state=checked]:border-chart-2"
+                                />
+                                <Label
+                                  htmlFor="receptivo"
+                                  className="text-sm font-medium cursor-pointer group-hover:text-foreground transition-colors"
+                                >
+                                  Receptivo
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              Tipo de Pessoa
+                            </div>
+                            <div className="space-y-2.5">
+                              <div className="flex items-center gap-2.5 group">
+                                <Checkbox
+                                  id="fisica"
+                                  checked={selectedPersonTypes.includes("fisica")}
+                                  onCheckedChange={() => togglePersonType("fisica")}
+                                  className="data-[state=checked]:bg-chart-3 data-[state=checked]:border-chart-3"
+                                />
+                                <Label
+                                  htmlFor="fisica"
+                                  className="text-sm font-medium cursor-pointer group-hover:text-foreground transition-colors"
+                                >
+                                  Física
+                                </Label>
+                              </div>
+                              <div className="flex items-center gap-2.5 group">
+                                <Checkbox
+                                  id="juridica"
+                                  checked={selectedPersonTypes.includes("juridica")}
+                                  onCheckedChange={() => togglePersonType("juridica")}
+                                  className="data-[state=checked]:bg-chart-3 data-[state=checked]:border-chart-3"
+                                />
+                                <Label
+                                  htmlFor="juridica"
+                                  className="text-sm font-medium cursor-pointer group-hover:text-foreground transition-colors"
+                                >
+                                  Jurídica
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {hasFiltersSelected && (
+                          <div className="flex items-center gap-2 pt-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {filteredProducts.length} produto(s) encontrado(s)
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+
+                      {!hasFiltersSelected ? (
+                        <div className="py-12 text-center">
+                          <Filter className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+                          <p className="text-sm text-muted-foreground font-medium">
+                            Selecione os filtros acima para ver os produtos
+                          </p>
+                          <p className="text-xs text-muted-foreground/70 mt-1">
+                            Escolha pelo menos um tipo de atendimento ou pessoa
+                          </p>
+                        </div>
+                      ) : filteredProducts.length === 0 ? (
+                        <CommandEmpty className="py-12 text-center">
+                          <div className="text-sm text-muted-foreground">
+                            Nenhum produto encontrado com os filtros selecionados.
+                          </div>
+                        </CommandEmpty>
+                      ) : (
+                        <CommandGroup heading="Produtos Disponíveis" className="p-2">
+                          {filteredProducts.map((product) => (
+                            <CommandItem
+                              key={product.id}
+                              onSelect={() => handleProductSelect(product.id)}
+                              className="cursor-pointer rounded-lg p-3 mb-1.5 hover:bg-accent/50 transition-colors border border-transparent hover:border-border"
+                            >
+                              <div className="flex items-center gap-3 w-full">
+                                <div className="flex-shrink-0">
+                                  <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
+                                    <Hash className="h-4 w-4 text-primary" />
+                                  </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm text-foreground leading-tight">
+                                    {product.name}
+                                  </div>
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
                     </CommandList>
                   </Command>
                 </PopoverContent>
