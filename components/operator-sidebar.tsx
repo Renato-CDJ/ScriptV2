@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { getTabulations, getSituations, getChannels } from "@/lib/store"
 import { StickyNote, Tags, AlertCircle, Radio, List, Search, CalendarIcon } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { PromiseCalendar } from "@/components/promise-calendar"
+import { PromiseCalendarInline } from "@/components/promise-calendar"
 
 interface OperatorSidebarProps {
   isOpen: boolean
@@ -196,7 +196,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
       {/* Content area */}
       <div className="flex-1 overflow-auto p-4">
         {activeSection === "notes" && (
-          <Card>
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-sm">Bloco de Notas</CardTitle>
             </CardHeader>
@@ -213,7 +213,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
         )}
 
         {activeSection === "tabulation" && (
-          <Card>
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-sm">Selecionar Tabulação</CardTitle>
             </CardHeader>
@@ -244,7 +244,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
               </Select>
 
               {selectedTabulation && (
-                <div className="p-3 bg-slate-700 dark:bg-slate-800 rounded-lg text-white">
+                <div className="p-3 bg-slate-700 dark:bg-slate-800 rounded-lg text-white border border-border">
                   <p className="text-sm font-medium break-words">
                     {tabulations.find((t) => t.id === selectedTabulation)?.name}
                   </p>
@@ -258,7 +258,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
         )}
 
         {activeSection === "situation" && (
-          <Card>
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-sm">Status Atual</CardTitle>
             </CardHeader>
@@ -277,9 +277,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
                   key={situation.id}
                   variant={selectedSituation === situation.id ? "default" : "outline"}
                   className={`w-full justify-start text-left ${
-                    selectedSituation === situation.id
-                      ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
-                      : ""
+                    selectedSituation === situation.id ? "bg-primary hover:bg-primary/90 text-primary-foreground" : ""
                   }`}
                   onClick={() => {
                     setSelectedSituation(situation.id)
@@ -294,7 +292,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
         )}
 
         {activeSection === "channel" && (
-          <Card>
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-sm">Canal de Atendimento</CardTitle>
             </CardHeader>
@@ -313,9 +311,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
                   key={channel.id}
                   variant={selectedChannel === channel.id ? "default" : "outline"}
                   className={`w-full justify-start text-left ${
-                    selectedChannel === channel.id
-                      ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
-                      : ""
+                    selectedChannel === channel.id ? "bg-primary hover:bg-primary/90 text-primary-foreground" : ""
                   }`}
                   onClick={() => {
                     setSelectedChannel(channel.id)
@@ -329,7 +325,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
           </Card>
         )}
 
-        {activeSection === "calendar" && <PromiseCalendar />}
+        {activeSection === "calendar" && <PromiseCalendarInline />}
       </div>
 
       <Dialog open={showTabulationFullView} onOpenChange={setShowTabulationFullView}>
@@ -347,7 +343,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
                 placeholder="Pesquisar tabulações..."
                 value={tabulationSearchQuery}
                 onChange={(e) => setTabulationSearchQuery(e.target.value)}
-                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-orange-500 dark:focus:border-primary transition-colors"
+                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-primary transition-colors"
               />
             </div>
 
@@ -375,17 +371,6 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
               )}
             />
           </div>
-          <div className="pt-4 border-t border-border">
-            <Button
-              onClick={() => {
-                setShowTabulationFullView(false)
-                setTabulationSearchQuery("")
-              }}
-              className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
-            >
-              Voltar
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -404,7 +389,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
                 placeholder="Pesquisar situações..."
                 value={situationSearchQuery}
                 onChange={(e) => setSituationSearchQuery(e.target.value)}
-                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-orange-500 dark:focus:border-primary transition-colors"
+                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-primary transition-colors"
               />
             </div>
 
@@ -433,17 +418,6 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
               )}
             />
           </div>
-          <div className="pt-4 border-t border-border">
-            <Button
-              onClick={() => {
-                setShowSituationFullView(false)
-                setSituationSearchQuery("")
-              }}
-              className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
-            >
-              Voltar
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -462,7 +436,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
                 placeholder="Pesquisar canais..."
                 value={channelSearchQuery}
                 onChange={(e) => setChannelSearchQuery(e.target.value)}
-                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-orange-500 dark:focus:border-primary transition-colors"
+                className="pl-10 h-12 text-base bg-muted/50 border-border focus:border-primary transition-colors"
               />
             </div>
 
@@ -489,26 +463,13 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
               )}
             />
           </div>
-          <div className="pt-4 border-t border-border">
-            <Button
-              onClick={() => {
-                setShowChannelFullView(false)
-                setChannelSearchQuery("")
-              }}
-              className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
-            >
-              Voltar
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showTabulationModal} onOpenChange={setShowTabulationModal}>
         <DialogContent className="max-w-3xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
-              {selectedTabulationForModal?.name}
-            </DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold">{selectedTabulationForModal?.name}</DialogTitle>
           </DialogHeader>
           <div className="py-6">
             <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
@@ -519,7 +480,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
           </div>
           <Button
             onClick={() => setShowTabulationModal(false)}
-            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -529,9 +490,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
       <Dialog open={showSituationModal} onOpenChange={setShowSituationModal}>
         <DialogContent className="max-w-3xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
-              {selectedSituationForModal?.name}
-            </DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold">{selectedSituationForModal?.name}</DialogTitle>
           </DialogHeader>
           <div className="py-6">
             <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
@@ -542,7 +501,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
           </div>
           <Button
             onClick={() => setShowSituationModal(false)}
-            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -552,9 +511,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
       <Dialog open={showChannelModal} onOpenChange={setShowChannelModal}>
         <DialogContent className="max-w-3xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
-              {selectedChannelForModal?.name}
-            </DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold">{selectedChannelForModal?.name}</DialogTitle>
           </DialogHeader>
           <div className="py-6">
             <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
@@ -565,7 +522,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
           </div>
           <Button
             onClick={() => setShowChannelModal(false)}
-            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -576,9 +533,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
       <Dialog open={showSituationDialog} onOpenChange={setShowSituationDialog}>
         <DialogContent className="max-w-3xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
-              {selectedSituationData?.name}
-            </DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold">{selectedSituationData?.name}</DialogTitle>
           </DialogHeader>
           <div className="py-6">
             <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
@@ -589,7 +544,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
           </div>
           <Button
             onClick={() => setShowSituationDialog(false)}
-            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -600,9 +555,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
       <Dialog open={showChannelDialog} onOpenChange={setShowChannelDialog}>
         <DialogContent className="max-w-3xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-orange-600 dark:text-primary text-2xl font-bold">
-              {selectedChannelData?.name}
-            </DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold">{selectedChannelData?.name}</DialogTitle>
           </DialogHeader>
           <div className="py-6">
             <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
@@ -613,7 +566,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
           </div>
           <Button
             onClick={() => setShowChannelDialog(false)}
-            className="w-full h-12 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>

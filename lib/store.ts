@@ -488,33 +488,23 @@ export function authenticateUser(username: string, password: string): User | nul
 
   const users: User[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
 
-  console.log(
-    "[v0] Available users in storage:",
-    users.map((u) => u.username),
-  )
-  console.log("[v0] Searching for user:", username)
-
   const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
-
-  console.log("[v0] User found:", !!user, user?.username)
 
   if (user) {
     if (user.role === "admin") {
       const validPasswords = ["rcp@$", "#qualidade@$"]
-      console.log("[v0] Validating admin password")
 
       if (!validPasswords.includes(password)) {
-        console.log("[v0] Invalid password")
         return null
       }
 
-      // Track login session
       const session: LoginSession = {
         id: `session-${Date.now()}`,
         loginAt: new Date(),
       }
 
       user.lastLoginAt = new Date()
+      user.isOnline = true
       user.loginSessions = user.loginSessions || []
       user.loginSessions.push(session)
 
@@ -523,17 +513,16 @@ export function authenticateUser(username: string, password: string): User | nul
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
 
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
-      console.log("[v0] User authenticated successfully:", user.username)
       return user
     }
 
-    // Operators don't need password
     const session: LoginSession = {
       id: `session-${Date.now()}`,
       loginAt: new Date(),
     }
 
     user.lastLoginAt = new Date()
+    user.isOnline = true
     user.loginSessions = user.loginSessions || []
     user.loginSessions.push(session)
 
@@ -542,11 +531,9 @@ export function authenticateUser(username: string, password: string): User | nul
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
 
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
-    console.log("[v0] Operator authenticated successfully:", user.username)
     return user
   }
 
-  console.log("[v0] User not found in storage")
   return null
 }
 
@@ -566,15 +553,16 @@ export function logout() {
     const user = users.find((u) => u.id === currentUser.id)
 
     if (user && user.loginSessions) {
-      // Update the last session with logout time
       const lastSession = user.loginSessions[user.loginSessions.length - 1]
       if (!lastSession.logoutAt) {
         lastSession.logoutAt = new Date()
         lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
+        user.isOnline = false
 
         // Update user in storage
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
         localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+        notifyUpdate()
       }
     }
   }
@@ -645,7 +633,6 @@ export function updateScriptStep(step: ScriptStep) {
     localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
     clearCaches() // Clear cache
     notifyUpdate()
-    console.log("[v0] Script step updated:", step.id)
   }
 }
 
@@ -846,6 +833,7 @@ export function forceLogoutUser(userId: string) {
       if (!lastSession.logoutAt) {
         lastSession.logoutAt = new Date()
         lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
+        user.isOnline = false
 
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
         localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
@@ -902,7 +890,6 @@ function notifyUpdate() {
   updateTimeout = setTimeout(() => {
     localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
     window.dispatchEvent(new CustomEvent("store-updated"))
-    console.log("[v0] Store updated, notifying all listeners")
   }, 100)
 }
 
@@ -966,4 +953,25 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
 export function clearCaches() {
   scriptStepsCache.clear()
   productCache.clear()
+}
+
+// Helper function to check if user is currently online
+export function isUserOnline(userId: string): boolean {
+  if (typeof window === "undefined") return false
+
+  const users = getAllUsers()
+  const user = users.find((u) => u.id === userId)
+
+  if (!user) return false
+
+  // Check if user has isOnline flag set to true
+  return user.isOnline === true
+}
+
+// Helper function to get count of online operators
+export function getOnlineOperatorsCount(): number {
+  if (typeof window === "undefined") return 0
+
+  const users = getAllUsers()
+  return users.filter((u) => u.role === "operator" && u.isOnline === true).length
 }

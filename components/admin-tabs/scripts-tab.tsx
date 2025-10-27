@@ -24,6 +24,9 @@ import {
   AlignRight,
   AlignJustify,
   RotateCcw,
+  Download,
+  FileJson,
+  AlertCircle,
 } from "lucide-react"
 import {
   getScriptSteps,
@@ -38,6 +41,12 @@ import { useToast } from "@/hooks/use-toast"
 import { AdminScriptPreview } from "@/components/admin-script-preview"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+const AVAILABLE_JSON_FILES = [
+  { name: "Comercial", file: "comercial.json", path: "/data/comercial.json" },
+  { name: "Habitacional 532", file: "hab532.json", path: "/data/hab532.json" },
+  { name: "Habitacional", file: "habitacional-script.json", path: "/data/habitacional-script.json" },
+]
+
 export function ScriptsTab() {
   const [steps, setSteps] = useState<ScriptStep[]>(getScriptSteps())
   const [products, setProducts] = useState<Product[]>(getProducts())
@@ -45,6 +54,7 @@ export function ScriptsTab() {
   const [isCreating, setIsCreating] = useState(false)
   const [previewStep, setPreviewStep] = useState<ScriptStep | null>(null)
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
+  const [showJsonList, setShowJsonList] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -84,6 +94,50 @@ export function ScriptsTab() {
     },
     {} as Record<string, ScriptStep[]>,
   )
+
+  const handleImportFromDataFolder = async (filePath: string, fileName: string) => {
+    try {
+      const response = await fetch(filePath)
+      if (!response.ok) {
+        throw new Error("Arquivo não encontrado")
+      }
+
+      const data = await response.json()
+
+      const isPhraseology = data.fraseologias && !data.marcas
+
+      if (isPhraseology) {
+        toast({
+          title: "Arquivo de fraseologia detectado",
+          description: "Por favor, use a aba 'Fraseologias' para importar arquivos de fraseologia.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const result = importScriptFromJson(data)
+
+      if (result.stepCount > 0) {
+        refreshSteps()
+        setEditingStep(null)
+        setIsCreating(false)
+        setPreviewStep(null)
+
+        toast({
+          title: "Script importado com sucesso!",
+          description: `${result.productCount} produto(s) e ${result.stepCount} tela(s) foram importados de ${fileName}.`,
+        })
+      } else {
+        throw new Error("Nenhuma tela foi importada")
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao importar",
+        description: `Não foi possível importar o arquivo ${fileName}. Verifique se o arquivo existe e está no formato correto.`,
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleImportScript = () => {
     const input = document.createElement("input")
@@ -273,6 +327,89 @@ export function ScriptsTab() {
     }
   }
 
+  const handleExportScriptsAsJson = () => {
+    // Group scripts by product
+    const exportData: any = {
+      marcas: {},
+    }
+
+    steps.forEach((step) => {
+      const productKey = step.productId || "standalone"
+      if (!exportData.marcas[productKey]) {
+        exportData.marcas[productKey] = {}
+      }
+      exportData.marcas[productKey][step.id] = {
+        title: step.title,
+        content: step.content,
+        contentSegments: step.contentSegments,
+        buttons: step.buttons,
+        formatting: step.formatting,
+        tabulations: step.tabulations,
+        order: step.order,
+      }
+    })
+
+    // Create JSON blob and download
+    const jsonString = JSON.stringify(exportData, null, 2)
+    const blob = new Blob([jsonString], { type: "application/json" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+
+    const today = new Date().toISOString().split("T")[0]
+    link.setAttribute("href", url)
+    link.setAttribute("download", `roteiros-export-${today}.json`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({
+      title: "Roteiros exportados",
+      description: "O arquivo JSON foi baixado com sucesso",
+    })
+  }
+
+  const handleExportProductScripts = (productId: string) => {
+    const productSteps = steps.filter((s) => s.productId === productId)
+    const product = products.find((p) => p.id === productId)
+
+    const exportData: any = {
+      marcas: {
+        [productId]: {},
+      },
+    }
+
+    productSteps.forEach((step) => {
+      exportData.marcas[productId][step.id] = {
+        title: step.title,
+        content: step.content,
+        contentSegments: step.contentSegments,
+        buttons: step.buttons,
+        formatting: step.formatting,
+        tabulations: step.tabulations,
+        order: step.order,
+      }
+    })
+
+    const jsonString = JSON.stringify(exportData, null, 2)
+    const blob = new Blob([jsonString], { type: "application/json" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+
+    const fileName = product?.name.toLowerCase().replace(/\s+/g, "-") || productId
+    link.setAttribute("href", url)
+    link.setAttribute("download", `roteiro-${fileName}.json`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({
+      title: "Roteiro exportado",
+      description: `Roteiro de ${product?.name || productId} exportado com sucesso`,
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -281,6 +418,14 @@ export function ScriptsTab() {
           <p className="text-muted-foreground mt-1">Crie e edite os scripts de atendimento com formatação avançada</p>
         </div>
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowJsonList(!showJsonList)}
+            disabled={!!editingStep || !!previewStep}
+          >
+            <FileJson className="h-4 w-4 mr-2" />
+            {showJsonList ? "Ocultar" : "Ver"} Roteiros JSON
+          </Button>
           <Button variant="outline" onClick={handleImportScript} disabled={!!editingStep || !!previewStep}>
             <Upload className="h-4 w-4 mr-2" />
             Importar JSON
@@ -291,6 +436,82 @@ export function ScriptsTab() {
           </Button>
         </div>
       </div>
+
+      {showJsonList && !editingStep && !previewStep && (
+        <Card className="border-primary/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileJson className="h-5 w-5" />
+              Roteiros Disponíveis para Exportação
+            </CardTitle>
+            <CardDescription>Exporte seus roteiros como arquivos JSON para backup ou compartilhamento</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="mb-6 pb-6 border-b">
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Importar da Pasta Data</h3>
+              <div className="space-y-2">
+                {AVAILABLE_JSON_FILES.map((jsonFile) => (
+                  <div
+                    key={jsonFile.file}
+                    className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileJson className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <div>
+                        <p className="font-semibold text-sm">{jsonFile.name}</p>
+                        <p className="text-xs text-muted-foreground">{jsonFile.file}</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleImportFromDataFolder(jsonFile.path, jsonFile.name)}
+                      className="gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Importar
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Exportar Roteiros Existentes</h3>
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div>
+                <p className="font-semibold">Todos os Roteiros</p>
+                <p className="text-sm text-muted-foreground">
+                  {steps.length} {steps.length === 1 ? "tela" : "telas"} no total
+                </p>
+              </div>
+              <Button size="sm" onClick={handleExportScriptsAsJson}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar Tudo
+              </Button>
+            </div>
+
+            {Object.entries(groupedSteps).map(([groupKey, groupSteps]) => {
+              const product = products.find((p) => p.id === groupKey)
+              const isStandalone = groupKey === "standalone"
+
+              return (
+                <div key={groupKey} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="font-semibold">{isStandalone ? "Roteiros Avulsos" : product?.name || groupKey}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {groupSteps.length} {groupSteps.length === 1 ? "tela" : "telas"}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => handleExportProductScripts(groupKey)}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {previewStep ? (
         <div className="space-y-4">
@@ -354,6 +575,53 @@ export function ScriptsTab() {
                     />
                   </div>
                 </div>
+
+                <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      Alerta para Operador
+                    </CardTitle>
+                    <CardDescription>
+                      Adicione uma mensagem de alerta que será exibida para o operador nesta tela
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="alertMessage">Mensagem de Alerta</Label>
+                      <Textarea
+                        id="alertMessage"
+                        value={editingStep.alert?.message || ""}
+                        onChange={(e) =>
+                          setEditingStep({
+                            ...editingStep,
+                            alert: e.target.value
+                              ? {
+                                  message: e.target.value,
+                                  createdAt: editingStep.alert?.createdAt || new Date(),
+                                }
+                              : undefined,
+                          })
+                        }
+                        placeholder="Digite uma mensagem importante para o operador visualizar nesta tela..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {editingStep.alert?.message
+                          ? "Um ícone de alerta piscante será exibido para o operador"
+                          : "Deixe em branco se não houver alertas"}
+                      </p>
+                    </div>
+                    {editingStep.alert?.message && (
+                      <div className="flex items-center gap-2 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-300 dark:border-amber-700">
+                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-pulse" />
+                        <span className="text-sm text-amber-900 dark:text-amber-100">
+                          Alerta ativo - será exibido ao operador
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 <RichTextEditor
                   value={editingStep.content}

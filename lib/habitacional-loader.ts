@@ -100,7 +100,6 @@ interface JsonData {
 
 export function loadScriptFromJson(jsonData: JsonData, productName: string): ScriptStep[] {
   if (!jsonData.marcas || !jsonData.marcas[productName]) {
-    console.error(`[v0] Product ${productName} not found in JSON`)
     return []
   }
 
@@ -143,8 +142,6 @@ export function loadScriptFromJson(jsonData: JsonData, productName: string): Scr
 
       steps.push(step)
     })
-
-    console.log(`[v0] Loaded ${steps.length} steps for product ${productName}`)
   } catch (error) {
     console.error(`[v0] Error loading script for product ${productName}:`, error)
   }

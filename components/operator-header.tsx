@@ -252,7 +252,10 @@ export const OperatorHeader = memo(function OperatorHeader({
                           </div>
                         </CommandEmpty>
                       ) : (
-                        <CommandGroup heading="Produtos Disponíveis" className="p-2">
+                        <CommandGroup
+                          heading="Produtos Disponíveis"
+                          className="p-2 [&_[cmdk-group-heading]]:bg-transparent [&_[cmdk-group-heading]]:text-foreground"
+                        >
                           {filteredProducts.map((product) => (
                             <CommandItem
                               key={product.id}

@@ -31,7 +31,6 @@ const OperatorContent = memo(function OperatorContent() {
       const minutes = now.getMinutes()
 
       if (hours === 21 && minutes === 0) {
-        console.log("[v0] Auto logout triggered at 21:00")
         logout()
         router.push("/")
       }
@@ -96,13 +95,10 @@ const OperatorContent = memo(function OperatorContent() {
         setStepHistory([firstStep.id])
         setIsSessionActive(true)
         setShowConfig(false)
-        console.log("[v0] Attendance started with product:", product.name)
       } else {
-        console.error("[v0] First step not found for product:", product.id)
         alert("Erro: Script não encontrado para este produto. Entre em contato com o administrador.")
       }
     } else {
-      console.error("[v0] Product not found:", config.product)
       alert("Erro: Produto não encontrado. Entre em contato com o administrador.")
     }
   }, [])

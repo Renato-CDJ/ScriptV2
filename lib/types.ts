@@ -41,6 +41,10 @@ export interface ScriptStep {
     italic?: boolean
     textAlign?: "left" | "center" | "right" | "justify"
   }
+  alert?: {
+    message: string
+    createdAt: Date
+  }
 }
 
 export interface ContentSegment {

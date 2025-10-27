@@ -121,6 +121,13 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Added responsive viewport height support */
+  html,
+  body {
+    height: 100%;
+    height: 100dvh;
+  }
 }
 
 @keyframes fade-in {
@@ -325,4 +332,23 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 8s ease-in-out infinite;
+}
+
+/* Added responsive utilities for better screen adaptation */
+@media (max-width: 640px) {
+  :root {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1920px) {
+  :root {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    font-size: 20px;
+  }
 }

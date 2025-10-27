@@ -19,7 +19,6 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
 
   useEffect(() => {
     const handleStoreUpdate = () => {
-      console.log("[v0] Store updated, refreshing products")
       setProducts(getProducts().filter((p) => p.isActive))
     }
 

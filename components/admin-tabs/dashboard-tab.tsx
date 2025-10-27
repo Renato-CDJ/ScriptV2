@@ -1,20 +1,48 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, FileText, CheckCircle, Clock } from "lucide-react"
+import { getOnlineOperatorsCount, getProducts } from "@/lib/store"
 
 export function DashboardTab() {
+  const [onlineCount, setOnlineCount] = useState(0)
+  const [productsCount, setProductsCount] = useState(0)
+
+  useEffect(() => {
+    const updateCounts = () => {
+      setOnlineCount(getOnlineOperatorsCount())
+      setProductsCount(getProducts().filter((p) => p.isActive).length)
+    }
+
+    updateCounts()
+
+    // Update every 5 seconds for real-time data
+    const interval = setInterval(updateCounts, 5000)
+
+    const handleStoreUpdate = () => {
+      updateCounts()
+    }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("store-updated", handleStoreUpdate)
+    }
+  }, [])
+
   const stats = [
     {
       title: "Operadores Online",
-      value: "1",
+      value: onlineCount.toString(),
       description: "Ativos no momento",
       icon: Users,
       color: "text-green-600 dark:text-green-400",
     },
     {
       title: "Roteiros Ativos",
-      value: "3",
+      value: productsCount.toString(),
       description: "Scripts configurados",
       icon: FileText,
       color: "text-blue-600 dark:text-blue-400",

@@ -59,8 +59,6 @@ export function PhraseologyTab() {
         const text = await file.text()
         const data = JSON.parse(text)
 
-        console.log("[v0] Importing phraseology data:", data)
-
         let importedCount = 0
         const newPhraseologies: Phraseology[] = []
 
