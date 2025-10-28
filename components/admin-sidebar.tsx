@@ -15,6 +15,7 @@ import {
   Package,
   Sun,
   Moon,
+  Settings2,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -30,6 +31,7 @@ const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "scripts", label: "Roteiros", icon: FileText },
   { id: "products", label: "Produtos", icon: Package },
+  { id: "attendance-config", label: "Configurar Atendimento", icon: Settings2 },
   { id: "tabulations", label: "Tabulações", icon: Tags },
   { id: "situations", label: "Situações", icon: AlertCircle },
   { id: "channels", label: "Canais", icon: Radio },

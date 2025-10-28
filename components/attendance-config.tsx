@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { getProducts } from "@/lib/store"
+import { getProducts, getAttendanceTypes, getPersonTypes } from "@/lib/store"
 import type { AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 
@@ -12,14 +12,18 @@ interface AttendanceConfigProps {
 }
 
 export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
-  const [attendanceType, setAttendanceType] = useState<"ativo" | "receptivo" | null>(null)
-  const [personType, setPersonType] = useState<"fisica" | "juridica" | null>(null)
+  const [attendanceType, setAttendanceType] = useState<string | null>(null)
+  const [personType, setPersonType] = useState<string | null>(null)
   const [product, setProduct] = useState<string>("")
   const [products, setProducts] = useState(getProducts().filter((p) => p.isActive))
+  const [attendanceTypes, setAttendanceTypes] = useState(getAttendanceTypes())
+  const [personTypes, setPersonTypes] = useState(getPersonTypes())
 
   useEffect(() => {
     const handleStoreUpdate = () => {
       setProducts(getProducts().filter((p) => p.isActive))
+      setAttendanceTypes(getAttendanceTypes())
+      setPersonTypes(getPersonTypes())
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
@@ -28,8 +32,8 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
 
   const filteredProducts = products.filter((p) => {
     if (!attendanceType || !personType) return false
-    const matchesAttendance = p.attendanceTypes?.includes(attendanceType) ?? false
-    const matchesPerson = p.personTypes?.includes(personType) ?? false
+    const matchesAttendance = p.attendanceTypes?.includes(attendanceType as any) ?? false
+    const matchesPerson = p.personTypes?.includes(personType as any) ?? false
     return matchesAttendance && matchesPerson
   })
 
@@ -42,8 +46,8 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
     }
 
     onStart({
-      attendanceType,
-      personType,
+      attendanceType: attendanceType as any,
+      personType: personType as any,
       product,
     })
   }
@@ -68,61 +72,45 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-10 pb-10 relative z-10">
-            {/* Tipo de atendimento */}
+            {/* Tipo de atendimento - Now using dynamic options */}
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-foreground text-center">Tipo de Atendimento</h3>
-              <div className="flex gap-4 justify-center">
-                <Button
-                  variant={attendanceType === "ativo" ? "default" : "outline"}
-                  onClick={() => setAttendanceType("ativo")}
-                  className={
-                    attendanceType === "ativo"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
-                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
-                  }
-                >
-                  Ativo
-                </Button>
-                <Button
-                  variant={attendanceType === "receptivo" ? "default" : "outline"}
-                  onClick={() => setAttendanceType("receptivo")}
-                  className={
-                    attendanceType === "receptivo"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
-                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
-                  }
-                >
-                  Receptivo
-                </Button>
+              <div className="flex gap-4 justify-center flex-wrap">
+                {attendanceTypes.map((type) => (
+                  <Button
+                    key={type.id}
+                    variant={attendanceType === type.value ? "default" : "outline"}
+                    onClick={() => setAttendanceType(type.value)}
+                    className={
+                      attendanceType === type.value
+                        ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                        : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
+                    }
+                  >
+                    {type.label}
+                  </Button>
+                ))}
               </div>
             </div>
 
-            {/* Pessoa */}
+            {/* Pessoa - Now using dynamic options */}
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-foreground text-center">Tipo de Pessoa</h3>
-              <div className="flex gap-4 justify-center">
-                <Button
-                  variant={personType === "fisica" ? "default" : "outline"}
-                  onClick={() => setPersonType("fisica")}
-                  className={
-                    personType === "fisica"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
-                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
-                  }
-                >
-                  Física
-                </Button>
-                <Button
-                  variant={personType === "juridica" ? "default" : "outline"}
-                  onClick={() => setPersonType("juridica")}
-                  className={
-                    personType === "juridica"
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold uppercase border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
-                      : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 uppercase min-w-[120px] h-10 text-sm font-medium transition-all"
-                  }
-                >
-                  Jurídica
-                </Button>
+              <div className="flex gap-4 justify-center flex-wrap">
+                {personTypes.map((type) => (
+                  <Button
+                    key={type.id}
+                    variant={personType === type.value ? "default" : "outline"}
+                    onClick={() => setPersonType(type.value)}
+                    className={
+                      personType === type.value
+                        ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                        : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
+                    }
+                  >
+                    {type.label}
+                  </Button>
+                ))}
               </div>
             </div>
 

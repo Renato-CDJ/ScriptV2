@@ -11,6 +11,8 @@ import type {
   CallSession,
   Product,
   LoginSession,
+  AttendanceTypeOption,
+  PersonTypeOption,
 } from "./types"
 import { loadHabitacionalScript, loadScriptFromJson } from "./habitacional-loader"
 
@@ -432,6 +434,8 @@ const STORAGE_KEYS = {
   SESSIONS: "callcenter_sessions",
   PRODUCTS: "callcenter_products",
   LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
+  ATTENDANCE_TYPES: "callcenter_attendance_types",
+  PERSON_TYPES: "callcenter_person_types",
 }
 
 // Initialize mock data
@@ -475,6 +479,42 @@ export function initializeMockData() {
       createdAt: new Date(),
     }
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([habitacionalProduct]))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.ATTENDANCE_TYPES)) {
+    const defaultAttendanceTypes: AttendanceTypeOption[] = [
+      {
+        id: "att-ativo",
+        value: "ativo",
+        label: "Ativo",
+        createdAt: new Date(),
+      },
+      {
+        id: "att-receptivo",
+        value: "receptivo",
+        label: "Receptivo",
+        createdAt: new Date(),
+      },
+    ]
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(defaultAttendanceTypes))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.PERSON_TYPES)) {
+    const defaultPersonTypes: PersonTypeOption[] = [
+      {
+        id: "per-fisica",
+        value: "fisica",
+        label: "Física",
+        createdAt: new Date(),
+      },
+      {
+        id: "per-juridica",
+        value: "juridica",
+        label: "Jurídica",
+        createdAt: new Date(),
+      },
+    ]
+    localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(defaultPersonTypes))
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.LAST_UPDATE)) {
@@ -974,4 +1014,92 @@ export function getOnlineOperatorsCount(): number {
 
   const users = getAllUsers()
   return users.filter((u) => u.role === "operator" && u.isOnline === true).length
+}
+
+// Attendance type options
+export function getAttendanceTypes(): AttendanceTypeOption[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE_TYPES) || "[]")
+}
+
+export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "createdAt">): AttendanceTypeOption {
+  if (typeof window === "undefined") return { ...option, id: "", createdAt: new Date() }
+
+  const newOption: AttendanceTypeOption = {
+    ...option,
+    id: `att-${Date.now()}`,
+    createdAt: new Date(),
+  }
+
+  const options = getAttendanceTypes()
+  options.push(newOption)
+  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+  notifyUpdate()
+
+  return newOption
+}
+
+export function updateAttendanceType(option: AttendanceTypeOption) {
+  if (typeof window === "undefined") return
+
+  const options = getAttendanceTypes()
+  const index = options.findIndex((o) => o.id === option.id)
+
+  if (index !== -1) {
+    options[index] = option
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+    notifyUpdate()
+  }
+}
+
+export function deleteAttendanceType(id: string) {
+  if (typeof window === "undefined") return
+
+  const options = getAttendanceTypes().filter((o) => o.id !== id)
+  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+  notifyUpdate()
+}
+
+// Person type options
+export function getPersonTypes(): PersonTypeOption[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PERSON_TYPES) || "[]")
+}
+
+export function createPersonType(option: Omit<PersonTypeOption, "id" | "createdAt">): PersonTypeOption {
+  if (typeof window === "undefined") return { ...option, id: "", createdAt: new Date() }
+
+  const newOption: PersonTypeOption = {
+    ...option,
+    id: `per-${Date.now()}`,
+    createdAt: new Date(),
+  }
+
+  const options = getPersonTypes()
+  options.push(newOption)
+  localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+  notifyUpdate()
+
+  return newOption
+}
+
+export function updatePersonType(option: PersonTypeOption) {
+  if (typeof window === "undefined") return
+
+  const options = getPersonTypes()
+  const index = options.findIndex((o) => o.id === option.id)
+
+  if (index !== -1) {
+    options[index] = option
+    localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+    notifyUpdate()
+  }
+}
+
+export function deletePersonType(id: string) {
+  if (typeof window === "undefined") return
+
+  const options = getPersonTypes().filter((o) => o.id !== id)
+  localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+  notifyUpdate()
 }

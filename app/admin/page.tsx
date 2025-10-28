@@ -13,6 +13,9 @@ const DashboardTab = lazy(() =>
 )
 const ScriptsTab = lazy(() => import("@/components/admin-tabs/scripts-tab").then((m) => ({ default: m.ScriptsTab })))
 const ProductsTab = lazy(() => import("@/components/admin-tabs/products-tab").then((m) => ({ default: m.ProductsTab })))
+const AttendanceTypesTab = lazy(() =>
+  import("@/components/admin-tabs/attendance-types-tab").then((m) => ({ default: m.AttendanceTypesTab })),
+)
 const OperatorsTab = lazy(() =>
   import("@/components/admin-tabs/operators-tab").then((m) => ({ default: m.OperatorsTab })),
 )
@@ -65,6 +68,12 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <ProductsTab />
+          </Suspense>
+        )
+      case "attendance-config":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <AttendanceTypesTab />
           </Suspense>
         )
       case "operators":
