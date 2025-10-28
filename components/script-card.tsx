@@ -174,6 +174,7 @@ export const ScriptCard = memo(function ScriptCard({
 
   const hasTabulations = step.tabulations && step.tabulations.length > 0
   const hasAlert = step.alert && step.alert.message
+  const alertTitle = step.alert?.title || "Alerta Importante"
 
   useEffect(() => {
     saveAccessibilitySettings(textSize[0], buttonSize[0])
@@ -332,7 +333,7 @@ export const ScriptCard = memo(function ScriptCard({
             className="absolute top-3 left-3 md:top-4 md:left-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm animate-pulse"
           >
             <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 md:mr-2 animate-bounce" />
-            <span className="hidden md:inline">Alerta Importante</span>
+            <span className="hidden md:inline">{alertTitle}</span>
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
@@ -414,27 +415,22 @@ export const ScriptCard = memo(function ScriptCard({
       </div>
 
       <Dialog open={showAlert} onOpenChange={setShowAlert}>
-        <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto border-2 border-amber-200 dark:border-amber-700">
+        <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto border-2 border-border">
           <DialogHeader className="space-y-3 pb-4 border-b border-border">
             <DialogTitle className="flex items-center gap-3 text-xl font-bold">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 dark:from-amber-400 dark:to-amber-500 animate-pulse">
+              <div className="p-2 rounded-lg bg-amber-500 dark:bg-amber-600 animate-pulse">
                 <AlertTriangle className="h-6 w-6 text-white" />
               </div>
-              <span className="bg-gradient-to-r from-amber-600 to-amber-500 dark:from-amber-400 dark:to-amber-300 bg-clip-text text-transparent">
-                Alerta Importante
-              </span>
+              <span className="text-foreground">{alertTitle}</span>
             </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              Mensagem do administrador para esta tela:
-            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="group relative rounded-xl border-2 border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/30 p-6 shadow-md">
+            <div className="group relative rounded-xl border-2 border-border bg-muted/50 p-6 shadow-md">
               <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
                 <AlertTriangle className="h-12 w-12 text-amber-500 dark:text-amber-400" />
               </div>
               <div className="relative">
-                <p className="text-base text-gray-900 dark:text-white leading-relaxed whitespace-pre-wrap break-words">
+                <p className="text-base text-foreground leading-relaxed whitespace-pre-wrap break-words">
                   {step.alert?.message}
                 </p>
               </div>
@@ -443,7 +439,7 @@ export const ScriptCard = memo(function ScriptCard({
           <div className="pt-4 border-t border-border">
             <Button
               onClick={handleAlertClose}
-              className="w-full h-11 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 dark:from-amber-500 dark:to-amber-600 dark:hover:from-amber-600 dark:hover:to-amber-700 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base"
+              className="w-full h-11 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base"
             >
               Entendi
             </Button>
