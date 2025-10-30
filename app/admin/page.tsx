@@ -27,6 +27,9 @@ const SituationsTab = lazy(() =>
 )
 const ChannelsTab = lazy(() => import("@/components/admin-tabs/channels-tab").then((m) => ({ default: m.ChannelsTab })))
 const NotesTab = lazy(() => import("@/components/admin-tabs/notes-tab").then((m) => ({ default: m.NotesTab })))
+const MessagesQuizTab = lazy(() =>
+  import("@/components/admin-tabs/messages-quiz-tab").then((m) => ({ default: m.MessagesQuizTab })),
+)
 const SettingsPage = lazy(() => import("@/app/admin/settings/page"))
 
 const LoadingFallback = memo(function LoadingFallback() {
@@ -104,6 +107,12 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <NotesTab />
+          </Suspense>
+        )
+      case "messages-quiz":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <MessagesQuizTab />
           </Suspense>
         )
       case "settings":

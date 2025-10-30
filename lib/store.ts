@@ -13,6 +13,9 @@ import type {
   LoginSession,
   AttendanceTypeOption,
   PersonTypeOption,
+  Message,
+  Quiz,
+  QuizAttempt,
 } from "./types"
 import { loadHabitacionalScript, loadScriptFromJson } from "./habitacional-loader"
 
@@ -436,6 +439,9 @@ const STORAGE_KEYS = {
   LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
   ATTENDANCE_TYPES: "callcenter_attendance_types",
   PERSON_TYPES: "callcenter_person_types",
+  MESSAGES: "callcenter_messages",
+  QUIZZES: "callcenter_quizzes",
+  QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
 }
 
 // Initialize mock data
@@ -1102,4 +1108,217 @@ export function deletePersonType(id: string) {
   const options = getPersonTypes().filter((o) => o.id !== id)
   localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
   notifyUpdate()
+}
+
+// Messages management functions
+export function getMessages(): Message[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || "[]")
+}
+
+export function getActiveMessages(): Message[] {
+  return getMessages().filter((m) => m.isActive)
+}
+
+export function createMessage(message: Omit<Message, "id" | "createdAt" | "seenBy">): Message {
+  if (typeof window === "undefined") return { ...message, id: "", createdAt: new Date(), seenBy: [] }
+
+  const newMessage: Message = {
+    ...message,
+    id: `msg-${Date.now()}`,
+    createdAt: new Date(),
+    seenBy: [],
+  }
+
+  const messages = getMessages()
+  messages.push(newMessage)
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+  notifyUpdate()
+
+  return newMessage
+}
+
+export function updateMessage(message: Message) {
+  if (typeof window === "undefined") return
+
+  const messages = getMessages()
+  const index = messages.findIndex((m) => m.id === message.id)
+
+  if (index !== -1) {
+    messages[index] = message
+    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+    notifyUpdate()
+  }
+}
+
+export function deleteMessage(id: string) {
+  if (typeof window === "undefined") return
+
+  const messages = getMessages().filter((m) => m.id !== id)
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+  notifyUpdate()
+}
+
+export function markMessageAsSeen(messageId: string, operatorId: string) {
+  if (typeof window === "undefined") return
+
+  const messages = getMessages()
+  const message = messages.find((m) => m.id === messageId)
+
+  if (message && !message.seenBy.includes(operatorId)) {
+    message.seenBy.push(operatorId)
+    updateMessage(message)
+  }
+}
+
+export function getActiveMessagesForOperator(operatorId: string): Message[] {
+  const now = new Date()
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  return getMessages().filter((m) => {
+    if (!m.isActive) return false
+
+    const messageDate = new Date(m.createdAt)
+    if (messageDate < twentyFourHoursAgo) return false
+
+    // Check if message is for this operator
+    if (m.recipients && m.recipients.length > 0) {
+      return m.recipients.includes(operatorId)
+    }
+
+    // Empty recipients means all operators
+    return true
+  })
+}
+
+export function getHistoricalMessagesForOperator(operatorId: string): Message[] {
+  const now = new Date()
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  return getMessages().filter((m) => {
+    const messageDate = new Date(m.createdAt)
+    if (messageDate >= twentyFourHoursAgo) return false
+
+    // Check if message is for this operator
+    if (m.recipients && m.recipients.length > 0) {
+      return m.recipients.includes(operatorId)
+    }
+
+    // Empty recipients means all operators
+    return true
+  })
+}
+
+// Quizzes management functions
+export function getQuizzes(): Quiz[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.QUIZZES) || "[]")
+}
+
+export function getActiveQuizzes(): Quiz[] {
+  return getQuizzes().filter((q) => q.isActive)
+}
+
+export function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Quiz {
+  if (typeof window === "undefined") return { ...quiz, id: "", createdAt: new Date() }
+
+  const newQuiz: Quiz = {
+    ...quiz,
+    id: `quiz-${Date.now()}`,
+    createdAt: new Date(),
+  }
+
+  const quizzes = getQuizzes()
+  quizzes.push(newQuiz)
+  localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+  notifyUpdate()
+
+  return newQuiz
+}
+
+export function updateQuiz(quiz: Quiz) {
+  if (typeof window === "undefined") return
+
+  const quizzes = getQuizzes()
+  const index = quizzes.findIndex((q) => q.id === quiz.id)
+
+  if (index !== -1) {
+    quizzes[index] = quiz
+    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+    notifyUpdate()
+  }
+}
+
+export function deleteQuiz(id: string) {
+  if (typeof window === "undefined") return
+
+  const quizzes = getQuizzes().filter((q) => q.id !== id)
+  localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+  notifyUpdate()
+}
+
+export function getActiveQuizzesForOperator(): Quiz[] {
+  const now = new Date()
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  return getQuizzes().filter((q) => {
+    if (!q.isActive) return false
+
+    // Check if quiz is scheduled for future
+    if (q.scheduledDate) {
+      const scheduledDate = new Date(q.scheduledDate)
+      if (scheduledDate > now) return false
+    }
+
+    const quizDate = new Date(q.createdAt)
+    if (quizDate < twentyFourHoursAgo) return false
+
+    return true
+  })
+}
+
+export function getHistoricalQuizzes(): Quiz[] {
+  const now = new Date()
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  return getQuizzes().filter((q) => {
+    const quizDate = new Date(q.createdAt)
+    return quizDate < twentyFourHoursAgo
+  })
+}
+
+export function hasOperatorAnsweredQuiz(quizId: string, operatorId: string): boolean {
+  const attempts = getQuizAttempts()
+  return attempts.some((a) => a.quizId === quizId && a.operatorId === operatorId)
+}
+
+// Quiz Attempts management functions
+export function getQuizAttempts(): QuizAttempt[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.QUIZ_ATTEMPTS) || "[]")
+}
+
+export function getQuizAttemptsByOperator(operatorId: string): QuizAttempt[] {
+  return getQuizAttempts().filter((a) => a.operatorId === operatorId)
+}
+
+export function getQuizAttemptsByQuiz(quizId: string): QuizAttempt[] {
+  return getQuizAttempts().filter((a) => a.quizId === quizId)
+}
+
+export function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt">): QuizAttempt {
+  if (typeof window === "undefined") return { ...attempt, id: "", attemptedAt: new Date() }
+
+  const newAttempt: QuizAttempt = {
+    ...attempt,
+    id: `attempt-${Date.now()}`,
+    attemptedAt: new Date(),
+  }
+
+  const attempts = getQuizAttempts()
+  attempts.push(newAttempt)
+  localStorage.setItem(STORAGE_KEYS.QUIZ_ATTEMPTS, JSON.stringify(attempts))
+  notifyUpdate()
+
+  return newAttempt
 }

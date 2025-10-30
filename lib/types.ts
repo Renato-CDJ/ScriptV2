@@ -102,6 +102,46 @@ export interface Note {
   updatedAt: Date
 }
 
+export interface Message {
+  id: string
+  title: string
+  content: string
+  createdBy: string // admin user id
+  createdByName: string // admin user name
+  createdAt: Date
+  isActive: boolean
+  seenBy: string[] // array of operator user ids who have seen this message
+  recipients: string[] // array of operator user ids, empty array means all operators
+}
+
+export interface Quiz {
+  id: string
+  question: string
+  options: QuizOption[]
+  correctAnswer: string // id of the correct option
+  createdBy: string // admin user id
+  createdByName: string // admin user name
+  createdAt: Date
+  isActive: boolean
+  scheduledDate?: Date // optional date for when quiz should become active
+}
+
+export interface QuizOption {
+  id: string
+  label: string // a, b, c, d
+  text: string
+}
+
+export interface QuizAttempt {
+  id: string
+  quizId: string
+  operatorId: string
+  operatorName: string
+  selectedAnswer: string // id of the selected option
+  isCorrect: boolean
+  attemptedAt: Date
+}
+
 export interface CallSession {
   id: string
   operatorId: string

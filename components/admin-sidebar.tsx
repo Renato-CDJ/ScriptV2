@@ -16,6 +16,7 @@ import {
   Sun,
   Moon,
   Settings2,
+  MessageSquare,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -37,6 +38,7 @@ const menuItems = [
   { id: "channels", label: "Canais", icon: Radio },
   { id: "notes", label: "Bloco de Notas", icon: StickyNote },
   { id: "operators", label: "Operadores", icon: Users },
+  { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare },
   { id: "settings", label: "Configurações", icon: Settings },
 ]
 
