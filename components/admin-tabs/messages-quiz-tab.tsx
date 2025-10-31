@@ -29,6 +29,7 @@ import {
   deleteQuiz,
   getQuizAttemptsByQuiz,
   getAllUsers,
+  getMonthlyQuizRanking,
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Message, Quiz, QuizOption } from "@/lib/types"
@@ -44,6 +45,7 @@ import {
   Calendar,
   Search,
   Download,
+  FileSpreadsheet,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -365,6 +367,50 @@ export function MessagesQuizTab() {
     })
   }
 
+  const handleExportRankingReport = () => {
+    const rankings = getMonthlyQuizRanking()
+
+    if (rankings.length === 0) {
+      toast({
+        title: "Nenhum dado disponível",
+        description: "Não há dados de ranking para exportar.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Create CSV content
+    let csvContent = "data:text/csv;charset=utf-8,"
+
+    // Header
+    csvContent += "Relatório de Ranking - Quiz\n\n"
+    csvContent += `Mês:,${new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}\n`
+    csvContent += `Data de exportação:,${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR")}\n\n`
+
+    // Table header
+    csvContent += "Posição,Nome do Operador,Acertos,Pontuação\n"
+
+    // Data rows
+    rankings.forEach((ranking) => {
+      csvContent += `${ranking.rank},${ranking.operatorName},${ranking.correctAnswers},${ranking.score}\n`
+    })
+
+    // Create download link
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    const fileName = `ranking_quiz_${new Date().getFullYear()}_${String(new Date().getMonth() + 1).padStart(2, "0")}_${Date.now()}.csv`
+    link.setAttribute("download", fileName)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({
+      title: "Relatório exportado",
+      description: "O relatório de ranking foi exportado com sucesso.",
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -374,21 +420,29 @@ export function MessagesQuizTab() {
         </div>
       </div>
 
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-3 border-b pb-4">
         <Button
           variant={activeTab === "messages" ? "default" : "ghost"}
           onClick={() => setActiveTab("messages")}
-          className={activeTab === "messages" ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}
+          className={`text-base px-6 py-5 transition-all duration-300 ${
+            activeTab === "messages"
+              ? "bg-gradient-to-r from-chart-2 via-chart-3 to-chart-2 hover:opacity-90 text-white shadow-lg scale-105"
+              : "hover:scale-105"
+          }`}
         >
-          <MessageSquare className="h-4 w-4 mr-2" />
+          <MessageSquare className={`h-5 w-5 mr-2 ${activeTab === "messages" ? "animate-pulse" : ""}`} />
           Recados
         </Button>
         <Button
           variant={activeTab === "quiz" ? "default" : "ghost"}
           onClick={() => setActiveTab("quiz")}
-          className={activeTab === "quiz" ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}
+          className={`text-base px-6 py-5 transition-all duration-300 ${
+            activeTab === "quiz"
+              ? "bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg scale-105"
+              : "hover:scale-105"
+          }`}
         >
-          <Brain className="h-4 w-4 mr-2" />
+          <Brain className={`h-5 w-5 mr-2 ${activeTab === "quiz" ? "animate-pulse" : ""}`} />
           Quiz
         </Button>
       </div>
@@ -555,97 +609,111 @@ export function MessagesQuizTab() {
 
       {activeTab === "quiz" && (
         <div className="space-y-4">
-          <Dialog open={showQuizDialog} onOpenChange={setShowQuizDialog}>
-            <DialogTrigger asChild>
-              <Button onClick={resetQuizForm} className="bg-orange-500 hover:bg-orange-600 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Quiz
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingQuiz ? "Editar Quiz" : "Novo Quiz"}</DialogTitle>
-                <DialogDescription>Crie um quiz com 4 opções de resposta para os operadores</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="quiz-question">Pergunta</Label>
-                  <Textarea
-                    id="quiz-question"
-                    value={quizQuestion}
-                    onChange={(e) => setQuizQuestion(e.target.value)}
-                    placeholder="Digite a pergunta do quiz"
-                    rows={3}
-                  />
-                </div>
-
-                <Separator />
-
+          <div className="flex gap-3">
+            <Dialog open={showQuizDialog} onOpenChange={setShowQuizDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  onClick={resetQuizForm}
+                  className="bg-gradient-to-r from-chart-1 to-chart-4 hover:opacity-90 text-white shadow-lg"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Quiz
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingQuiz ? "Editar Quiz" : "Novo Quiz"}</DialogTitle>
+                  <DialogDescription>Crie um quiz com 4 opções de resposta para os operadores</DialogDescription>
+                </DialogHeader>
                 <div className="space-y-4">
-                  <Label>Opções de Resposta</Label>
-                  {quizOptions.map((option, index) => (
-                    <div key={option.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label className="font-bold w-8">{option.label})</Label>
-                        <Input
-                          value={option.text}
-                          onChange={(e) => updateQuizOption(index, e.target.value)}
-                          placeholder={`Digite a opção ${option.label}`}
-                        />
+                  <div className="space-y-2">
+                    <Label htmlFor="quiz-question">Pergunta</Label>
+                    <Textarea
+                      id="quiz-question"
+                      value={quizQuestion}
+                      onChange={(e) => setQuizQuestion(e.target.value)}
+                      placeholder="Digite a pergunta do quiz"
+                      rows={3}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <Label>Opções de Resposta</Label>
+                    {quizOptions.map((option, index) => (
+                      <div key={option.id} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label className="font-bold w-8">{option.label})</Label>
+                          <Input
+                            value={option.text}
+                            onChange={(e) => updateQuizOption(index, e.target.value)}
+                            placeholder={`Digite a opção ${option.label}`}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label>Resposta Correta</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {quizOptions.map((option) => (
-                      <Button
-                        key={option.id}
-                        variant={quizCorrectAnswer === option.id ? "default" : "outline"}
-                        onClick={() => setQuizCorrectAnswer(option.id)}
-                        className="font-bold"
-                      >
-                        {option.label}
-                      </Button>
                     ))}
                   </div>
-                </div>
 
-                <Separator />
-                <div className="space-y-2">
-                  <Label htmlFor="quiz-scheduled-date">
-                    <Calendar className="inline h-4 w-4 mr-2" />
-                    Agendar Quiz (Opcional)
-                  </Label>
-                  <Input
-                    id="quiz-scheduled-date"
-                    type="date"
-                    value={quizScheduledDate}
-                    onChange={(e) => setQuizScheduledDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                  />
-                  <p className="text-xs text-muted-foreground">Deixe em branco para disponibilizar imediatamente</p>
-                </div>
+                  <Separator />
 
-                <Separator />
-                <div className="flex items-center space-x-2">
-                  <Switch id="quiz-active" checked={quizActive} onCheckedChange={setQuizActive} />
-                  <Label htmlFor="quiz-active">Ativo</Label>
-                </div>
+                  <div className="space-y-2">
+                    <Label>Resposta Correta</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {quizOptions.map((option) => (
+                        <Button
+                          key={option.id}
+                          variant={quizCorrectAnswer === option.id ? "default" : "outline"}
+                          onClick={() => setQuizCorrectAnswer(option.id)}
+                          className="font-bold"
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setShowQuizDialog(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSaveQuiz}>Salvar</Button>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label htmlFor="quiz-scheduled-date">
+                      <Calendar className="inline h-4 w-4 mr-2" />
+                      Agendar Quiz (Opcional)
+                    </Label>
+                    <Input
+                      id="quiz-scheduled-date"
+                      type="date"
+                      value={quizScheduledDate}
+                      onChange={(e) => setQuizScheduledDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                    <p className="text-xs text-muted-foreground">Deixe em branco para disponibilizar imediatamente</p>
+                  </div>
+
+                  <Separator />
+                  <div className="flex items-center space-x-2">
+                    <Switch id="quiz-active" checked={quizActive} onCheckedChange={setQuizActive} />
+                    <Label htmlFor="quiz-active">Ativo</Label>
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setShowQuizDialog(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSaveQuiz}>Salvar</Button>
+                  </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              onClick={handleExportRankingReport}
+              variant="outline"
+              className="bg-gradient-to-r from-chart-4 to-chart-1 hover:opacity-90 text-white border-0 shadow-lg"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Exportar Ranking
+            </Button>
+          </div>
 
           <div className="grid gap-4">
             {quizzes.length === 0 ? (
@@ -661,7 +729,7 @@ export function MessagesQuizTab() {
                 const isScheduled = quiz.scheduledDate && new Date(quiz.scheduledDate) > new Date()
 
                 return (
-                  <Card key={quiz.id}>
+                  <Card key={quiz.id} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

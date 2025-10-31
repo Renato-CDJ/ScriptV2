@@ -17,6 +17,7 @@ import {
   Moon,
   Settings2,
   MessageSquare,
+  Shield,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -29,17 +30,17 @@ interface AdminSidebarProps {
 }
 
 const menuItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "scripts", label: "Roteiros", icon: FileText },
-  { id: "products", label: "Produtos", icon: Package },
-  { id: "attendance-config", label: "Configurar Atendimento", icon: Settings2 },
-  { id: "tabulations", label: "Tabulações", icon: Tags },
-  { id: "situations", label: "Situações", icon: AlertCircle },
-  { id: "channels", label: "Canais", icon: Radio },
-  { id: "notes", label: "Bloco de Notas", icon: StickyNote },
-  { id: "operators", label: "Operadores", icon: Users },
-  { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare },
-  { id: "settings", label: "Configurações", icon: Settings },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard" },
+  { id: "scripts", label: "Roteiros", icon: FileText, permission: "scripts" },
+  { id: "products", label: "Produtos", icon: Package, permission: "products" },
+  { id: "attendance-config", label: "Configurar Atendimento", icon: Settings2, permission: "attendanceConfig" },
+  { id: "tabulations", label: "Tabulações", icon: Tags, permission: "tabulations" },
+  { id: "situations", label: "Situações", icon: AlertCircle, permission: "situations" },
+  { id: "channels", label: "Canais", icon: Radio, permission: "channels" },
+  { id: "notes", label: "Bloco de Notas", icon: StickyNote, permission: "notes" },
+  { id: "operators", label: "Operadores", icon: Users, permission: "operators" },
+  { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
+  { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]
 
 export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
@@ -56,6 +57,18 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
     setTheme(theme === "dark" ? "light" : "dark")
   }
 
+  const hasPermission = (permission: string) => {
+    if (!user) return false
+    if (user.username === "admin") return true // Admin has all permissions
+
+    const permissions = user.permissions || {}
+    return permissions[permission as keyof typeof permissions] !== false
+  }
+
+  const visibleMenuItems = menuItems.filter((item) => hasPermission(item.permission))
+
+  const isMainAdmin = user?.username === "admin"
+
   return (
     <div className="flex flex-col h-full bg-card border-r border-orange-500/30 dark:border-orange-500/40">
       {/* Header */}
@@ -67,7 +80,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon
             return (
               <Button
@@ -85,6 +98,21 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
               </Button>
             )
           })}
+
+          {isMainAdmin && (
+            <Button
+              variant={activeTab === "access-control" ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start gap-3",
+                activeTab === "access-control" &&
+                  "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-semibold border-0",
+              )}
+              onClick={() => onTabChange("access-control")}
+            >
+              <Shield className="h-4 w-4" />
+              Controle de Acesso
+            </Button>
+          )}
         </nav>
       </ScrollArea>
 

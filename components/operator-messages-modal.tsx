@@ -39,6 +39,8 @@ import {
   Medal,
   Crown,
   TrendingUp,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -63,6 +65,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   const [showResult, setShowResult] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
   const [expandedMessage, setExpandedMessage] = useState<Message | null>(null)
+
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
 
   useEffect(() => {
     if (open) {
@@ -150,9 +155,59 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   const displayMessages = showHistory ? historicalMessages : messages
   const displayQuizzes = showHistory ? historicalQuizzes : quizzes
 
-  const rankings = getMonthlyQuizRanking()
+  const rankings = getMonthlyQuizRanking(selectedYear, selectedMonth)
   const currentMonth = getCurrentMonthName()
   const userRanking = user ? rankings.find((r) => r.operatorId === user.id) : null
+
+  const getMonthName = (month: number) => {
+    const months = [
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+    ]
+    return months[month]
+  }
+
+  const handlePreviousMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11)
+      setSelectedYear(selectedYear - 1)
+    } else {
+      setSelectedMonth(selectedMonth - 1)
+    }
+  }
+
+  const handleNextMonth = () => {
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonthIndex = now.getMonth()
+
+    // Don't allow going beyond current month
+    if (selectedYear === currentYear && selectedMonth === currentMonthIndex) {
+      return
+    }
+
+    if (selectedMonth === 11) {
+      setSelectedMonth(0)
+      setSelectedYear(selectedYear + 1)
+    } else {
+      setSelectedMonth(selectedMonth + 1)
+    }
+  }
+
+  const isCurrentMonth = () => {
+    const now = new Date()
+    return selectedYear === now.getFullYear() && selectedMonth === now.getMonth()
+  }
 
   return (
     <>
@@ -237,7 +292,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 pr-6">
+          <ScrollArea className="flex-1 min-h-0 pr-6 overflow-hidden">
             {activeTab === "messages" && (
               <div className="space-y-6 py-2">
                 {displayMessages.length === 0 ? (
@@ -254,7 +309,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                     return (
                       <Card
                         key={message.id}
-                        className={`transition-all duration-300 transform hover:scale-[1.01] ${
+                        className={`transition-all duration-300 transform hover:scale-[1.01] overflow-hidden ${
                           seen
                             ? "opacity-60 bg-muted"
                             : "bg-gradient-to-br from-card to-muted/30 hover:shadow-2xl hover:shadow-chart-2/20 border-2 border-transparent hover:border-chart-2/50"
@@ -268,23 +323,23 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                               <div className="absolute bottom-0 left-0 w-24 h-24 bg-chart-3/20 rounded-full blur-2xl -z-10" />
                             </>
                           )}
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2 rounded-lg bg-gradient-to-br from-chart-2 to-chart-3 shadow-lg">
+                                <div className="p-2 rounded-lg bg-gradient-to-br from-chart-2 to-chart-3 shadow-lg flex-shrink-0">
                                   <Mail className="h-6 w-6 text-white" />
                                 </div>
                                 {!seen && (
-                                  <Badge className="bg-gradient-to-r from-chart-2 to-chart-3 text-white border-0 animate-pulse">
+                                  <Badge className="bg-gradient-to-r from-chart-2 to-chart-3 text-white border-0 animate-pulse flex-shrink-0">
                                     <Bell className="h-4 w-4 mr-1" />
                                     Novo
                                   </Badge>
                                 )}
                               </div>
-                              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-chart-2 to-chart-3 bg-clip-text text-transparent">
+                              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-chart-2 to-chart-3 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
                                 {message.title}
                               </CardTitle>
-                              <CardDescription className="mt-3 text-lg">
+                              <CardDescription className="mt-3 text-lg break-words">
                                 Por {message.createdByName} • {new Date(message.createdAt).toLocaleDateString("pt-BR")}{" "}
                                 às{" "}
                                 {new Date(message.createdAt).toLocaleTimeString("pt-BR", {
@@ -293,7 +348,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                 })}
                               </CardDescription>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-shrink-0">
                               <Button
                                 variant="outline"
                                 size="lg"
@@ -313,7 +368,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="text-lg whitespace-pre-wrap mb-6 leading-relaxed">{message.content}</p>
+                          <p className="text-lg whitespace-pre-wrap mb-6 leading-relaxed break-words overflow-wrap-anywhere">
+                            {message.content}
+                          </p>
                           {!seen && !showHistory && (
                             <Button
                               size="lg"
@@ -340,17 +397,38 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                       <CardHeader className="relative overflow-hidden pb-6">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-chart-1/10 rounded-full blur-3xl -z-10" />
                         <div className="absolute bottom-0 left-0 w-48 h-48 bg-chart-4/10 rounded-full blur-3xl -z-10" />
-                        <div className="flex items-center gap-4 mb-2">
-                          <div className="p-3 rounded-xl bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg">
-                            <Trophy className="h-8 w-8 text-white animate-pulse" />
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg">
+                              <Trophy className="h-8 w-8 text-white animate-pulse" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent">
+                                Ranking Mensal - {getMonthName(selectedMonth)} {selectedYear}
+                              </CardTitle>
+                              <CardDescription className="text-lg mt-1">
+                                Classificação geral dos operadores
+                              </CardDescription>
+                            </div>
                           </div>
-                          <div>
-                            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent">
-                              Ranking Mensal - {currentMonth}
-                            </CardTitle>
-                            <CardDescription className="text-lg mt-1">
-                              Classificação geral dos operadores
-                            </CardDescription>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handlePreviousMonth}
+                              className="h-10 w-10 p-0 bg-transparent"
+                            >
+                              <ChevronLeft className="h-5 w-5" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleNextMonth}
+                              disabled={isCurrentMonth()}
+                              className="h-10 w-10 p-0 bg-transparent"
+                            >
+                              <ChevronRight className="h-5 w-5" />
+                            </Button>
                           </div>
                         </div>
                       </CardHeader>
@@ -371,31 +449,30 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   <p className="text-muted-foreground">Os melhores operadores do ranking</p>
                                 </div>
 
-                                {/* Podium Container */}
-                                <div className="flex items-end justify-center gap-4 px-8 py-8">
+                                <div className="flex items-end justify-center gap-3 px-4 py-6">
                                   {/* 2nd Place - Left */}
                                   {rankings[1] && (
                                     <div className="flex flex-col items-center flex-1 animate-in fade-in slide-in-from-left duration-700">
-                                      <div className="mb-4 text-center">
+                                      <div className="mb-3 text-center">
                                         <div
-                                          className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 shadow-xl mb-3 animate-bounce"
+                                          className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 shadow-xl mb-2 animate-bounce"
                                           style={{ animationDelay: "200ms" }}
                                         >
-                                          <Medal className="h-10 w-10 text-white" />
+                                          <Medal className="h-8 w-8 text-white" />
                                         </div>
-                                        <p className="font-bold text-lg mb-1">{rankings[1].operatorName}</p>
-                                        <p className="text-3xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
+                                        <p className="font-bold text-base mb-1">{rankings[1].operatorName}</p>
+                                        <p className="text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
                                           {rankings[1].score}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">pontos</p>
+                                        <p className="text-xs text-muted-foreground">pontos</p>
                                       </div>
                                       <div
                                         className="w-full bg-gradient-to-br from-gray-300 to-gray-500 rounded-t-2xl shadow-2xl border-4 border-gray-400 dark:border-gray-600 relative overflow-hidden"
-                                        style={{ height: "180px" }}
+                                        style={{ height: "120px" }}
                                       >
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                          <p className="text-6xl font-black text-white/90">2</p>
+                                          <p className="text-5xl font-black text-white/90">2</p>
                                         </div>
                                       </div>
                                     </div>
@@ -404,27 +481,27 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   {/* 1st Place - Center (Highest) */}
                                   {rankings[0] && (
                                     <div className="flex flex-col items-center flex-1 animate-in fade-in zoom-in-95 duration-700">
-                                      <div className="mb-4 text-center">
-                                        <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-2xl mb-3 animate-bounce">
-                                          <Crown className="h-12 w-12 text-white" />
+                                      <div className="mb-3 text-center">
+                                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-2xl mb-2 animate-bounce">
+                                          <Crown className="h-10 w-10 text-white" />
                                         </div>
-                                        <p className="font-bold text-xl mb-1">{rankings[0].operatorName}</p>
-                                        <p className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+                                        <p className="font-bold text-lg mb-1">{rankings[0].operatorName}</p>
+                                        <p className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
                                           {rankings[0].score}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">pontos</p>
+                                        <p className="text-xs text-muted-foreground">pontos</p>
                                       </div>
                                       <div
                                         className="w-full bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-t-2xl shadow-2xl border-4 border-yellow-500 dark:border-yellow-700 relative overflow-hidden"
-                                        style={{ height: "240px" }}
+                                        style={{ height: "160px" }}
                                       >
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-pulse" />
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                          <p className="text-7xl font-black text-white/90">1</p>
+                                          <p className="text-6xl font-black text-white/90">1</p>
                                         </div>
-                                        <Sparkles className="absolute top-4 right-4 h-8 w-8 text-white/80 animate-spin" />
-                                        <Star className="absolute bottom-4 left-4 h-6 w-6 text-white/80 animate-pulse" />
+                                        <Sparkles className="absolute top-3 right-3 h-6 w-6 text-white/80 animate-spin" />
+                                        <Star className="absolute bottom-3 left-3 h-5 w-5 text-white/80 animate-pulse" />
                                       </div>
                                     </div>
                                   )}
@@ -435,26 +512,26 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       className="flex flex-col items-center flex-1 animate-in fade-in slide-in-from-right duration-700"
                                       style={{ animationDelay: "400ms" }}
                                     >
-                                      <div className="mb-4 text-center">
+                                      <div className="mb-3 text-center">
                                         <div
-                                          className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-xl mb-3 animate-bounce"
+                                          className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-xl mb-2 animate-bounce"
                                           style={{ animationDelay: "400ms" }}
                                         >
-                                          <Medal className="h-10 w-10 text-white" />
+                                          <Medal className="h-8 w-8 text-white" />
                                         </div>
-                                        <p className="font-bold text-lg mb-1">{rankings[2].operatorName}</p>
-                                        <p className="text-3xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
+                                        <p className="font-bold text-base mb-1">{rankings[2].operatorName}</p>
+                                        <p className="text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
                                           {rankings[2].score}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">pontos</p>
+                                        <p className="text-xs text-muted-foreground">pontos</p>
                                       </div>
                                       <div
                                         className="w-full bg-gradient-to-br from-orange-400 to-orange-600 rounded-t-2xl shadow-2xl border-4 border-orange-500 dark:border-orange-700 relative overflow-hidden"
-                                        style={{ height: "140px" }}
+                                        style={{ height: "100px" }}
                                       >
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                          <p className="text-6xl font-black text-white/90">3</p>
+                                          <p className="text-5xl font-black text-white/90">3</p>
                                         </div>
                                       </div>
                                     </div>
@@ -515,13 +592,19 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                               )}
                                             </div>
                                           </TableCell>
-                                          <TableCell>
-                                            <div className="flex items-center gap-2">
-                                              <span className={isTopThree ? "font-bold text-lg" : "text-base"}>
+                                          <TableCell className="min-w-0">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <span
+                                                className={`break-words overflow-wrap-anywhere ${isTopThree ? "font-bold text-lg" : "text-base"}`}
+                                              >
                                                 {ranking.operatorName}
                                               </span>
-                                              {isCurrentUser && <Badge className="bg-chart-1 text-white">Você</Badge>}
-                                              {isTopThree && <Star className="h-4 w-4 text-chart-1 fill-chart-1" />}
+                                              {isCurrentUser && (
+                                                <Badge className="bg-chart-1 text-white flex-shrink-0">Você</Badge>
+                                              )}
+                                              {isTopThree && (
+                                                <Star className="h-4 w-4 text-chart-1 fill-chart-1 flex-shrink-0" />
+                                              )}
                                             </div>
                                           </TableCell>
                                           <TableCell className="text-center">
@@ -581,7 +664,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                         return (
                           <Card
                             key={quiz.id}
-                            className={`cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
+                            className={`cursor-pointer transition-all duration-300 transform hover:scale-[1.02] overflow-hidden ${
                               answered
                                 ? "opacity-60 bg-muted"
                                 : "bg-gradient-to-br from-card to-muted/30 hover:shadow-2xl hover:shadow-chart-1/20 border-2 border-transparent hover:border-chart-1/50"
@@ -598,23 +681,23 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   <div className="absolute bottom-0 left-0 w-24 h-24 bg-chart-5/20 rounded-full blur-2xl -z-10" />
                                 </>
                               )}
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-2 rounded-lg bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg">
+                                    <div className="p-2 rounded-lg bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg flex-shrink-0">
                                       <Brain className="h-6 w-6 text-white" />
                                     </div>
                                     {!answered && (
-                                      <Badge className="bg-gradient-to-r from-chart-5 to-chart-1 text-white border-0 animate-pulse">
+                                      <Badge className="bg-gradient-to-r from-chart-5 to-chart-1 text-white border-0 animate-pulse flex-shrink-0">
                                         <Star className="h-4 w-4 mr-1" />
                                         Novo
                                       </Badge>
                                     )}
                                   </div>
-                                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
+                                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
                                     {quiz.question}
                                   </CardTitle>
-                                  <CardDescription className="mt-3 text-lg">
+                                  <CardDescription className="mt-3 text-lg break-words">
                                     Por {quiz.createdByName} • {new Date(quiz.createdAt).toLocaleDateString("pt-BR")} às{" "}
                                     {new Date(quiz.createdAt).toLocaleTimeString("pt-BR", {
                                       hour: "2-digit",
@@ -623,7 +706,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   </CardDescription>
                                 </div>
                                 {answered && (
-                                  <Badge variant="secondary" className="ml-2 px-4 py-2 text-base">
+                                  <Badge variant="secondary" className="ml-2 px-4 py-2 text-base flex-shrink-0">
                                     <CheckCircle2 className="h-5 w-5 mr-2" />
                                     Respondido
                                   </Badge>
@@ -641,9 +724,11 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                 }`}
                                 disabled={answered || showHistory}
                               >
-                                <Zap className="h-6 w-6 mr-2" />
+                                <Zap className="h-6 w-6 mr-2 flex-shrink-0" />
                                 {answered ? "Já Respondido" : showHistory ? "Visualizar" : "Responder Quiz"}
-                                {!answered && !showHistory && <Sparkles className="h-5 w-5 ml-2 animate-pulse" />}
+                                {!answered && !showHistory && (
+                                  <Sparkles className="h-5 w-5 ml-2 animate-pulse flex-shrink-0" />
+                                )}
                               </Button>
                             </CardContent>
                           </Card>
@@ -657,19 +742,21 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                       <div className="absolute top-0 right-0 w-64 h-64 bg-chart-1/10 rounded-full blur-3xl -z-10" />
                       <div className="absolute bottom-0 left-0 w-48 h-48 bg-chart-5/10 rounded-full blur-3xl -z-10" />
 
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="p-3 rounded-xl bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg animate-pulse">
+                      <div className="flex items-center gap-4 mb-4 flex-wrap">
+                        <div className="p-3 rounded-xl bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg animate-pulse flex-shrink-0">
                           <Brain className="h-8 w-8 text-white" />
                         </div>
-                        <Badge className="bg-gradient-to-r from-chart-1 to-chart-4 text-white border-0 px-4 py-2 text-base">
+                        <Badge className="bg-gradient-to-r from-chart-1 to-chart-4 text-white border-0 px-4 py-2 text-base flex-shrink-0">
                           <Trophy className="h-5 w-5 mr-2" />
                           Quiz Ativo
                         </Badge>
                       </div>
-                      <CardTitle className="text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent">
+                      <CardTitle className="text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
                         {selectedQuiz.question}
                       </CardTitle>
-                      <CardDescription className="text-lg mt-3">Selecione a resposta correta abaixo</CardDescription>
+                      <CardDescription className="text-lg mt-3 break-words">
+                        Selecione a resposta correta abaixo
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
                       <RadioGroup value={selectedAnswer} onValueChange={setSelectedAnswer} disabled={showResult}>
@@ -689,10 +776,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             }`}
                             style={{ animationDelay: `${index * 100}ms` }}
                           >
-                            <RadioGroupItem value={option.id} id={option.id} className="h-6 w-6" />
+                            <RadioGroupItem value={option.id} id={option.id} className="h-6 w-6 flex-shrink-0" />
                             <Label
                               htmlFor={option.id}
-                              className={`flex-1 cursor-pointer text-lg transition-all duration-300 ${
+                              className={`flex-1 min-w-0 cursor-pointer text-lg transition-all duration-300 break-words overflow-wrap-anywhere ${
                                 showResult && option.id === selectedQuiz.correctAnswer
                                   ? "text-green-600 dark:text-green-400 font-semibold"
                                   : showResult && option.id === selectedAnswer && !isCorrect
@@ -702,15 +789,15 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       : ""
                               }`}
                             >
-                              <span className="font-bold mr-3 text-xl bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
+                              <span className="font-bold mr-3 text-xl bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent inline-block flex-shrink-0">
                                 {option.label})
                               </span>
-                              {option.text}
+                              <span className="inline">{option.text}</span>
                               {showResult && option.id === selectedQuiz.correctAnswer && (
-                                <CheckCircle2 className="inline h-6 w-6 ml-3 text-green-600 dark:text-green-400 animate-in zoom-in-50 spin-in-180" />
+                                <CheckCircle2 className="inline h-6 w-6 ml-3 text-green-600 dark:text-green-400 animate-in zoom-in-50 spin-in-180 flex-shrink-0" />
                               )}
                               {showResult && option.id === selectedAnswer && !isCorrect && (
-                                <XCircle className="inline h-6 w-6 ml-3 text-red-600 dark:text-red-400 animate-in zoom-in-50" />
+                                <XCircle className="inline h-6 w-6 ml-3 text-red-600 dark:text-red-400 animate-in zoom-in-50 flex-shrink-0" />
                               )}
                             </Label>
                           </div>
@@ -798,25 +885,53 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
       </Dialog>
 
       <Dialog open={!!expandedMessage} onOpenChange={(open) => !open && setExpandedMessage(null)}>
-        <DialogContent className="!max-w-[calc(100vw-4.5rem)] sm:!max-w-[calc(100vw-4.5rem)] md:!max-w-[calc(100vw-4.5rem)] lg:!max-w-[calc(100vw-4.5rem)] !max-h-[calc(100vh-7.5rem)] !top-[4.5rem] !translate-y-0 flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="text-4xl font-bold">{expandedMessage?.title}</DialogTitle>
-            <CardDescription className="text-lg mt-3">
+        <DialogContent className="!max-w-[calc(100vw-4.5rem)] sm:!max-w-[calc(100vw-4.5rem)] md:!max-w-[calc(100vw-4.5rem)] lg:!max-w-[calc(100vw-4.5rem)] !max-h-[calc(100vh-7.5rem)] !top-[4.5rem] !translate-y-0 flex flex-col p-8 bg-gradient-to-br from-card via-card to-muted/30 border-2 border-chart-2/30">
+          <DialogHeader className="flex-shrink-0 pb-6 relative">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-chart-2/10 rounded-full blur-3xl -z-10" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-chart-3/10 rounded-full blur-2xl -z-10" />
+
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-chart-2 to-chart-3 shadow-lg flex-shrink-0">
+                <Mail className="h-8 w-8 text-white" />
+              </div>
+              <Badge className="bg-gradient-to-r from-chart-2 to-chart-3 text-white border-0 px-4 py-2 text-base flex-shrink-0">
+                <Maximize2 className="h-4 w-4 mr-2" />
+                Visualização Ampliada
+              </Badge>
+            </div>
+
+            <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-chart-2 via-chart-3 to-chart-2 bg-clip-text text-transparent break-words overflow-wrap-anywhere leading-tight">
+              {expandedMessage?.title}
+            </DialogTitle>
+
+            <CardDescription className="text-lg mt-4 break-words flex items-center gap-2 flex-wrap">
               {expandedMessage && (
                 <>
-                  Por {expandedMessage.createdByName} •{" "}
-                  {new Date(expandedMessage.createdAt).toLocaleDateString("pt-BR")} às{" "}
-                  {new Date(expandedMessage.createdAt).toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  <span className="font-semibold text-foreground">Por {expandedMessage.createdByName}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span>{new Date(expandedMessage.createdAt).toLocaleDateString("pt-BR")}</span>
+                  <span className="text-muted-foreground">às</span>
+                  <span>
+                    {new Date(expandedMessage.createdAt).toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </>
               )}
             </CardDescription>
           </DialogHeader>
+
+          <Separator className="my-4" />
+
           <ScrollArea className="flex-1 min-h-0">
-            <div className="text-xl whitespace-pre-wrap leading-relaxed py-6">{expandedMessage?.content}</div>
+            <div className="bg-muted/30 rounded-xl p-8 border border-border/50">
+              <div className="text-xl whitespace-pre-wrap leading-relaxed break-words overflow-wrap-anywhere text-foreground">
+                {expandedMessage?.content}
+              </div>
+            </div>
           </ScrollArea>
+
           <div className="flex gap-4 pt-6 flex-shrink-0">
             {expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory && (
               <Button
@@ -825,7 +940,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   handleMarkAsSeen(expandedMessage.id)
                   setExpandedMessage(null)
                 }}
-                className="flex-1 text-lg py-6"
+                className="flex-1 text-lg py-6 bg-gradient-to-r from-chart-2 via-chart-3 to-chart-2 hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 <CheckCircle2 className="h-6 w-6 mr-2" />
                 Marcar como Visto
@@ -835,7 +950,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
               variant="outline"
               size="lg"
               onClick={() => setExpandedMessage(null)}
-              className="flex-1 text-lg py-6"
+              className={`text-lg py-6 hover:scale-105 transition-transform ${expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory ? "flex-1" : "w-full"}`}
             >
               Fechar
             </Button>

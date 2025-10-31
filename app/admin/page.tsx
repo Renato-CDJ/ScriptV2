@@ -31,6 +31,9 @@ const MessagesQuizTab = lazy(() =>
   import("@/components/admin-tabs/messages-quiz-tab").then((m) => ({ default: m.MessagesQuizTab })),
 )
 const SettingsPage = lazy(() => import("@/app/admin/settings/page"))
+const AccessControlTab = lazy(() =>
+  import("@/components/admin-tabs/access-control-tab").then((m) => ({ default: m.AccessControlTab })),
+)
 
 const LoadingFallback = memo(function LoadingFallback() {
   return (
@@ -119,6 +122,12 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <SettingsPage />
+          </Suspense>
+        )
+      case "access-control":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <AccessControlTab />
           </Suspense>
         )
       default:

@@ -16,6 +16,7 @@ import type {
   Message,
   Quiz,
   QuizAttempt,
+  AdminPermissions,
 } from "./types"
 import { loadHabitacionalScript, loadScriptFromJson } from "./habitacional-loader"
 
@@ -28,6 +29,19 @@ const MOCK_USERS: User[] = [
     role: "admin",
     isOnline: true,
     createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
   },
   {
     id: "2",
@@ -36,6 +50,19 @@ const MOCK_USERS: User[] = [
     role: "admin",
     isOnline: true,
     createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
   },
   {
     id: "3",
@@ -44,6 +71,19 @@ const MOCK_USERS: User[] = [
     role: "admin",
     isOnline: true,
     createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
   },
   {
     id: "4",
@@ -52,6 +92,19 @@ const MOCK_USERS: User[] = [
     role: "admin",
     isOnline: true,
     createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
   },
   {
     id: "5",
@@ -60,6 +113,19 @@ const MOCK_USERS: User[] = [
     role: "admin",
     isOnline: true,
     createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
   },
 ]
 
@@ -1408,4 +1474,81 @@ export function getCurrentMonthName(): string {
     "Dezembro",
   ]
   return months[new Date().getMonth()]
+}
+
+export function updateAdminPermissions(userId: string, permissions: AdminPermissions) {
+  if (typeof window === "undefined") return
+
+  try {
+    const users = getAllUsers()
+    const user = users.find((u) => u.id === userId)
+
+    if (user && user.role === "admin") {
+      user.permissions = permissions
+      updateUser(user)
+    }
+  } catch (error) {
+    console.error("[v0] Error updating admin permissions:", error)
+  }
+}
+
+export function getAdminUsers(): User[] {
+  if (typeof window === "undefined") return []
+
+  const users = getAllUsers()
+  return users.filter((u) => u.role === "admin" && u.username !== "admin")
+}
+
+export function createAdminUser(username: string, fullName: string): User | null {
+  if (typeof window === "undefined") return null
+
+  try {
+    const users = getAllUsers()
+
+    // Check if username already exists
+    if (users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+      return null
+    }
+
+    const newUser: User = {
+      id: `user-${Date.now()}`,
+      username,
+      fullName,
+      role: "admin",
+      isOnline: false,
+      createdAt: new Date(),
+      permissions: {
+        dashboard: true,
+        scripts: true,
+        products: true,
+        attendanceConfig: true,
+        tabulations: true,
+        situations: true,
+        channels: true,
+        notes: true,
+        operators: true,
+        messagesQuiz: true,
+        settings: true,
+      },
+    }
+
+    users.push(newUser)
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+    notifyUpdate()
+
+    return newUser
+  } catch (error) {
+    console.error("[v0] Error creating admin user:", error)
+    return null
+  }
+}
+
+export function canDeleteAdminUser(userId: string): boolean {
+  if (typeof window === "undefined") return false
+
+  const users = getAllUsers()
+  const user = users.find((u) => u.id === userId)
+
+  // Cannot delete the main admin user
+  return user !== undefined && user.username !== "admin"
 }

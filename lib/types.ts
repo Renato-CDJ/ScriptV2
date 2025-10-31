@@ -2,6 +2,20 @@
 
 export type UserRole = "operator" | "admin"
 
+export interface AdminPermissions {
+  dashboard?: boolean
+  scripts?: boolean
+  products?: boolean
+  attendanceConfig?: boolean
+  tabulations?: boolean
+  situations?: boolean
+  channels?: boolean
+  notes?: boolean
+  operators?: boolean
+  messagesQuiz?: boolean
+  settings?: boolean
+}
+
 export interface User {
   id: string
   username: string
@@ -11,6 +25,7 @@ export interface User {
   createdAt: Date
   lastLoginAt?: Date
   loginSessions?: LoginSession[]
+  permissions?: AdminPermissions
 }
 
 export interface LoginSession {
