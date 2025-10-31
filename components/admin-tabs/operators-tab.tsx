@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Circle, UserX, Plus, Edit, Trash2, Download } from "lucide-react"
+import { Circle, UserX, Plus, Edit, Trash2, Download, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   getAllUsers,
@@ -27,6 +29,7 @@ import {
   isUserOnline,
 } from "@/lib/store"
 import type { User } from "@/lib/types"
+import * as XLSX from "xlsx"
 
 export function OperatorsTab() {
   const [operators, setOperators] = useState<User[]>([])
@@ -38,6 +41,7 @@ export function OperatorsTab() {
     username: "",
   })
   const { toast } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const loadOperators = () => {
@@ -160,6 +164,160 @@ export function OperatorsTab() {
     setIsDialogOpen(false)
   }
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Check file extension
+    const fileName = file.name.toLowerCase()
+    if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um arquivo Excel (.xlsx, .xls) ou CSV",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      let rows: string[][] = []
+
+      if (fileName.endsWith(".csv")) {
+        // Parse CSV
+        const text = await file.text()
+        rows = text.split("\n").map((line) => line.split(",").map((cell) => cell.trim()))
+      } else {
+        // Parse Excel file
+        const arrayBuffer = await file.arrayBuffer()
+        const workbook = XLSX.read(arrayBuffer, { type: "array" })
+
+        // Get first sheet
+        const firstSheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[firstSheetName]
+
+        // Convert to array of arrays
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][]
+        rows = data.map((row) => row.map((cell) => String(cell || "").trim()))
+      }
+
+      let nameColumnIndex = -1
+      let usernameColumnIndex = -1
+
+      if (rows.length > 0) {
+        const headerRow = rows[0].map((cell) => cell.toLowerCase())
+
+        // Look for "nome completo" or "nome" column
+        nameColumnIndex = headerRow.findIndex((cell) => cell.includes("nome completo") || cell === "nome")
+
+        // Look for "usuario" or "usuário" column
+        usernameColumnIndex = headerRow.findIndex(
+          (cell) => cell.includes("usuario") || cell.includes("usuário") || cell === "usuario",
+        )
+
+        // If headers found, remove header row
+        if (nameColumnIndex !== -1 && usernameColumnIndex !== -1) {
+          rows = rows.slice(1)
+        } else {
+          // If no headers found, assume first two columns are name and username
+          nameColumnIndex = 0
+          usernameColumnIndex = 1
+        }
+      }
+
+      // Filter out empty rows
+      rows = rows.filter(
+        (row) =>
+          row.length > Math.max(nameColumnIndex, usernameColumnIndex) &&
+          row[nameColumnIndex]?.trim() &&
+          row[usernameColumnIndex]?.trim(),
+      )
+
+      if (rows.length === 0) {
+        toast({
+          title: "Erro",
+          description: "Nenhum dado válido encontrado no arquivo",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Import operators
+      const allUsers = getAllUsers()
+      let importedCount = 0
+      let skippedCount = 0
+      const errors: string[] = []
+
+      rows.forEach((row, index) => {
+        const fullName = row[nameColumnIndex]?.trim()
+        const username = row[usernameColumnIndex]?.trim()
+
+        if (!fullName || !username) {
+          errors.push(`Linha ${index + 2}: Dados incompletos`)
+          skippedCount++
+          return
+        }
+
+        // Check if username already exists
+        if (allUsers.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+          errors.push(`Linha ${index + 2}: Usuário "${username}" já existe`)
+          skippedCount++
+          return
+        }
+
+        // Create new operator
+        const newOperator: User = {
+          id: `op-${Date.now()}-${index}`,
+          username: username,
+          fullName: fullName,
+          isOnline: false,
+          role: "operator",
+          createdAt: new Date(),
+          loginSessions: [],
+        }
+
+        allUsers.push(newOperator)
+        importedCount++
+      })
+
+      // Save to localStorage
+      localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
+      window.dispatchEvent(new CustomEvent("store-updated"))
+
+      // Show results
+      if (importedCount > 0) {
+        toast({
+          title: "Importação Concluída",
+          description: `${importedCount} operador(es) importado(s) com sucesso${skippedCount > 0 ? `. ${skippedCount} ignorado(s)` : ""}`,
+        })
+      }
+
+      if (errors.length > 0 && errors.length <= 5) {
+        setTimeout(() => {
+          toast({
+            title: "Avisos",
+            description: errors.join("\n"),
+            variant: "destructive",
+          })
+        }, 500)
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao processar o arquivo. Verifique o formato.",
+        variant: "destructive",
+      })
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
   const formatDuration = (milliseconds: number): string => {
     const hours = Math.floor(milliseconds / (1000 * 60 * 60))
     const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60))
@@ -263,6 +421,17 @@ export function OperatorsTab() {
           <p className="text-muted-foreground mt-1">Visualize e gerencie os operadores do sistema</p>
         </div>
         <div className="flex gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Button variant="outline" onClick={handleImportClick} className="gap-2 bg-transparent">
+            <Upload className="h-4 w-4" />
+            Importar Usuários
+          </Button>
           <Button variant="outline" onClick={handleExportReport} className="gap-2 bg-transparent">
             <Download className="h-4 w-4" />
             Exportar Relatório
