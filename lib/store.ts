@@ -1322,3 +1322,90 @@ export function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt
 
   return newAttempt
 }
+
+// Monthly ranking functions for quiz leaderboard
+export interface OperatorRanking {
+  operatorId: string
+  operatorName: string
+  totalAttempts: number
+  correctAnswers: number
+  score: number
+  accuracy: number
+  rank: number
+}
+
+export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRanking[] {
+  if (typeof window === "undefined") return []
+
+  const now = new Date()
+  const targetYear = year ?? now.getFullYear()
+  const targetMonth = month ?? now.getMonth()
+
+  const attempts = getQuizAttempts()
+
+  // Filter attempts for the target month
+  const monthlyAttempts = attempts.filter((attempt) => {
+    const attemptDate = new Date(attempt.attemptedAt)
+    return attemptDate.getFullYear() === targetYear && attemptDate.getMonth() === targetMonth
+  })
+
+  // Group by operator
+  const operatorStats = new Map<string, { name: string; total: number; correct: number }>()
+
+  monthlyAttempts.forEach((attempt) => {
+    const existing = operatorStats.get(attempt.operatorId) || {
+      name: attempt.operatorName,
+      total: 0,
+      correct: 0,
+    }
+
+    existing.total++
+    if (attempt.isCorrect) {
+      existing.correct++
+    }
+
+    operatorStats.set(attempt.operatorId, existing)
+  })
+
+  // Convert to ranking array
+  const rankings: OperatorRanking[] = Array.from(operatorStats.entries()).map(([operatorId, stats]) => ({
+    operatorId,
+    operatorName: stats.name,
+    totalAttempts: stats.total,
+    correctAnswers: stats.correct,
+    score: stats.correct * 10, // 10 points per correct answer
+    accuracy: stats.total > 0 ? (stats.correct / stats.total) * 100 : 0,
+    rank: 0, // Will be set after sorting
+  }))
+
+  // Sort by score (descending), then by accuracy (descending)
+  rankings.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    return b.accuracy - a.accuracy
+  })
+
+  // Assign ranks
+  rankings.forEach((ranking, index) => {
+    ranking.rank = index + 1
+  })
+
+  return rankings
+}
+
+export function getCurrentMonthName(): string {
+  const months = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+  ]
+  return months[new Date().getMonth()]
+}
