@@ -68,21 +68,25 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
   const [channels, setChannels] = useState(getChannels().filter((c) => c.isActive))
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: NodeJS.Timeout | null = null
 
     const handleStoreUpdate = () => {
-      clearTimeout(timeoutId)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
       timeoutId = setTimeout(() => {
-        console.log("[v0] Operator sidebar: Store updated, refreshing data")
         setTabulations(getTabulations())
         setSituations(getSituations().filter((s) => s.isActive))
         setChannels(getChannels().filter((c) => c.isActive))
+        timeoutId = null
       }, 150)
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => {
-      clearTimeout(timeoutId)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
       window.removeEventListener("store-updated", handleStoreUpdate)
     }
   }, [])

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,10 @@ import {
   Search,
   Download,
   FileSpreadsheet,
+  History,
+  Clock,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -58,8 +63,13 @@ export function MessagesQuizTab() {
   const [operators, setOperators] = useState<{ id: string; fullName: string }[]>([])
   const [showMessageDialog, setShowMessageDialog] = useState(false)
   const [showQuizDialog, setShowQuizDialog] = useState(false)
+  const [showMessageHistoryDialog, setShowMessageHistoryDialog] = useState(false)
+  const [showQuizHistoryDialog, setShowQuizHistoryDialog] = useState(false)
   const [editingMessage, setEditingMessage] = useState<Message | null>(null)
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null)
+
+  const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(new Set())
+  const [expandedQuizIds, setExpandedQuizIds] = useState<Set<string>>(new Set())
 
   // Message form state
   const [messageTitle, setMessageTitle] = useState("")
@@ -113,6 +123,30 @@ export function MessagesQuizTab() {
     const searchLower = operatorSearch.toLowerCase()
     return operators.filter((op) => op.fullName.toLowerCase().includes(searchLower))
   }, [operators, operatorSearch])
+
+  const toggleMessageExpanded = (messageId: string) => {
+    setExpandedMessageIds((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId)
+      } else {
+        newSet.add(messageId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleQuizExpanded = (quizId: string) => {
+    setExpandedQuizIds((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(quizId)) {
+        newSet.delete(quizId)
+      } else {
+        newSet.add(quizId)
+      }
+      return newSet
+    })
+  }
 
   const resetMessageForm = () => {
     setMessageTitle("")
@@ -449,105 +483,198 @@ export function MessagesQuizTab() {
 
       {activeTab === "messages" && (
         <div className="space-y-4">
-          <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
-            <DialogTrigger asChild>
-              <Button onClick={resetMessageForm} className="bg-orange-500 hover:bg-orange-600 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Recado
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingMessage ? "Editar Recado" : "Novo Recado"}</DialogTitle>
-                <DialogDescription>Crie um recado para ser exibido aos operadores</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="message-title">Título</Label>
-                  <Input
-                    id="message-title"
-                    value={messageTitle}
-                    onChange={(e) => setMessageTitle(e.target.value)}
-                    placeholder="Digite o título do recado"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="message-content">Conteúdo</Label>
-                  <Textarea
-                    id="message-content"
-                    value={messageContent}
-                    onChange={(e) => setMessageContent(e.target.value)}
-                    placeholder="Digite o conteúdo do recado"
-                    rows={6}
-                  />
-                </div>
-
-                <Separator />
-                <div className="space-y-3">
-                  <Label>Destinatários</Label>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="send-to-all"
-                      checked={sendToAll}
-                      onCheckedChange={(checked) => setSendToAll(checked as boolean)}
+          <div className="flex gap-3">
+            <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+              <DialogTrigger asChild>
+                <Button onClick={resetMessageForm} className="bg-orange-500 hover:bg-orange-600 text-white">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Recado
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingMessage ? "Editar Recado" : "Novo Recado"}</DialogTitle>
+                  <DialogDescription>Crie um recado para ser exibido aos operadores</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="message-title">Título</Label>
+                    <Input
+                      id="message-title"
+                      value={messageTitle}
+                      onChange={(e) => setMessageTitle(e.target.value)}
+                      placeholder="Digite o título do recado"
                     />
-                    <Label htmlFor="send-to-all" className="cursor-pointer">
-                      Enviar para todos os operadores
-                    </Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="message-content">Conteúdo</Label>
+                    <Textarea
+                      id="message-content"
+                      value={messageContent}
+                      onChange={(e) => setMessageContent(e.target.value)}
+                      placeholder="Digite o conteúdo do recado"
+                      rows={6}
+                    />
                   </div>
 
-                  {!sendToAll && (
-                    <div className="border rounded-lg p-4 space-y-3">
-                      <Label className="text-sm text-muted-foreground">Selecione os operadores:</Label>
-
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Pesquisar operadores..."
-                          value={operatorSearch}
-                          onChange={(e) => setOperatorSearch(e.target.value)}
-                          className="pl-9"
-                        />
-                      </div>
-
-                      <div className="max-h-48 overflow-y-auto space-y-2">
-                        {operators.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">Nenhum operador cadastrado.</p>
-                        ) : filteredOperators.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">Nenhum operador encontrado.</p>
-                        ) : (
-                          filteredOperators.map((operator) => (
-                            <div key={operator.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`operator-${operator.id}`}
-                                checked={messageRecipients.includes(operator.id)}
-                                onCheckedChange={() => toggleRecipient(operator.id)}
-                              />
-                              <Label htmlFor={`operator-${operator.id}`} className="cursor-pointer">
-                                {operator.fullName}
-                              </Label>
-                            </div>
-                          ))
-                        )}
-                      </div>
+                  <Separator />
+                  <div className="space-y-3">
+                    <Label>Destinatários</Label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="send-to-all"
+                        checked={sendToAll}
+                        onCheckedChange={(checked) => setSendToAll(checked as boolean)}
+                      />
+                      <Label htmlFor="send-to-all" className="cursor-pointer">
+                        Enviar para todos os operadores
+                      </Label>
                     </div>
-                  )}
-                </div>
 
-                <Separator />
-                <div className="flex items-center space-x-2">
-                  <Switch id="message-active" checked={messageActive} onCheckedChange={setMessageActive} />
-                  <Label htmlFor="message-active">Ativo</Label>
+                    {!sendToAll && (
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <Label className="text-sm text-muted-foreground">Selecione os operadores:</Label>
+
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Pesquisar operadores..."
+                            value={operatorSearch}
+                            onChange={(e) => setOperatorSearch(e.target.value)}
+                            className="pl-9"
+                          />
+                        </div>
+
+                        <div className="max-h-48 overflow-y-auto space-y-2">
+                          {operators.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Nenhum operador cadastrado.</p>
+                          ) : filteredOperators.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Nenhum operador encontrado.</p>
+                          ) : (
+                            filteredOperators.map((operator) => (
+                              <div key={operator.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`operator-${operator.id}`}
+                                  checked={messageRecipients.includes(operator.id)}
+                                  onCheckedChange={() => toggleRecipient(operator.id)}
+                                />
+                                <Label htmlFor={`operator-${operator.id}`} className="cursor-pointer">
+                                  {operator.fullName}
+                                </Label>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+                  <div className="flex items-center space-x-2">
+                    <Switch id="message-active" checked={messageActive} onCheckedChange={setMessageActive} />
+                    <Label htmlFor="message-active">Ativo</Label>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setShowMessageDialog(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSaveMessage}>Salvar</Button>
+                  </div>
                 </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setShowMessageDialog(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSaveMessage}>Salvar</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showMessageHistoryDialog} onOpenChange={setShowMessageHistoryDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20 bg-transparent"
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  Ver Histórico de Recados
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[85vh]">
+                <DialogHeader>
+                  <DialogTitle>Histórico de Recados Enviados</DialogTitle>
+                  <DialogDescription>
+                    Todos os recados enviados aos operadores ({messages.length} total)
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-[60vh] pr-4">
+                  <div className="space-y-3">
+                    {messages.length === 0 ? (
+                      <div className="py-12 text-center">
+                        <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                        <p className="text-muted-foreground">Nenhum recado no histórico.</p>
+                      </div>
+                    ) : (
+                      messages
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .map((message) => {
+                          const isExpanded = expandedMessageIds.has(message.id)
+                          return (
+                            <Card
+                              key={message.id}
+                              className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                              onClick={() => toggleMessageExpanded(message.id)}
+                            >
+                              <CardHeader className="pb-3">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-5 w-5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-5 w-5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <CardTitle className="text-base break-words overflow-wrap-anywhere">
+                                        {message.title}
+                                      </CardTitle>
+                                      <CardDescription className="mt-1 break-words">
+                                        <Clock className="inline h-3 w-3 mr-1" />
+                                        {new Date(message.createdAt).toLocaleDateString("pt-BR")} às{" "}
+                                        {new Date(message.createdAt).toLocaleTimeString("pt-BR", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </CardDescription>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-2 flex-shrink-0">
+                                    <Badge variant={message.isActive ? "default" : "secondary"}>
+                                      {message.isActive ? "Ativo" : "Inativo"}
+                                    </Badge>
+                                    <Badge variant="outline" className="whitespace-nowrap">
+                                      <Eye className="h-3 w-3 mr-1" />
+                                      {message.seenBy.length}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </CardHeader>
+                              {isExpanded && (
+                                <CardContent>
+                                  <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere mb-3">
+                                    {message.content}
+                                  </p>
+                                  <div className="text-xs text-muted-foreground break-words overflow-wrap-anywhere">
+                                    <Users className="inline h-3 w-3 mr-1" />
+                                    Destinatários: {getRecipientNames(message.recipients)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Criado por: {message.createdByName}
+                                  </div>
+                                </CardContent>
+                              )}
+                            </Card>
+                          )
+                        })
+                    )}
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+          </div>
 
           <div className="grid gap-4">
             {messages.length === 0 ? (
@@ -713,6 +840,130 @@ export function MessagesQuizTab() {
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Exportar Ranking
             </Button>
+
+            <Dialog open={showQuizHistoryDialog} onOpenChange={setShowQuizHistoryDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/20 bg-transparent"
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  Ver Histórico de Quizzes
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[85vh]">
+                <DialogHeader>
+                  <DialogTitle>Histórico de Quizzes Enviados</DialogTitle>
+                  <DialogDescription>
+                    Todos os quizzes enviados aos operadores ({quizzes.length} total)
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-[60vh] pr-4">
+                  <div className="space-y-3">
+                    {quizzes.length === 0 ? (
+                      <div className="py-12 text-center">
+                        <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                        <p className="text-muted-foreground">Nenhum quiz no histórico.</p>
+                      </div>
+                    ) : (
+                      quizzes
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .map((quiz) => {
+                          const stats = getQuizStats(quiz.id)
+                          const isScheduled = quiz.scheduledDate && new Date(quiz.scheduledDate) > new Date()
+                          const isExpanded = expandedQuizIds.has(quiz.id)
+
+                          return (
+                            <Card
+                              key={quiz.id}
+                              className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                              onClick={() => toggleQuizExpanded(quiz.id)}
+                            >
+                              <CardHeader className="pb-3">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-5 w-5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-5 w-5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <CardTitle className="text-base break-words overflow-wrap-anywhere">
+                                        {quiz.question}
+                                      </CardTitle>
+                                      <CardDescription className="mt-1 break-words">
+                                        <Clock className="inline h-3 w-3 mr-1" />
+                                        {new Date(quiz.createdAt).toLocaleDateString("pt-BR")} às{" "}
+                                        {new Date(quiz.createdAt).toLocaleTimeString("pt-BR", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </CardDescription>
+                                      {quiz.scheduledDate && (
+                                        <CardDescription className="mt-1 break-words">
+                                          <Calendar className="inline h-3 w-3 mr-1" />
+                                          {isScheduled ? "Agendado para: " : "Disponível desde: "}
+                                          {new Date(quiz.scheduledDate).toLocaleDateString("pt-BR")}
+                                        </CardDescription>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-2 flex-shrink-0">
+                                    {isScheduled && <Badge variant="secondary">Agendado</Badge>}
+                                    <Badge variant={quiz.isActive ? "default" : "secondary"}>
+                                      {quiz.isActive ? "Ativo" : "Inativo"}
+                                    </Badge>
+                                    <Badge variant="outline" className="whitespace-nowrap">
+                                      <Users className="h-3 w-3 mr-1" />
+                                      {stats.total}
+                                    </Badge>
+                                    {stats.total > 0 && (
+                                      <Badge
+                                        variant={stats.percentage >= 70 ? "default" : "destructive"}
+                                        className="whitespace-nowrap"
+                                      >
+                                        {stats.percentage}%
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardHeader>
+                              {isExpanded && (
+                                <CardContent>
+                                  <div className="space-y-2 mb-3">
+                                    {quiz.options.map((option) => (
+                                      <div
+                                        key={option.id}
+                                        className={`p-2 rounded break-words overflow-wrap-anywhere ${
+                                          option.id === quiz.correctAnswer
+                                            ? "bg-green-50 dark:bg-green-950/30 text-green-900 dark:text-green-100"
+                                            : "bg-muted/50"
+                                        }`}
+                                      >
+                                        <span className="font-bold mr-2">{option.label})</span>
+                                        <span className="break-words overflow-wrap-anywhere">{option.text}</span>
+                                        {option.id === quiz.correctAnswer && (
+                                          <CheckCircle2 className="inline h-4 w-4 ml-2 text-green-600 dark:text-green-400" />
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">Criado por: {quiz.createdByName}</div>
+                                  {stats.total > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {stats.correct} acertos de {stats.total} tentativas ({stats.percentage}%)
+                                    </div>
+                                  )}
+                                </CardContent>
+                              )}
+                            </Card>
+                          )
+                        })
+                    )}
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="grid gap-4">
@@ -772,13 +1023,15 @@ export function MessagesQuizTab() {
                           <div
                             key={option.id}
                             className={`p-2 rounded ${
-                              option.id === quiz.correctAnswer ? "bg-green-50 dark:bg-green-950/20" : ""
+                              option.id === quiz.correctAnswer
+                                ? "bg-green-50 dark:bg-green-950/30 text-green-900 dark:text-green-100"
+                                : "bg-muted/50"
                             }`}
                           >
                             <span className="font-bold mr-2">{option.label})</span>
                             {option.text}
                             {option.id === quiz.correctAnswer && (
-                              <CheckCircle2 className="inline h-4 w-4 ml-2 text-green-600" />
+                              <CheckCircle2 className="inline h-4 w-4 ml-2 text-green-600 dark:text-green-400" />
                             )}
                           </div>
                         ))}
