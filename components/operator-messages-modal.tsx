@@ -212,14 +212,14 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="!max-w-[calc(100vw-4.5rem)] sm:!max-w-[calc(100vw-4.5rem)] md:!max-w-[calc(100vw-4.5rem)] lg:!max-w-[calc(100vw-4.5rem)] !h-[calc(100vh-7.5rem)] !top-[4.5rem] !translate-y-0 flex flex-col p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] h-[90vh] flex flex-col p-4 sm:p-6">
           <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+            <DialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
               Recados e Quiz
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex gap-4 border-b pb-3 flex-shrink-0">
+          <div className="flex gap-2 sm:gap-4 border-b pb-3 flex-shrink-0 overflow-x-auto">
             <Button
               variant={activeTab === "messages" ? "default" : "ghost"}
               onClick={() => {
@@ -227,23 +227,25 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                 setShowHistory(false)
                 setShowRanking(false)
               }}
-              className={`relative text-lg px-8 py-6 transition-all duration-300 ${
+              className={`relative text-sm sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 transition-all duration-300 whitespace-nowrap ${
                 activeTab === "messages"
-                  ? "bg-gradient-to-r from-chart-2 via-chart-3 to-chart-2 hover:opacity-90 text-white shadow-lg shadow-chart-2/50 scale-105"
+                  ? "bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 text-white shadow-lg shadow-primary/50 scale-105"
                   : "hover:scale-105"
               }`}
             >
-              <MessageSquare className={`h-6 w-6 mr-2 ${activeTab === "messages" ? "animate-pulse" : ""}`} />
+              <MessageSquare
+                className={`h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2 ${activeTab === "messages" ? "animate-pulse" : ""}`}
+              />
               Recados
               {getUnseenCount() > 0 && (
                 <Badge
                   variant="destructive"
-                  className="ml-2 h-7 w-7 p-0 flex items-center justify-center text-sm font-bold animate-pulse"
+                  className="ml-2 h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 p-0 flex items-center justify-center text-xs sm:text-sm font-bold animate-pulse"
                 >
                   {getUnseenCount()}
                 </Badge>
               )}
-              {activeTab === "messages" && <Sparkles className="h-5 w-5 ml-2 animate-spin" />}
+              {activeTab === "messages" && <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 ml-2 animate-spin" />}
             </Button>
             <Button
               variant={activeTab === "quiz" ? "default" : "ghost"}
@@ -252,15 +254,19 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                 setShowHistory(false)
                 setShowRanking(false)
               }}
-              className={`text-lg px-8 py-6 transition-all duration-300 ${
+              className={`text-sm sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 transition-all duration-300 whitespace-nowrap ${
                 activeTab === "quiz"
                   ? "bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg shadow-chart-1/50 scale-105"
                   : "hover:scale-105"
               }`}
             >
-              <Brain className={`h-6 w-6 mr-2 ${activeTab === "quiz" ? "animate-pulse" : ""}`} />
+              <Brain
+                className={`h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2 ${activeTab === "quiz" ? "animate-pulse" : ""}`}
+              />
               Quiz
-              <Sparkles className={`h-5 w-5 ml-2 ${activeTab === "quiz" ? "animate-spin" : "opacity-50"}`} />
+              <Sparkles
+                className={`h-4 w-4 sm:h-5 sm:w-5 ml-2 ${activeTab === "quiz" ? "animate-spin" : "opacity-50"}`}
+              />
             </Button>
             {activeTab === "quiz" && (
               <Button
@@ -269,13 +275,13 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   setShowRanking(!showRanking)
                   setShowHistory(false)
                 }}
-                className={`text-lg px-8 py-6 transition-all duration-300 ${
+                className={`text-sm sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 transition-all duration-300 whitespace-nowrap ${
                   showRanking
                     ? "bg-gradient-to-r from-chart-4 via-chart-1 to-chart-5 text-white shadow-lg scale-105"
                     : "hover:scale-105"
                 }`}
               >
-                <Trophy className={`h-6 w-6 mr-2 ${showRanking ? "animate-bounce" : ""}`} />
+                <Trophy className={`h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2 ${showRanking ? "animate-bounce" : ""}`} />
                 Ranking
               </Button>
             )}
@@ -285,20 +291,20 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                 setShowHistory(!showHistory)
                 setShowRanking(false)
               }}
-              className={`ml-auto text-lg px-8 py-6 ${showHistory ? "shadow-lg" : ""}`}
+              className={`ml-auto text-sm sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 whitespace-nowrap ${showHistory ? "shadow-lg" : ""}`}
             >
-              <History className="h-6 w-6 mr-2" />
+              <History className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2" />
               Histórico
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 pr-6 overflow-hidden">
+          <ScrollArea className="flex-1 min-h-0 pr-2 sm:pr-4 md:pr-6">
             {activeTab === "messages" && (
-              <div className="space-y-6 py-2">
+              <div className="space-y-4 sm:space-y-6 py-2 px-1">
                 {displayMessages.length === 0 ? (
-                  <div className="text-center py-32">
-                    <MessageSquare className="h-24 w-24 text-muted-foreground mx-auto mb-6 opacity-50" />
-                    <p className="text-muted-foreground text-2xl">
+                  <div className="text-center py-16 sm:py-24 md:py-32">
+                    <MessageSquare className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
+                    <p className="text-muted-foreground text-lg sm:text-xl md:text-2xl">
                       {showHistory ? "Nenhum recado no histórico." : "Nenhum recado disponível no momento."}
                     </p>
                   </div>
@@ -309,37 +315,37 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                     return (
                       <Card
                         key={message.id}
-                        className={`transition-all duration-300 transform hover:scale-[1.01] overflow-hidden ${
+                        className={`transition-all duration-300 overflow-hidden ${
                           seen
                             ? "opacity-60 bg-muted"
-                            : "bg-gradient-to-br from-card to-muted/30 hover:shadow-2xl hover:shadow-chart-2/20 border-2 border-transparent hover:border-chart-2/50"
+                            : "bg-gradient-to-br from-card to-muted/30 hover:shadow-xl hover:shadow-primary/10 border-2 border-transparent hover:border-primary/30"
                         } animate-in fade-in slide-in-from-bottom-4`}
                         style={{ animationDelay: `${index * 100}ms` }}
                       >
-                        <CardHeader className="pb-4 relative overflow-hidden">
+                        <CardHeader className="pb-3 sm:pb-4 relative overflow-hidden">
                           {!seen && (
                             <>
-                              <div className="absolute top-0 right-0 w-32 h-32 bg-chart-2/20 rounded-full blur-3xl -z-10" />
-                              <div className="absolute bottom-0 left-0 w-24 h-24 bg-chart-3/20 rounded-full blur-2xl -z-10" />
+                              <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
+                              <div className="absolute bottom-0 left-0 w-20 h-20 sm:w-24 sm:h-24 bg-accent/20 rounded-full blur-2xl -z-10" />
                             </>
                           )}
-                          <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start justify-between gap-2 sm:gap-4">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2 rounded-lg bg-gradient-to-br from-chart-2 to-chart-3 shadow-lg flex-shrink-0">
-                                  <Mail className="h-6 w-6 text-white" />
+                              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-primary to-accent shadow-lg flex-shrink-0">
+                                  <Mail className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
                                 </div>
                                 {!seen && (
-                                  <Badge className="bg-gradient-to-r from-chart-2 to-chart-3 text-white border-0 animate-pulse flex-shrink-0">
-                                    <Bell className="h-4 w-4 mr-1" />
+                                  <Badge className="bg-gradient-to-r from-primary to-accent text-white border-0 animate-pulse flex-shrink-0 text-xs sm:text-sm">
+                                    <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                     Novo
                                   </Badge>
                                 )}
                               </div>
-                              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-chart-2 to-chart-3 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
+                              <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent break-words overflow-wrap-anywhere">
                                 {message.title}
                               </CardTitle>
-                              <CardDescription className="mt-3 text-lg break-words">
+                              <CardDescription className="mt-2 sm:mt-3 text-sm sm:text-base md:text-lg break-words">
                                 Por {message.createdByName} • {new Date(message.createdAt).toLocaleDateString("pt-BR")}{" "}
                                 às{" "}
                                 {new Date(message.createdAt).toLocaleTimeString("pt-BR", {
@@ -348,36 +354,39 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                 })}
                               </CardDescription>
                             </div>
-                            <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                               <Button
                                 variant="outline"
-                                size="lg"
+                                size="sm"
                                 onClick={() => setExpandedMessage(message)}
-                                className="px-4 hover:scale-105 transition-transform"
+                                className="px-2 sm:px-3 md:px-4 hover:scale-105 transition-transform text-xs sm:text-sm"
                               >
-                                <Maximize2 className="h-5 w-5 mr-2" />
-                                Ampliar
+                                <Maximize2 className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 sm:mr-2" />
+                                <span className="hidden sm:inline">Ampliar</span>
                               </Button>
                               {seen && (
-                                <Badge variant="secondary" className="px-4 py-2 text-base">
-                                  <Eye className="h-5 w-5 mr-2" />
-                                  Visto
+                                <Badge
+                                  variant="secondary"
+                                  className="px-2 sm:px-3 md:px-4 py-1 sm:py-2 text-xs sm:text-sm md:text-base"
+                                >
+                                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 sm:mr-2" />
+                                  <span className="hidden sm:inline">Visto</span>
                                 </Badge>
                               )}
                             </div>
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="text-lg whitespace-pre-wrap mb-6 leading-relaxed break-words overflow-wrap-anywhere">
+                          <p className="text-sm sm:text-base md:text-lg whitespace-pre-wrap mb-4 sm:mb-6 leading-relaxed break-words overflow-wrap-anywhere">
                             {message.content}
                           </p>
                           {!seen && !showHistory && (
                             <Button
                               size="lg"
                               onClick={() => handleMarkAsSeen(message.id)}
-                              className="w-full text-lg py-6 bg-gradient-to-r from-chart-2 via-chart-3 to-chart-2 hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                              className="w-full text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                             >
-                              <CheckCircle2 className="h-6 w-6 mr-2" />
+                              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2" />
                               Marcar como Visto
                             </Button>
                           )}
@@ -390,81 +399,85 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             )}
 
             {activeTab === "quiz" && (
-              <div className="space-y-6 py-2">
+              <div className="space-y-4 sm:space-y-6 py-2 px-1">
                 {showRanking ? (
-                  <div className="space-y-8">
+                  <div className="space-y-6 sm:space-y-8">
                     <Card className="bg-gradient-to-br from-card to-muted/30 border-2 border-chart-1/50 shadow-2xl">
-                      <CardHeader className="relative overflow-hidden pb-6">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-chart-1/10 rounded-full blur-3xl -z-10" />
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-chart-4/10 rounded-full blur-3xl -z-10" />
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
-                            <div className="p-3 rounded-xl bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg">
-                              <Trophy className="h-8 w-8 text-white animate-pulse" />
+                      <CardHeader className="relative overflow-hidden pb-4 sm:pb-6">
+                        <div className="absolute top-0 right-0 w-48 h-48 sm:w-64 sm:h-64 bg-chart-1/10 rounded-full blur-3xl -z-10" />
+                        <div className="absolute bottom-0 left-0 w-36 h-36 sm:w-48 sm:h-48 bg-chart-4/10 rounded-full blur-3xl -z-10" />
+                        <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
+                          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg flex-shrink-0">
+                              <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-white animate-pulse" />
                             </div>
-                            <div>
-                              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent">
+                            <div className="min-w-0">
+                              <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words">
                                 Ranking Mensal - {getMonthName(selectedMonth)} {selectedYear}
                               </CardTitle>
-                              <CardDescription className="text-lg mt-1">
+                              <CardDescription className="text-sm sm:text-base md:text-lg mt-1">
                                 Classificação geral dos operadores
                               </CardDescription>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={handlePreviousMonth}
-                              className="h-10 w-10 p-0 bg-transparent"
+                              className="h-8 w-8 sm:h-10 sm:w-10 p-0 bg-transparent"
                             >
-                              <ChevronLeft className="h-5 w-5" />
+                              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={handleNextMonth}
                               disabled={isCurrentMonth()}
-                              className="h-10 w-10 p-0 bg-transparent"
+                              className="h-8 w-8 sm:h-10 sm:w-10 p-0 bg-transparent"
                             >
-                              <ChevronRight className="h-5 w-5" />
+                              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                             </Button>
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-8">
+                      <CardContent className="space-y-6 sm:space-y-8">
                         {rankings.length === 0 ? (
-                          <div className="text-center py-16">
-                            <Trophy className="h-20 w-20 text-muted-foreground mx-auto mb-4 opacity-50" />
-                            <p className="text-muted-foreground text-xl">Nenhum quiz respondido este mês ainda.</p>
+                          <div className="text-center py-16 sm:py-24 md:py-32">
+                            <Trophy className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
+                            <p className="text-muted-foreground text-lg sm:text-xl md:text-2xl">
+                              Nenhum quiz respondido este mês ainda.
+                            </p>
                           </div>
                         ) : (
                           <>
                             {rankings.length > 0 && (
-                              <div className="space-y-6">
+                              <div className="space-y-6 sm:space-y-8">
                                 <div className="text-center">
-                                  <h3 className="text-2xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent mb-2">
+                                  <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent mb-2 sm:mb-3">
                                     🏆 Top 3 do Mês
                                   </h3>
                                   <p className="text-muted-foreground">Os melhores operadores do ranking</p>
                                 </div>
 
-                                <div className="flex items-end justify-center gap-3 px-4 py-6">
+                                <div className="flex items-end justify-center gap-3 px-4 py-6 sm:px-8 md:px-12">
                                   {/* 2nd Place - Left */}
                                   {rankings[1] && (
                                     <div className="flex flex-col items-center flex-1 animate-in fade-in slide-in-from-left duration-700">
                                       <div className="mb-3 text-center">
                                         <div
-                                          className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 shadow-xl mb-2 animate-bounce"
+                                          className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 shadow-xl mb-2 animate-bounce"
                                           style={{ animationDelay: "200ms" }}
                                         >
-                                          <Medal className="h-8 w-8 text-white" />
+                                          <Medal className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-white" />
                                         </div>
-                                        <p className="font-bold text-base mb-1">{rankings[1].operatorName}</p>
-                                        <p className="text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
+                                        <p className="font-bold text-base sm:text-lg md:text-xl mb-1 sm:mb-2">
+                                          {rankings[1].operatorName}
+                                        </p>
+                                        <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
                                           {rankings[1].score}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">pontos</p>
+                                        <p className="text-xs sm:text-sm md:text-base text-muted-foreground">pontos</p>
                                       </div>
                                       <div
                                         className="w-full bg-gradient-to-br from-gray-300 to-gray-500 rounded-t-2xl shadow-2xl border-4 border-gray-400 dark:border-gray-600 relative overflow-hidden"
@@ -472,7 +485,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       >
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                          <p className="text-5xl font-black text-white/90">2</p>
+                                          <p className="text-5xl sm:text-6xl md:text-7xl font-black text-white/90">2</p>
                                         </div>
                                       </div>
                                     </div>
@@ -482,14 +495,16 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   {rankings[0] && (
                                     <div className="flex flex-col items-center flex-1 animate-in fade-in zoom-in-95 duration-700">
                                       <div className="mb-3 text-center">
-                                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-2xl mb-2 animate-bounce">
-                                          <Crown className="h-10 w-10 text-white" />
+                                        <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-2xl mb-2 animate-bounce">
+                                          <Crown className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 text-white" />
                                         </div>
-                                        <p className="font-bold text-lg mb-1">{rankings[0].operatorName}</p>
-                                        <p className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+                                        <p className="font-bold text-lg sm:text-xl md:text-2xl mb-1 sm:mb-2">
+                                          {rankings[0].operatorName}
+                                        </p>
+                                        <p className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
                                           {rankings[0].score}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">pontos</p>
+                                        <p className="text-xs sm:text-sm md:text-base text-muted-foreground">pontos</p>
                                       </div>
                                       <div
                                         className="w-full bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-t-2xl shadow-2xl border-4 border-yellow-500 dark:border-yellow-700 relative overflow-hidden"
@@ -498,10 +513,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-pulse" />
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                          <p className="text-6xl font-black text-white/90">1</p>
+                                          <p className="text-6xl sm:text-7xl md:text-8xl font-black text-white/90">1</p>
                                         </div>
-                                        <Sparkles className="absolute top-3 right-3 h-6 w-6 text-white/80 animate-spin" />
-                                        <Star className="absolute bottom-3 left-3 h-5 w-5 text-white/80 animate-pulse" />
+                                        <Sparkles className="absolute top-3 right-3 h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 text-white/80 animate-spin" />
+                                        <Star className="absolute bottom-3 left-3 h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white/80 animate-pulse" />
                                       </div>
                                     </div>
                                   )}
@@ -514,16 +529,18 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                     >
                                       <div className="mb-3 text-center">
                                         <div
-                                          className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-xl mb-2 animate-bounce"
+                                          className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-xl mb-2 animate-bounce"
                                           style={{ animationDelay: "400ms" }}
                                         >
-                                          <Medal className="h-8 w-8 text-white" />
+                                          <Medal className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-white" />
                                         </div>
-                                        <p className="font-bold text-base mb-1">{rankings[2].operatorName}</p>
-                                        <p className="text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
+                                        <p className="font-bold text-base sm:text-lg md:text-xl mb-1 sm:mb-2">
+                                          {rankings[2].operatorName}
+                                        </p>
+                                        <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
                                           {rankings[2].score}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">pontos</p>
+                                        <p className="text-xs sm:text-sm md:text-base text-muted-foreground">pontos</p>
                                       </div>
                                       <div
                                         className="w-full bg-gradient-to-br from-orange-400 to-orange-600 rounded-t-2xl shadow-2xl border-4 border-orange-500 dark:border-orange-700 relative overflow-hidden"
@@ -531,7 +548,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       >
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                          <p className="text-5xl font-black text-white/90">3</p>
+                                          <p className="text-5xl sm:text-6xl md:text-7xl font-black text-white/90">3</p>
                                         </div>
                                       </div>
                                     </div>
@@ -540,15 +557,17 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                               </div>
                             )}
 
-                            <Separator className="my-8" />
+                            <Separator className="my-8 sm:my-10" />
 
-                            <div className="space-y-4">
-                              <h3 className="text-xl font-bold">Classificação Completa</h3>
+                            <div className="space-y-4 sm:space-y-6">
+                              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold">Classificação Completa</h3>
                               <div className="rounded-lg border bg-card overflow-hidden">
                                 <Table>
                                   <TableHeader>
                                     <TableRow className="bg-muted/50">
-                                      <TableHead className="w-20 text-center font-bold">Posição</TableHead>
+                                      <TableHead className="w-20 sm:w-24 md:w-28 text-center font-bold">
+                                        Posição
+                                      </TableHead>
                                       <TableHead className="font-bold">Operador</TableHead>
                                       <TableHead className="text-center font-bold">Quiz Respondidos</TableHead>
                                       <TableHead className="text-center font-bold">Acertos</TableHead>
@@ -576,26 +595,28 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                           <TableCell className="text-center">
                                             <div className="flex items-center justify-center">
                                               {ranking.rank === 1 ? (
-                                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg">
-                                                  <Crown className="h-5 w-5" />
+                                                <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg">
+                                                  <Crown className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
                                                 </div>
                                               ) : ranking.rank === 2 ? (
-                                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-lg">
-                                                  <Medal className="h-5 w-5" />
+                                                <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-lg">
+                                                  <Medal className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
                                                 </div>
                                               ) : ranking.rank === 3 ? (
-                                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg">
-                                                  <Medal className="h-5 w-5" />
+                                                <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg">
+                                                  <Medal className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
                                                 </div>
                                               ) : (
-                                                <span className="text-lg font-bold">{ranking.rank}º</span>
+                                                <span className="text-lg sm:text-xl md:text-2xl font-bold">
+                                                  {ranking.rank}º
+                                                </span>
                                               )}
                                             </div>
                                           </TableCell>
                                           <TableCell className="min-w-0">
                                             <div className="flex items-center gap-2 min-w-0">
                                               <span
-                                                className={`break-words overflow-wrap-anywhere ${isTopThree ? "font-bold text-lg" : "text-base"}`}
+                                                className={`break-words overflow-wrap-anywhere ${isTopThree ? "font-bold text-lg sm:text-xl md:text-2xl" : "text-base sm:text-lg md:text-xl"}`}
                                               >
                                                 {ranking.operatorName}
                                               </span>
@@ -603,31 +624,37 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                                 <Badge className="bg-chart-1 text-white flex-shrink-0">Você</Badge>
                                               )}
                                               {isTopThree && (
-                                                <Star className="h-4 w-4 text-chart-1 fill-chart-1 flex-shrink-0" />
+                                                <Star className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-chart-1 fill-chart-1 flex-shrink-0" />
                                               )}
                                             </div>
                                           </TableCell>
                                           <TableCell className="text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                              <Brain className="h-4 w-4 text-muted-foreground" />
-                                              <span className="font-semibold">{ranking.totalAttempts}</span>
+                                              <Brain className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-muted-foreground" />
+                                              <span className="font-semibold text-lg sm:text-xl md:text-2xl">
+                                                {ranking.totalAttempts}
+                                              </span>
                                             </div>
                                           </TableCell>
                                           <TableCell className="text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                              <span className="font-semibold">{ranking.correctAnswers}</span>
+                                              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600 dark:text-green-400" />
+                                              <span className="font-semibold text-lg sm:text-xl md:text-2xl">
+                                                {ranking.correctAnswers}
+                                              </span>
                                             </div>
                                           </TableCell>
                                           <TableCell className="text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                                              <span className="font-semibold">{ranking.accuracy.toFixed(1)}%</span>
+                                              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-muted-foreground" />
+                                              <span className="font-semibold text-lg sm:text-xl md:text-2xl">
+                                                {ranking.accuracy.toFixed(1)}%
+                                              </span>
                                             </div>
                                           </TableCell>
                                           <TableCell className="text-right">
                                             <span
-                                              className={`text-lg font-bold ${
+                                              className={`text-lg sm:text-xl md:text-2xl font-bold ${
                                                 isTopThree
                                                   ? "bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent"
                                                   : ""
@@ -651,9 +678,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                 ) : !selectedQuiz ? (
                   <>
                     {displayQuizzes.length === 0 ? (
-                      <div className="text-center py-32">
-                        <Brain className="h-24 w-24 text-muted-foreground mx-auto mb-6 opacity-50" />
-                        <p className="text-muted-foreground text-2xl">
+                      <div className="text-center py-16 sm:py-24 md:py-32">
+                        <Brain className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
+                        <p className="text-muted-foreground text-lg sm:text-xl md:text-2xl">
                           {showHistory ? "Nenhum quiz no histórico." : "Nenhum quiz disponível no momento."}
                         </p>
                       </div>
@@ -664,40 +691,40 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                         return (
                           <Card
                             key={quiz.id}
-                            className={`cursor-pointer transition-all duration-300 transform hover:scale-[1.02] overflow-hidden ${
+                            className={`cursor-pointer transition-all duration-300 overflow-hidden ${
                               answered
                                 ? "opacity-60 bg-muted"
-                                : "bg-gradient-to-br from-card to-muted/30 hover:shadow-2xl hover:shadow-chart-1/20 border-2 border-transparent hover:border-chart-1/50"
+                                : "bg-gradient-to-br from-card to-muted/30 hover:shadow-xl hover:shadow-chart-1/10 border-2 border-transparent hover:border-chart-1/30"
                             } animate-in fade-in slide-in-from-bottom-4`}
                             style={{ animationDelay: `${index * 100}ms` }}
                           >
                             <CardHeader
                               onClick={() => !answered && !showHistory && handleSelectQuiz(quiz)}
-                              className="pb-4 relative overflow-hidden"
+                              className="pb-3 sm:pb-4 relative overflow-hidden"
                             >
                               {!answered && (
                                 <>
-                                  <div className="absolute top-0 right-0 w-32 h-32 bg-chart-1/20 rounded-full blur-3xl -z-10" />
-                                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-chart-5/20 rounded-full blur-2xl -z-10" />
+                                  <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-chart-1/20 rounded-full blur-3xl -z-10" />
+                                  <div className="absolute bottom-0 left-0 w-20 h-20 sm:w-24 sm:h-24 bg-chart-5/20 rounded-full blur-2xl -z-10" />
                                 </>
                               )}
-                              <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start justify-between gap-2 sm:gap-4">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-2 rounded-lg bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg flex-shrink-0">
-                                      <Brain className="h-6 w-6 text-white" />
+                                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                                    <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg flex-shrink-0">
+                                      <Brain className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
                                     </div>
                                     {!answered && (
-                                      <Badge className="bg-gradient-to-r from-chart-5 to-chart-1 text-white border-0 animate-pulse flex-shrink-0">
-                                        <Star className="h-4 w-4 mr-1" />
+                                      <Badge className="bg-gradient-to-r from-chart-5 to-chart-1 text-white border-0 animate-pulse flex-shrink-0 text-xs sm:text-sm">
+                                        <Star className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                         Novo
                                       </Badge>
                                     )}
                                   </div>
-                                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
+                                  <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
                                     {quiz.question}
                                   </CardTitle>
-                                  <CardDescription className="mt-3 text-lg break-words">
+                                  <CardDescription className="mt-2 sm:mt-3 text-sm sm:text-base md:text-lg break-words">
                                     Por {quiz.createdByName} • {new Date(quiz.createdAt).toLocaleDateString("pt-BR")} às{" "}
                                     {new Date(quiz.createdAt).toLocaleTimeString("pt-BR", {
                                       hour: "2-digit",
@@ -706,9 +733,12 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   </CardDescription>
                                 </div>
                                 {answered && (
-                                  <Badge variant="secondary" className="ml-2 px-4 py-2 text-base flex-shrink-0">
-                                    <CheckCircle2 className="h-5 w-5 mr-2" />
-                                    Respondido
+                                  <Badge
+                                    variant="secondary"
+                                    className="ml-2 px-2 sm:px-3 md:px-4 py-1 sm:py-2 text-xs sm:text-sm md:text-base flex-shrink-0"
+                                  >
+                                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 sm:mr-2" />
+                                    <span className="hidden sm:inline">Respondido</span>
                                   </Badge>
                                 )}
                               </div>
@@ -717,17 +747,17 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                               <Button
                                 size="lg"
                                 onClick={() => handleSelectQuiz(quiz)}
-                                className={`w-full text-lg py-6 transition-all duration-300 ${
+                                className={`w-full text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 transition-all duration-300 ${
                                   !answered && !showHistory
                                     ? "bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105"
                                     : ""
                                 }`}
                                 disabled={answered || showHistory}
                               >
-                                <Zap className="h-6 w-6 mr-2 flex-shrink-0" />
+                                <Zap className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2 flex-shrink-0" />
                                 {answered ? "Já Respondido" : showHistory ? "Visualizar" : "Responder Quiz"}
                                 {!answered && !showHistory && (
-                                  <Sparkles className="h-5 w-5 ml-2 animate-pulse flex-shrink-0" />
+                                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 ml-2 animate-pulse flex-shrink-0" />
                                 )}
                               </Button>
                             </CardContent>
@@ -738,36 +768,36 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   </>
                 ) : (
                   <Card className="shadow-2xl border-2 border-chart-1/50 bg-gradient-to-br from-card to-muted/30 animate-in fade-in zoom-in-95 duration-500">
-                    <CardHeader className="pb-6 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-chart-1/10 rounded-full blur-3xl -z-10" />
-                      <div className="absolute bottom-0 left-0 w-48 h-48 bg-chart-5/10 rounded-full blur-3xl -z-10" />
+                    <CardHeader className="pb-4 sm:pb-6 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-48 h-48 sm:w-64 sm:h-64 bg-chart-1/10 rounded-full blur-3xl -z-10" />
+                      <div className="absolute bottom-0 left-0 w-36 h-36 sm:w-48 sm:h-48 bg-chart-5/10 rounded-full blur-3xl -z-10" />
 
-                      <div className="flex items-center gap-4 mb-4 flex-wrap">
-                        <div className="p-3 rounded-xl bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg animate-pulse flex-shrink-0">
-                          <Brain className="h-8 w-8 text-white" />
+                      <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4 flex-wrap">
+                        <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-chart-1 to-chart-4 shadow-lg animate-pulse flex-shrink-0">
+                          <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                         </div>
-                        <Badge className="bg-gradient-to-r from-chart-1 to-chart-4 text-white border-0 px-4 py-2 text-base flex-shrink-0">
-                          <Trophy className="h-5 w-5 mr-2" />
+                        <Badge className="bg-gradient-to-r from-chart-1 to-chart-4 text-white border-0 px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base flex-shrink-0">
+                          <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                           Quiz Ativo
                         </Badge>
                       </div>
-                      <CardTitle className="text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
+                      <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
                         {selectedQuiz.question}
                       </CardTitle>
-                      <CardDescription className="text-lg mt-3 break-words">
+                      <CardDescription className="text-sm sm:text-base md:text-lg mt-2 sm:mt-3 break-words">
                         Selecione a resposta correta abaixo
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-8">
+                    <CardContent className="space-y-6 sm:space-y-8">
                       <RadioGroup value={selectedAnswer} onValueChange={setSelectedAnswer} disabled={showResult}>
                         {selectedQuiz.options.map((option, index) => (
                           <div
                             key={option.id}
-                            className={`flex items-center space-x-4 p-5 rounded-xl border-2 transition-all duration-300 transform animate-in slide-in-from-left ${
-                              !showResult ? "hover:bg-muted/50 cursor-pointer hover:scale-[1.02] hover:shadow-lg" : ""
+                            className={`flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-5 rounded-xl border-2 transition-all duration-300 transform animate-in slide-in-from-left ${
+                              !showResult ? "hover:bg-muted/50 cursor-pointer hover:shadow-md" : ""
                             } ${
                               selectedAnswer === option.id && !showResult
-                                ? "border-chart-1 bg-muted/50 shadow-lg scale-[1.02]"
+                                ? "border-chart-1 bg-muted/50 shadow-md"
                                 : showResult && option.id === selectedQuiz.correctAnswer
                                   ? "border-green-500 dark:border-green-600 bg-green-500/10 shadow-lg shadow-green-500/20"
                                   : showResult && option.id === selectedAnswer && !isCorrect
@@ -776,10 +806,14 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             }`}
                             style={{ animationDelay: `${index * 100}ms` }}
                           >
-                            <RadioGroupItem value={option.id} id={option.id} className="h-6 w-6 flex-shrink-0" />
+                            <RadioGroupItem
+                              value={option.id}
+                              id={option.id}
+                              className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0"
+                            />
                             <Label
                               htmlFor={option.id}
-                              className={`flex-1 min-w-0 cursor-pointer text-lg transition-all duration-300 break-words overflow-wrap-anywhere ${
+                              className={`flex-1 min-w-0 cursor-pointer text-sm sm:text-base md:text-lg transition-all duration-300 break-words overflow-wrap-anywhere ${
                                 showResult && option.id === selectedQuiz.correctAnswer
                                   ? "text-green-600 dark:text-green-400 font-semibold"
                                   : showResult && option.id === selectedAnswer && !isCorrect
@@ -789,15 +823,15 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       : ""
                               }`}
                             >
-                              <span className="font-bold mr-3 text-xl bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent inline-block flex-shrink-0">
+                              <span className="font-bold mr-2 sm:mr-3 text-base sm:text-lg md:text-xl bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent inline-block flex-shrink-0">
                                 {option.label})
                               </span>
                               <span className="inline">{option.text}</span>
                               {showResult && option.id === selectedQuiz.correctAnswer && (
-                                <CheckCircle2 className="inline h-6 w-6 ml-3 text-green-600 dark:text-green-400 animate-in zoom-in-50 spin-in-180 flex-shrink-0" />
+                                <CheckCircle2 className="inline h-5 w-5 sm:h-6 sm:w-6 ml-2 sm:ml-3 text-green-600 dark:text-green-400 animate-in zoom-in-50 spin-in-180 flex-shrink-0" />
                               )}
                               {showResult && option.id === selectedAnswer && !isCorrect && (
-                                <XCircle className="inline h-6 w-6 ml-3 text-red-600 dark:text-red-400 animate-in zoom-in-50 flex-shrink-0" />
+                                <XCircle className="inline h-5 w-5 sm:h-6 sm:w-6 ml-2 sm:ml-3 text-red-600 dark:text-red-400 animate-in zoom-in-50 flex-shrink-0" />
                               )}
                             </Label>
                           </div>
@@ -806,7 +840,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
                       {showResult && (
                         <div
-                          className={`p-8 rounded-xl border-2 transition-all duration-500 relative overflow-hidden ${
+                          className={`p-8 sm:p-10 md:p-12 rounded-xl border-2 transition-all duration-500 relative overflow-hidden ${
                             isCorrect
                               ? "bg-green-500/10 border-green-500 dark:border-green-600 shadow-2xl shadow-green-500/30 animate-in fade-in slide-in-from-bottom-8 zoom-in-95"
                               : "bg-red-500/10 border-red-500 dark:border-red-600 shadow-xl shadow-red-500/20 animate-in fade-in slide-in-from-bottom-4"
@@ -814,9 +848,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                         >
                           {isCorrect && (
                             <>
-                              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 dark:bg-yellow-600/10 rounded-full blur-2xl animate-pulse" />
+                              <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-yellow-400/20 dark:bg-yellow-600/10 rounded-full blur-2xl animate-pulse" />
                               <div
-                                className="absolute bottom-0 left-0 w-40 h-40 bg-green-400/20 dark:bg-green-600/10 rounded-full blur-2xl animate-pulse"
+                                className="absolute bottom-0 left-0 w-40 h-40 sm:w-48 sm:h-48 bg-green-400/20 dark:bg-green-600/10 rounded-full blur-2xl animate-pulse"
                                 style={{ animationDelay: "500ms" }}
                               />
                             </>
@@ -825,28 +859,28 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           {isCorrect ? (
                             <div className="flex items-center gap-6 relative z-10">
                               <div className="relative">
-                                <Trophy className="h-16 w-16 text-yellow-500 dark:text-yellow-400 animate-bounce" />
-                                <Sparkles className="h-8 w-8 text-yellow-400 dark:text-yellow-300 absolute -top-2 -right-2 animate-spin" />
-                                <Star className="h-6 w-6 text-yellow-500 dark:text-yellow-400 absolute -bottom-1 -left-1 animate-pulse" />
+                                <Trophy className="h-16 w-16 sm:h-20 sm:w-20 text-yellow-500 dark:text-yellow-400 animate-bounce" />
+                                <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-400 dark:text-yellow-300 absolute -top-2 -right-2 animate-spin" />
+                                <Star className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 dark:text-yellow-400 absolute -bottom-1 -left-1 animate-pulse" />
                               </div>
                               <div className="flex-1">
-                                <p className="font-bold text-3xl text-green-600 dark:text-green-400 mb-2">
+                                <p className="font-bold text-3xl sm:text-4xl md:text-5xl text-green-600 dark:text-green-400 mb-2 sm:mb-3">
                                   🎉 Parabéns! Resposta Correta!
                                 </p>
-                                <p className="text-lg text-green-700 dark:text-green-500">
+                                <p className="text-lg sm:text-xl md:text-2xl text-green-700 dark:text-green-500">
                                   Excelente trabalho! Você demonstrou conhecimento e acertou a questão.
                                 </p>
                               </div>
                             </div>
                           ) : (
                             <div className="flex items-center gap-6 relative z-10">
-                              <XCircle className="h-16 w-16 text-red-600 dark:text-red-400 animate-pulse" />
+                              <XCircle className="h-16 w-16 sm:h-20 sm:w-20 text-red-600 dark:text-red-400 animate-pulse" />
                               <div className="flex-1">
-                                <p className="font-semibold text-3xl text-red-700 dark:text-red-400 mb-2">
+                                <p className="font-semibold text-3xl sm:text-4xl md:text-5xl text-red-700 dark:text-red-400 mb-2 sm:mb-3">
                                   Resposta incorreta
                                 </p>
-                                <p className="text-lg text-red-600 dark:text-red-500">
-                                  Continue estudando e tente novamente em um próximo quiz.
+                                <p className="text-lg sm:text-xl md:text-2xl text-red-600 dark:text-red-500">
+                                  Não foi desta vez, tente novamente em um próximo Quiz.
                                 </p>
                               </div>
                             </div>
@@ -854,13 +888,13 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                         </div>
                       )}
 
-                      <Separator />
+                      <Separator className="my-4 sm:my-6" />
 
-                      <div className="flex gap-4">
+                      <div className="flex gap-2 sm:gap-4">
                         <Button
                           variant="outline"
                           onClick={() => setSelectedQuiz(null)}
-                          className="flex-1 text-lg py-6 hover:scale-105 transition-transform"
+                          className="flex-1 text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 hover:scale-105 transition-transform"
                         >
                           Voltar
                         </Button>
@@ -868,9 +902,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           <Button
                             onClick={handleSubmitQuiz}
                             disabled={!selectedAnswer}
-                            className="flex-1 text-lg py-6 bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                            className="flex-1 text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                           >
-                            <Zap className="h-6 w-6 mr-2" />
+                            <Zap className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
                             Enviar Resposta
                           </Button>
                         )}
@@ -885,26 +919,26 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
       </Dialog>
 
       <Dialog open={!!expandedMessage} onOpenChange={(open) => !open && setExpandedMessage(null)}>
-        <DialogContent className="!max-w-[calc(100vw-4.5rem)] sm:!max-w-[calc(100vw-4.5rem)] md:!max-w-[calc(100vw-4.5rem)] lg:!max-w-[calc(100vw-4.5rem)] !max-h-[calc(100vh-7.5rem)] !top-[4.5rem] !translate-y-0 flex flex-col p-8 bg-gradient-to-br from-card via-card to-muted/30 border-2 border-chart-2/30">
-          <DialogHeader className="flex-shrink-0 pb-6 relative">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-chart-2/10 rounded-full blur-3xl -z-10" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-chart-3/10 rounded-full blur-2xl -z-10" />
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] max-h-[90vh] flex flex-col p-4 sm:p-6 md:p-8 bg-gradient-to-br from-card via-card to-muted/30 border-2 border-primary/30">
+          <DialogHeader className="flex-shrink-0 pb-4 sm:pb-6 relative">
+            <div className="absolute top-0 right-0 w-36 h-36 sm:w-48 sm:h-48 bg-primary/10 rounded-full blur-3xl -z-10" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-accent/10 rounded-full blur-2xl -z-10" />
 
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-chart-2 to-chart-3 shadow-lg flex-shrink-0">
-                <Mail className="h-8 w-8 text-white" />
+            <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
+              <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg flex-shrink-0">
+                <Mail className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <Badge className="bg-gradient-to-r from-chart-2 to-chart-3 text-white border-0 px-4 py-2 text-base flex-shrink-0">
-                <Maximize2 className="h-4 w-4 mr-2" />
+              <Badge className="bg-gradient-to-r from-primary to-accent text-white border-0 px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base flex-shrink-0">
+                <Maximize2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Visualização Ampliada
               </Badge>
             </div>
 
-            <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-chart-2 via-chart-3 to-chart-2 bg-clip-text text-transparent break-words overflow-wrap-anywhere leading-tight">
+            <DialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent break-words overflow-wrap-anywhere leading-tight">
               {expandedMessage?.title}
             </DialogTitle>
 
-            <CardDescription className="text-lg mt-4 break-words flex items-center gap-2 flex-wrap">
+            <CardDescription className="text-sm sm:text-base md:text-lg mt-3 sm:mt-4 break-words flex items-center gap-2 flex-wrap">
               {expandedMessage && (
                 <>
                   <span className="font-semibold text-foreground">Por {expandedMessage.createdByName}</span>
@@ -922,17 +956,17 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             </CardDescription>
           </DialogHeader>
 
-          <Separator className="my-4" />
+          <Separator className="my-3 sm:my-4" />
 
           <ScrollArea className="flex-1 min-h-0">
-            <div className="bg-muted/30 rounded-xl p-8 border border-border/50">
-              <div className="text-xl whitespace-pre-wrap leading-relaxed break-words overflow-wrap-anywhere text-foreground">
+            <div className="bg-muted/30 rounded-xl p-4 sm:p-6 md:p-8 border border-border/50">
+              <div className="text-base sm:text-lg md:text-xl whitespace-pre-wrap leading-relaxed break-words overflow-wrap-anywhere text-foreground">
                 {expandedMessage?.content}
               </div>
             </div>
           </ScrollArea>
 
-          <div className="flex gap-4 pt-6 flex-shrink-0">
+          <div className="flex gap-2 sm:gap-4 pt-4 sm:pt-6 flex-shrink-0">
             {expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory && (
               <Button
                 size="lg"
@@ -940,9 +974,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   handleMarkAsSeen(expandedMessage.id)
                   setExpandedMessage(null)
                 }}
-                className="flex-1 text-lg py-6 bg-gradient-to-r from-chart-2 via-chart-3 to-chart-2 hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                className="flex-1 text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
-                <CheckCircle2 className="h-6 w-6 mr-2" />
+                <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
                 Marcar como Visto
               </Button>
             )}
@@ -950,7 +984,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
               variant="outline"
               size="lg"
               onClick={() => setExpandedMessage(null)}
-              className={`text-lg py-6 hover:scale-105 transition-transform ${expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory ? "flex-1" : "w-full"}`}
+              className={`text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 hover:scale-105 transition-transform ${expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory ? "flex-1" : "w-full"}`}
             >
               Fechar
             </Button>

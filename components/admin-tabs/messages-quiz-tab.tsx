@@ -460,7 +460,7 @@ export function MessagesQuizTab() {
           onClick={() => setActiveTab("messages")}
           className={`text-base px-6 py-5 transition-all duration-300 ${
             activeTab === "messages"
-              ? "bg-gradient-to-r from-chart-2 via-chart-3 to-chart-2 hover:opacity-90 text-white shadow-lg scale-105"
+              ? "bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 text-white shadow-lg scale-105"
               : "hover:scale-105"
           }`}
         >
@@ -486,7 +486,7 @@ export function MessagesQuizTab() {
           <div className="flex gap-3">
             <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
               <DialogTrigger asChild>
-                <Button onClick={resetMessageForm} className="bg-orange-500 hover:bg-orange-600 text-white">
+                <Button onClick={resetMessageForm} className="bg-primary hover:bg-primary/90 text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Recado
                 </Button>
@@ -586,10 +586,7 @@ export function MessagesQuizTab() {
 
             <Dialog open={showMessageHistoryDialog} onOpenChange={setShowMessageHistoryDialog}>
               <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20 bg-transparent"
-                >
+                <Button variant="outline" className="border-primary text-primary hover:bg-primary/10 bg-transparent">
                   <History className="h-4 w-4 mr-2" />
                   Ver Histórico de Recados
                 </Button>
@@ -843,10 +840,7 @@ export function MessagesQuizTab() {
 
             <Dialog open={showQuizHistoryDialog} onOpenChange={setShowQuizHistoryDialog}>
               <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/20 bg-transparent"
-                >
+                <Button variant="outline" className="border-chart-1 text-chart-1 hover:bg-chart-1/10 bg-transparent">
                   <History className="h-4 w-4 mr-2" />
                   Ver Histórico de Quizzes
                 </Button>
