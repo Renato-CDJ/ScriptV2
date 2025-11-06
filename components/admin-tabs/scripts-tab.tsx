@@ -38,6 +38,7 @@ import type { ScriptStep, ScriptButton, Product } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { AdminScriptPreview } from "@/components/admin-script-preview"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { validateScriptJson } from "@/lib/scripts-loader"
 
 export function ScriptsTab() {
   const [steps, setSteps] = useState<ScriptStep[]>(getScriptSteps())
@@ -104,6 +105,16 @@ export function ScriptsTab() {
           toast({
             title: "Arquivo de fraseologia detectado",
             description: "Por favor, use a aba 'Fraseologias' para importar arquivos de fraseologia.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        const validation = validateScriptJson(data)
+        if (!validation.valid) {
+          toast({
+            title: "Erro de validação",
+            description: validation.errors.join(", "),
             variant: "destructive",
           })
           return

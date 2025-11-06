@@ -44,6 +44,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface OperatorMessagesModalProps {
   open: boolean
@@ -229,7 +230,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
               }}
               className={`relative text-sm sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 transition-all duration-300 whitespace-nowrap ${
                 activeTab === "messages"
-                  ? "bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 text-white shadow-lg shadow-primary/50 scale-105"
+                  ? "bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 text-white shadow-lg shadow-orange-500/50 dark:shadow-primary/50 scale-105"
                   : "hover:scale-105"
               }`}
             >
@@ -256,7 +257,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
               }}
               className={`text-sm sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 transition-all duration-300 whitespace-nowrap ${
                 activeTab === "quiz"
-                  ? "bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg shadow-chart-1/50 scale-105"
+                  ? "bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-chart-1 dark:via-chart-4 dark:to-chart-5 dark:hover:opacity-90 text-white shadow-lg shadow-orange-500/50 dark:shadow-chart-1/50 scale-105"
                   : "hover:scale-105"
               }`}
             >
@@ -277,7 +278,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                 }}
                 className={`text-sm sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 transition-all duration-300 whitespace-nowrap ${
                   showRanking
-                    ? "bg-gradient-to-r from-chart-4 via-chart-1 to-chart-5 text-white shadow-lg scale-105"
+                    ? "bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-chart-4 dark:via-chart-1 dark:to-chart-5 text-white shadow-lg shadow-orange-500/50 dark:shadow-chart-4/50 scale-105"
                     : "hover:scale-105"
                 }`}
               >
@@ -332,22 +333,30 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           <div className="flex items-start justify-between gap-2 sm:gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                                <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-primary to-accent shadow-lg flex-shrink-0">
-                                  <Mail className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
-                                </div>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="p-1.5 sm:p-2 rounded-lg bg-orange-500 dark:bg-gradient-to-br dark:from-primary dark:to-accent shadow-lg flex-shrink-0 cursor-help">
+                                        <Mail className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="font-semibold">Enviado por: {message.createdByName}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                                 {!seen && (
-                                  <Badge className="bg-gradient-to-r from-primary to-accent text-white border-0 animate-pulse flex-shrink-0 text-xs sm:text-sm">
+                                  <Badge className="bg-orange-500 dark:bg-gradient-to-r dark:from-primary dark:to-accent text-white border-0 animate-pulse flex-shrink-0 text-xs sm:text-sm">
                                     <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                     Novo
                                   </Badge>
                                 )}
                               </div>
-                              <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent break-words overflow-wrap-anywhere">
+                              <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent break-words hyphens-auto">
                                 {message.title}
                               </CardTitle>
                               <CardDescription className="mt-2 sm:mt-3 text-sm sm:text-base md:text-lg break-words">
-                                Por {message.createdByName} • {new Date(message.createdAt).toLocaleDateString("pt-BR")}{" "}
-                                às{" "}
+                                {new Date(message.createdAt).toLocaleDateString("pt-BR")} às{" "}
                                 {new Date(message.createdAt).toLocaleTimeString("pt-BR", {
                                   hour: "2-digit",
                                   minute: "2-digit",
@@ -377,14 +386,14 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="text-sm sm:text-base md:text-lg whitespace-pre-wrap mb-4 sm:mb-6 leading-relaxed break-words overflow-wrap-anywhere">
+                          <p className="text-sm sm:text-base md:text-lg whitespace-pre-wrap mb-4 sm:mb-6 leading-relaxed break-words hyphens-auto max-w-full">
                             {message.content}
                           </p>
                           {!seen && !showHistory && (
                             <Button
                               size="lg"
                               onClick={() => handleMarkAsSeen(message.id)}
-                              className="w-full text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                              className="w-full text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                             >
                               <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2" />
                               Marcar como Visto
@@ -412,7 +421,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                               <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-white animate-pulse" />
                             </div>
                             <div className="min-w-0">
-                              <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words">
+                              <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words hyphens-auto">
                                 Ranking Mensal - {getMonthName(selectedMonth)} {selectedYear}
                               </CardTitle>
                               <CardDescription className="text-sm sm:text-base md:text-lg mt-1">
@@ -471,7 +480,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                         >
                                           <Medal className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-white" />
                                         </div>
-                                        <p className="font-bold text-base sm:text-lg md:text-xl mb-1 sm:mb-2">
+                                        <p className="font-bold text-base sm:text-lg md:text-xl mb-1 sm:mb-2 break-words hyphens-auto max-w-full px-2">
                                           {rankings[1].operatorName}
                                         </p>
                                         <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
@@ -498,7 +507,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                         <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-2xl mb-2 animate-bounce">
                                           <Crown className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 text-white" />
                                         </div>
-                                        <p className="font-bold text-lg sm:text-xl md:text-2xl mb-1 sm:mb-2">
+                                        <p className="font-bold text-lg sm:text-xl md:text-2xl mb-1 sm:mb-2 break-words hyphens-auto max-w-full px-2">
                                           {rankings[0].operatorName}
                                         </p>
                                         <p className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
@@ -534,7 +543,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                         >
                                           <Medal className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-white" />
                                         </div>
-                                        <p className="font-bold text-base sm:text-lg md:text-xl mb-1 sm:mb-2">
+                                        <p className="font-bold text-base sm:text-lg md:text-xl mb-1 sm:mb-2 break-words hyphens-auto max-w-full px-2">
                                           {rankings[2].operatorName}
                                         </p>
                                         <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
@@ -561,15 +570,17 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
                             <div className="space-y-4 sm:space-y-6">
                               <h3 className="text-xl sm:text-2xl md:text-3xl font-bold">Classificação Completa</h3>
-                              <div className="rounded-lg border bg-card overflow-hidden">
+                              <div className="rounded-lg border bg-card overflow-x-auto">
                                 <Table>
                                   <TableHeader>
                                     <TableRow className="bg-muted/50">
                                       <TableHead className="w-20 sm:w-24 md:w-28 text-center font-bold">
                                         Posição
                                       </TableHead>
-                                      <TableHead className="font-bold">Operador</TableHead>
-                                      <TableHead className="text-center font-bold">Quiz Respondidos</TableHead>
+                                      <TableHead className="font-bold min-w-[150px]">Operador</TableHead>
+                                      <TableHead className="text-center font-bold whitespace-nowrap">
+                                        Quiz Respondidos
+                                      </TableHead>
                                       <TableHead className="text-center font-bold">Acertos</TableHead>
                                       <TableHead className="text-center font-bold">Precisão</TableHead>
                                       <TableHead className="text-right font-bold">Pontos</TableHead>
@@ -616,7 +627,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                           <TableCell className="min-w-0">
                                             <div className="flex items-center gap-2 min-w-0">
                                               <span
-                                                className={`break-words overflow-wrap-anywhere ${isTopThree ? "font-bold text-lg sm:text-xl md:text-2xl" : "text-base sm:text-lg md:text-xl"}`}
+                                                className={`break-words hyphens-auto max-w-full ${isTopThree ? "font-bold text-lg sm:text-xl md:text-2xl" : "text-base sm:text-lg md:text-xl"}`}
                                               >
                                                 {ranking.operatorName}
                                               </span>
@@ -721,7 +732,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       </Badge>
                                     )}
                                   </div>
-                                  <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
+                                  <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent break-words hyphens-auto">
                                     {quiz.question}
                                   </CardTitle>
                                   <CardDescription className="mt-2 sm:mt-3 text-sm sm:text-base md:text-lg break-words">
@@ -781,7 +792,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           Quiz Ativo
                         </Badge>
                       </div>
-                      <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words overflow-wrap-anywhere">
+                      <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words hyphens-auto">
                         {selectedQuiz.question}
                       </CardTitle>
                       <CardDescription className="text-sm sm:text-base md:text-lg mt-2 sm:mt-3 break-words">
@@ -813,7 +824,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             />
                             <Label
                               htmlFor={option.id}
-                              className={`flex-1 min-w-0 cursor-pointer text-sm sm:text-base md:text-lg transition-all duration-300 break-words overflow-wrap-anywhere ${
+                              className={`flex-1 min-w-0 cursor-pointer text-sm sm:text-base md:text-lg transition-all duration-300 break-words hyphens-auto ${
                                 showResult && option.id === selectedQuiz.correctAnswer
                                   ? "text-green-600 dark:text-green-400 font-semibold"
                                   : showResult && option.id === selectedAnswer && !isCorrect
@@ -919,54 +930,62 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
       </Dialog>
 
       <Dialog open={!!expandedMessage} onOpenChange={(open) => !open && setExpandedMessage(null)}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] max-h-[90vh] flex flex-col p-4 sm:p-6 md:p-8 bg-gradient-to-br from-card via-card to-muted/30 border-2 border-primary/30">
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[70vw] max-h-[90vh] flex flex-col p-6 sm:p-8 md:p-10 bg-gradient-to-br from-card via-card to-muted/30 border-2 border-orange-500/30 dark:border-primary/30 shadow-2xl">
           <DialogHeader className="flex-shrink-0 pb-4 sm:pb-6 relative">
-            <div className="absolute top-0 right-0 w-36 h-36 sm:w-48 sm:h-48 bg-primary/10 rounded-full blur-3xl -z-10" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-accent/10 rounded-full blur-2xl -z-10" />
+            <div className="absolute top-0 right-0 w-36 h-36 sm:w-48 sm:h-48 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl -z-10" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-orange-400/10 dark:bg-accent/10 rounded-full blur-2xl -z-10" />
 
-            <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
-              <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg flex-shrink-0">
-                <Mail className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-primary dark:to-accent shadow-lg flex-shrink-0 cursor-help hover:scale-110 transition-transform">
+                      <Mail className="h-7 w-7 sm:h-9 sm:w-9 text-white" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-base sm:text-lg p-3">
+                    <p className="font-semibold">Enviado por: {expandedMessage?.createdByName}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <div className="flex-1 min-w-0">
+                <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 dark:from-primary dark:to-accent text-white border-0 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-shrink-0 mb-2">
+                  <Maximize2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+                  Visualização Ampliada
+                </Badge>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {expandedMessage && (
+                    <>
+                      {new Date(expandedMessage.createdAt).toLocaleDateString("pt-BR")} às{" "}
+                      {new Date(expandedMessage.createdAt).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </>
+                  )}
+                </p>
               </div>
-              <Badge className="bg-gradient-to-r from-primary to-accent text-white border-0 px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base flex-shrink-0">
-                <Maximize2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                Visualização Ampliada
-              </Badge>
             </div>
 
-            <DialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent break-words overflow-wrap-anywhere leading-tight">
+            <DialogTitle className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500 dark:from-primary dark:via-accent dark:to-primary bg-clip-text text-transparent break-words hyphens-auto leading-tight mb-2">
               {expandedMessage?.title}
             </DialogTitle>
-
-            <CardDescription className="text-sm sm:text-base md:text-lg mt-3 sm:mt-4 break-words flex items-center gap-2 flex-wrap">
-              {expandedMessage && (
-                <>
-                  <span className="font-semibold text-foreground">Por {expandedMessage.createdByName}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span>{new Date(expandedMessage.createdAt).toLocaleDateString("pt-BR")}</span>
-                  <span className="text-muted-foreground">às</span>
-                  <span>
-                    {new Date(expandedMessage.createdAt).toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </>
-              )}
-            </CardDescription>
           </DialogHeader>
 
-          <Separator className="my-3 sm:my-4" />
+          <Separator className="my-4 sm:my-6" />
 
           <ScrollArea className="flex-1 min-h-0">
-            <div className="bg-muted/30 rounded-xl p-4 sm:p-6 md:p-8 border border-border/50">
-              <div className="text-base sm:text-lg md:text-xl whitespace-pre-wrap leading-relaxed break-words overflow-wrap-anywhere text-foreground">
-                {expandedMessage?.content}
+            <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-6 sm:p-8 md:p-10 border-2 border-orange-500/20 dark:border-primary/20 shadow-inner">
+              <div className="prose prose-lg sm:prose-xl md:prose-2xl max-w-none dark:prose-invert">
+                <div className="text-lg sm:text-xl md:text-2xl whitespace-pre-wrap leading-relaxed break-words hyphens-auto text-foreground/90 max-w-full font-normal">
+                  {expandedMessage?.content}
+                </div>
               </div>
             </div>
           </ScrollArea>
 
-          <div className="flex gap-2 sm:gap-4 pt-4 sm:pt-6 flex-shrink-0">
+          <div className="flex gap-3 sm:gap-4 pt-6 sm:pt-8 flex-shrink-0">
             {expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory && (
               <Button
                 size="lg"
@@ -974,7 +993,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   handleMarkAsSeen(expandedMessage.id)
                   setExpandedMessage(null)
                 }}
-                className="flex-1 text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                className="flex-1 text-base sm:text-lg md:text-xl py-5 sm:py-6 md:py-7 bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
               >
                 <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
                 Marcar como Visto
@@ -984,7 +1003,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
               variant="outline"
               size="lg"
               onClick={() => setExpandedMessage(null)}
-              className={`text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 hover:scale-105 transition-transform ${expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory ? "flex-1" : "w-full"}`}
+              className={`text-base sm:text-lg md:text-xl py-5 sm:py-6 md:py-7 hover:scale-105 transition-transform font-semibold ${expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory ? "flex-1" : "w-full"}`}
             >
               Fechar
             </Button>
