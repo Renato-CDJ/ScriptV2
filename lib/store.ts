@@ -18,7 +18,7 @@ import type {
   QuizAttempt,
   AdminPermissions,
 } from "./types"
-import { loadHabitacionalScript, loadScriptFromJson } from "./habitacional-loader"
+// import { loadHabitacionalScript, loadScriptFromJson } from "./habitacional-loader"
 
 export function loadScriptsFromDataFolder() {
   if (typeof window === "undefined") return
@@ -153,7 +153,7 @@ const MOCK_USERS: User[] = [
   },
 ]
 
-const MOCK_SCRIPT_STEPS: ScriptStep[] = loadHabitacionalScript()
+const MOCK_SCRIPT_STEPS: ScriptStep[] = []
 
 const MOCK_TABULATIONS: Tabulation[] = [
   // Identification Issues
@@ -544,9 +544,8 @@ export function initializeMockData() {
     MOCK_USERS.map((u) => u.username),
   )
 
-  const habitacionalSteps = loadHabitacionalScript()
   if (!localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS)) {
-    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(habitacionalSteps))
+    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify([]))
   }
 
   localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(MOCK_TABULATIONS))
@@ -565,16 +564,7 @@ export function initializeMockData() {
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
-    const habitacionalProduct: Product = {
-      id: "prod-habitacional",
-      name: "HABITACIONAL",
-      description: "Financiamento Habitacional",
-      scriptId: habitacionalSteps[0]?.id || "hab_abordagem",
-      category: "habitacional",
-      isActive: true,
-      createdAt: new Date(),
-    }
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([habitacionalProduct]))
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]))
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.ATTENDANCE_TYPES)) {
@@ -1049,15 +1039,31 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
   try {
     if (jsonData.marcas) {
       Object.entries(jsonData.marcas).forEach(([productName, productSteps]: [string, any]) => {
-        const steps = loadScriptFromJson(jsonData, productName)
+        const steps: ScriptStep[] = []
+        const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
+
+        // Convert JSON steps to ScriptStep format
+        Object.entries(productSteps).forEach(([stepKey, stepData]: [string, any]) => {
+          const step: ScriptStep = {
+            id: stepData.id,
+            productId: productId,
+            title: stepData.title,
+            body: stepData.body,
+            buttons: stepData.buttons || [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }
+          steps.push(step)
+        })
 
         if (steps.length > 0) {
           const existingSteps = getScriptSteps()
-          const newSteps = [...existingSteps, ...steps]
+          // Remove existing steps for this product
+          const filteredSteps = existingSteps.filter((s) => s.productId !== productId)
+          const newSteps = [...filteredSteps, ...steps]
           localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(newSteps))
           stepCount += steps.length
 
-          const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
           const product: Product = {
             id: productId,
             name: productName,
@@ -1068,7 +1074,7 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
           }
 
           const existingProducts = getProducts()
-          const existingIndex = existingProducts.findIndex((p) => p.name === productName)
+          const existingIndex = existingProducts.findIndex((p) => p.id === productId)
           if (existingIndex !== -1) {
             existingProducts[existingIndex] = product
           } else {
