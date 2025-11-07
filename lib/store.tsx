@@ -18,7 +18,7 @@ import type {
   QuizAttempt,
   AdminPermissions,
 } from "./types"
-// import { loadHabitacionalScript, loadScriptFromJson } from "./habitacional-loader"
+import { getAutoLoadScripts } from "./auto-load-scripts"
 
 export function loadScriptsFromDataFolder() {
   if (typeof window === "undefined") return
@@ -31,17 +31,29 @@ export function loadScriptsFromDataFolder() {
     return
   }
 
-  // In a browser environment, we can't directly read from filesystem
-  // Instead, we'll provide instructions for users to use the Import JSON button
-  // or we can load example scripts here
+  try {
+    const autoLoadScripts = getAutoLoadScripts()
+    let totalProductCount = 0
+    let totalStepCount = 0
 
-  console.log("[v0] To load scripts from JSON files:")
-  console.log("1. Place your JSON files in the /data/scripts folder")
-  console.log("2. Use the 'Importar JSON' button in Gerenciar Roteiros")
-  console.log("3. Or add them programmatically using importScriptFromJson()")
+    console.log("[v0] Auto-loading scripts from /data/scripts folder...")
 
-  // Mark as checked (not loaded, just checked)
-  localStorage.setItem("callcenter_scripts_from_folder_loaded", "true")
+    autoLoadScripts.forEach((scriptData) => {
+      const result = importScriptFromJson(scriptData)
+      totalProductCount += result.productCount
+      totalStepCount += result.stepCount
+    })
+
+    if (totalStepCount > 0) {
+      console.log(
+        `[v0] Successfully auto-loaded ${totalProductCount} products and ${totalStepCount} steps from /data/scripts folder`,
+      )
+      localStorage.setItem("callcenter_scripts_from_folder_loaded", "true")
+    }
+  } catch (error) {
+    console.error("[v0] Error auto-loading scripts from folder:", error)
+  }
+  // </CHANGE>
 }
 
 // Mock data for demonstration
