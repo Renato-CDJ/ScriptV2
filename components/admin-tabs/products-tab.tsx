@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,7 @@ export function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [dialogId, setDialogId] = useState<string>("")
   const [formData, setFormData] = useState({
     name: "",
     scriptId: "",
@@ -46,6 +47,7 @@ export function ProductsTab() {
   }
 
   const handleOpenDialog = (product?: Product) => {
+    setDialogId(`dialog-${Date.now()}`)
     if (product) {
       setEditingProduct(product)
       setFormData({
@@ -108,6 +110,14 @@ export function ProductsTab() {
     }
 
     setIsDialogOpen(false)
+    setFormData({
+      name: "",
+      scriptId: "",
+      category: "habitacional",
+      attendanceTypes: [],
+      personTypes: [],
+    })
+    setEditingProduct(null)
     loadProducts()
   }
 
@@ -140,8 +150,13 @@ export function ProductsTab() {
     }))
   }
 
-  const scriptSteps = getScriptSteps()
-  const startSteps = scriptSteps.filter((step) => step.order === 1 || step.title.toLowerCase().includes("início"))
+  const abordagemSteps = useMemo(() => {
+    const allSteps = getScriptSteps()
+    // Filter steps that are "Abordagem" (approach/first screen of each product)
+    return allSteps.filter(
+      (step) => step.title.toLowerCase().includes("abordagem") || step.id.toLowerCase().includes("abordagem"),
+    )
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -223,9 +238,9 @@ export function ProductsTab() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome do Produto *</Label>
+              <Label htmlFor={`name-${dialogId}`}>Nome do Produto *</Label>
               <Input
-                id="name"
+                id={`name-${dialogId}`}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: HABITACIONAL"
@@ -233,31 +248,42 @@ export function ProductsTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="scriptId">Script Inicial *</Label>
+              <Label htmlFor={`scriptId-${dialogId}`}>Script Inicial * (Abordagem)</Label>
               <Select
                 value={formData.scriptId}
                 onValueChange={(value) => setFormData({ ...formData, scriptId: value })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o script inicial" />
+                <SelectTrigger id={`scriptId-${dialogId}`}>
+                  <SelectValue placeholder="Selecione a tela de Abordagem" />
                 </SelectTrigger>
                 <SelectContent>
-                  {startSteps.map((step) => (
-                    <SelectItem key={step.id} value={step.id}>
-                      {step.title}
+                  {abordagemSteps.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      Nenhuma tela de Abordagem encontrada
                     </SelectItem>
-                  ))}
+                  ) : (
+                    abordagemSteps.map((step) => (
+                      <SelectItem key={step.id} value={step.id}>
+                        {step.title}
+                        {step.productId && ` (${step.productId})`}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Selecione a tela inicial de abordagem do script. Os scripts são importados da pasta data/scripts em
+                "Gerenciar Roteiros".
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">Categoria</Label>
+              <Label htmlFor={`category-${dialogId}`}>Categoria</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value: any) => setFormData({ ...formData, category: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger id={`category-${dialogId}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -273,21 +299,21 @@ export function ProductsTab() {
               <div className="flex gap-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="ativo"
+                    id={`ativo-${dialogId}`}
                     checked={formData.attendanceTypes.includes("ativo")}
                     onCheckedChange={() => toggleAttendanceType("ativo")}
                   />
-                  <label htmlFor="ativo" className="text-sm font-medium cursor-pointer">
+                  <label htmlFor={`ativo-${dialogId}`} className="text-sm font-medium cursor-pointer">
                     Atendimento Ativo
                   </label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="receptivo"
+                    id={`receptivo-${dialogId}`}
                     checked={formData.attendanceTypes.includes("receptivo")}
                     onCheckedChange={() => toggleAttendanceType("receptivo")}
                   />
-                  <label htmlFor="receptivo" className="text-sm font-medium cursor-pointer">
+                  <label htmlFor={`receptivo-${dialogId}`} className="text-sm font-medium cursor-pointer">
                     Atendimento Receptivo
                   </label>
                 </div>
@@ -299,21 +325,21 @@ export function ProductsTab() {
               <div className="flex gap-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="fisica"
+                    id={`fisica-${dialogId}`}
                     checked={formData.personTypes.includes("fisica")}
                     onCheckedChange={() => togglePersonType("fisica")}
                   />
-                  <label htmlFor="fisica" className="text-sm font-medium cursor-pointer">
+                  <label htmlFor={`fisica-${dialogId}`} className="text-sm font-medium cursor-pointer">
                     Pessoa Física
                   </label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="juridica"
+                    id={`juridica-${dialogId}`}
                     checked={formData.personTypes.includes("juridica")}
                     onCheckedChange={() => togglePersonType("juridica")}
                   />
-                  <label htmlFor="juridica" className="text-sm font-medium cursor-pointer">
+                  <label htmlFor={`juridica-${dialogId}`} className="text-sm font-medium cursor-pointer">
                     Pessoa Jurídica
                   </label>
                 </div>
