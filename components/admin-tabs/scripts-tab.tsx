@@ -147,7 +147,10 @@ export function ScriptsTab() {
   }
 
   const handleEdit = (step: ScriptStep) => {
-    setEditingStep({ ...step })
+    setEditingStep({
+      ...step,
+      content: step.content || "", // Ensure content is never undefined
+    })
     setIsCreating(false)
     setPreviewStep(null)
   }

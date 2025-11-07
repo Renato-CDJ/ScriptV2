@@ -55,9 +55,10 @@ function renderContentWithSegments(
   operatorName: string,
   customerFirstName: string,
 ): React.ReactNode {
+  const safeContent = content || ""
+
   if (!segments || segments.length === 0) {
-    // Fallback to original HTML rendering if no segments
-    return content
+    return safeContent
       .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
       .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
       .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
@@ -82,26 +83,22 @@ function renderContentWithSegments(
     return elements
   }
 
-  // Build a map of segments by their text for quick lookup
   const segmentMap = new Map<string, ContentSegment>()
   segments.forEach((seg) => {
     segmentMap.set(seg.text, seg)
   })
 
-  // Split content by segments and render with formatting
   let lastIndex = 0
   const elements: React.ReactNode[] = []
 
   segments.forEach((segment, idx) => {
-    const index = content.indexOf(segment.text, lastIndex)
+    const index = safeContent.indexOf(segment.text, lastIndex)
     if (index !== -1) {
-      // Add text before segment (with line breaks)
       if (index > lastIndex) {
-        const textBefore = content.substring(lastIndex, index)
+        const textBefore = safeContent.substring(lastIndex, index)
         elements.push(...textToElements(textBefore, `text-${idx}`))
       }
 
-      // Add formatted segment
       const segmentStyle: React.CSSProperties = {
         fontWeight: segment.formatting.bold ? "bold" : "normal",
         fontStyle: segment.formatting.italic ? "italic" : "normal",
@@ -141,9 +138,8 @@ function renderContentWithSegments(
     }
   })
 
-  // Add remaining text (with line breaks)
-  if (lastIndex < content.length) {
-    const remainingText = content.substring(lastIndex)
+  if (lastIndex < safeContent.length) {
+    const remainingText = safeContent.substring(lastIndex)
     elements.push(...textToElements(remainingText, "text-end"))
   }
 
@@ -201,7 +197,7 @@ export const ScriptCard = memo(function ScriptCard({
 
   const processedContent = useMemo(
     () =>
-      step.content
+      (step.content || "")
         .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
         .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)

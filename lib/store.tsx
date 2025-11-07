@@ -1054,19 +1054,21 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
         const steps: ScriptStep[] = []
         const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
 
-        // Convert JSON steps to ScriptStep format
         Object.entries(productSteps).forEach(([stepKey, stepData]: [string, any]) => {
           const step: ScriptStep = {
             id: stepData.id,
             productId: productId,
-            title: stepData.title,
-            body: stepData.body,
+            title: stepData.title || "",
+            content: stepData.body || stepData.content || "", // Map 'body' to 'content' field
+            order: stepData.order || 0,
             buttons: stepData.buttons || [],
+            contentSegments: stepData.contentSegments || [],
             createdAt: new Date(),
             updatedAt: new Date(),
           }
           steps.push(step)
         })
+        // </CHANGE>
 
         if (steps.length > 0) {
           const existingSteps = getScriptSteps()
@@ -1080,7 +1082,7 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
             id: productId,
             name: productName,
             scriptId: steps[0].id,
-            category: productName.toLowerCase(),
+            category: productName.toLowerCase() as "habitacional" | "comercial" | "outros",
             isActive: true,
             createdAt: new Date(),
           }
