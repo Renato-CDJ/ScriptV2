@@ -38,7 +38,6 @@ import type { ScriptStep, ScriptButton, Product } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { AdminScriptPreview } from "@/components/admin-script-preview"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { validateScriptJson } from "@/lib/scripts-loader"
 
 export function ScriptsTab() {
   const [steps, setSteps] = useState<ScriptStep[]>(getScriptSteps())
@@ -110,16 +109,6 @@ export function ScriptsTab() {
           return
         }
 
-        const validation = validateScriptJson(data)
-        if (!validation.valid) {
-          toast({
-            title: "Erro de validação",
-            description: validation.errors.join(", "),
-            variant: "destructive",
-          })
-          return
-        }
-
         const result = importScriptFromJson(data)
 
         if (result.stepCount > 0) {
@@ -147,10 +136,7 @@ export function ScriptsTab() {
   }
 
   const handleEdit = (step: ScriptStep) => {
-    setEditingStep({
-      ...step,
-      content: step.content || "", // Ensure content is never undefined
-    })
+    setEditingStep({ ...step })
     setIsCreating(false)
     setPreviewStep(null)
   }

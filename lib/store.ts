@@ -18,65 +18,7 @@ import type {
   QuizAttempt,
   AdminPermissions,
 } from "./types"
-import { getAutoLoadScripts } from "./auto-load-scripts"
-
-const saveQueue: Map<string, any> = new Map()
-let saveTimeout: NodeJS.Timeout | null = null
-
-function debouncedSave(key: string, data: any) {
-  saveQueue.set(key, data)
-
-  if (saveTimeout) {
-    clearTimeout(saveTimeout)
-  }
-
-  saveTimeout = setTimeout(() => {
-    saveQueue.forEach((value, storageKey) => {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(value))
-      } catch (error) {
-        console.error(`[v0] Error saving ${storageKey}:`, error)
-      }
-    })
-    saveQueue.clear()
-  }, 250) // Batch writes every 250ms
-}
-
-export function loadScriptsFromDataFolder() {
-  if (typeof window === "undefined") return
-
-  // Check if scripts have already been loaded from folder
-  const scriptsLoaded = localStorage.getItem("callcenter_scripts_from_folder_loaded")
-
-  if (scriptsLoaded === "true") {
-    console.log("[v0] Scripts from data folder already loaded")
-    return
-  }
-
-  try {
-    const autoLoadScripts = getAutoLoadScripts()
-    let totalProductCount = 0
-    let totalStepCount = 0
-
-    console.log("[v0] Auto-loading scripts from /data/scripts folder...")
-
-    autoLoadScripts.forEach((scriptData) => {
-      const result = importScriptFromJson(scriptData)
-      totalProductCount += result.productCount
-      totalStepCount += result.stepCount
-    })
-
-    if (totalStepCount > 0) {
-      console.log(
-        `[v0] Successfully auto-loaded ${totalProductCount} products and ${totalStepCount} steps from /data/scripts folder`,
-      )
-      localStorage.setItem("callcenter_scripts_from_folder_loaded", "true")
-    }
-  } catch (error) {
-    console.error("[v0] Error auto-loading scripts from folder:", error)
-  }
-  // </CHANGE>
-}
+import { loadHabitacionalScript, loadScriptFromJson } from "./habitacional-loader"
 
 // Mock data for demonstration
 const MOCK_USERS: User[] = [
@@ -187,7 +129,7 @@ const MOCK_USERS: User[] = [
   },
 ]
 
-const MOCK_SCRIPT_STEPS: ScriptStep[] = []
+const MOCK_SCRIPT_STEPS: ScriptStep[] = loadHabitacionalScript()
 
 const MOCK_TABULATIONS: Tabulation[] = [
   // Identification Issues
@@ -411,7 +353,7 @@ const MOCK_SITUATIONS: ServiceSituation[] = [
     id: "sit-3",
     name: "SE O CLIENTE CITAR A LGPD OU PERGUNTAR POR QUE TEMOS OS SEUS DADOS",
     description:
-      '"(NOME DO CLIENTE), seguindo a lei LGPD, n°13.709, possuímos alguns dados representando a CAIXAECONÔMICA FEDERAL, para garantir sua segurança. Caso você possua qualquer dúvida ou solicitação em relação a isso, pedimos que entre em contato conosco enviando um e-mail para: dpo@gruporoveri.com.br ."\n\nEXEMPLOS DE QUESTIONAMENTOS FEITOS PELOS CLIENTES:\n- Como você possui meus dados pessoais?\n- Vocês têm o direito de me ligar?\n- Isso está conforme a LGPD?\n- Quero que excluam meus dados!',
+      '"(NOME DO CLIENTE), seguindo a lei LGPD, n°13.709, possuímos alguns dados representando a CAIXA ECONÔMICA FEDERAL, para garantir sua segurança. Caso você possua qualquer dúvida ou solicitação em relação a isso, pedimos que entre em contato conosco enviando um e-mail para: dpo@gruporoveri.com.br ."\n\nEXEMPLOS DE QUESTIONAMENTOS FEITOS PELOS CLIENTES:\n- Como você possui meus dados pessoais?\n- Vocês têm o direito de me ligar?\n- Isso está conforme a LGPD?\n- Quero que excluam meus dados!',
     isActive: true,
     createdAt: new Date(),
   },
@@ -578,8 +520,9 @@ export function initializeMockData() {
     MOCK_USERS.map((u) => u.username),
   )
 
+  const habitacionalSteps = loadHabitacionalScript()
   if (!localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS)) {
-    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify([]))
+    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(habitacionalSteps))
   }
 
   localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(MOCK_TABULATIONS))
@@ -598,7 +541,16 @@ export function initializeMockData() {
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]))
+    const habitacionalProduct: Product = {
+      id: "prod-habitacional",
+      name: "HABITACIONAL",
+      description: "Financiamento Habitacional",
+      scriptId: habitacionalSteps[0]?.id || "hab_abordagem",
+      category: "habitacional",
+      isActive: true,
+      createdAt: new Date(),
+    }
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([habitacionalProduct]))
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.ATTENDANCE_TYPES)) {
@@ -640,8 +592,6 @@ export function initializeMockData() {
   if (!localStorage.getItem(STORAGE_KEYS.LAST_UPDATE)) {
     localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
   }
-
-  loadScriptsFromDataFolder()
 }
 
 // User authentication
@@ -672,7 +622,7 @@ export function authenticateUser(username: string, password: string): User | nul
 
       // Update user in storage
       const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-      debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
 
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
       return user
@@ -690,7 +640,7 @@ export function authenticateUser(username: string, password: string): User | nul
 
     // Update user in storage
     const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-    debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
 
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
     return user
@@ -723,7 +673,7 @@ export function logout() {
 
         // Update user in storage
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
         notifyUpdate()
       }
     }
@@ -792,7 +742,7 @@ export function updateScriptStep(step: ScriptStep) {
 
   if (index !== -1) {
     steps[index] = { ...step, updatedAt: new Date() }
-    debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
+    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
     clearCaches() // Clear cache
     notifyUpdate()
   }
@@ -810,7 +760,7 @@ export function createScriptStep(step: Omit<ScriptStep, "id" | "createdAt" | "up
 
   const steps = getScriptSteps()
   steps.push(newStep)
-  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
+  localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
   notifyUpdate() // Notify about update
 
   return newStep
@@ -820,7 +770,7 @@ export function deleteScriptStep(id: string) {
   if (typeof window === "undefined") return
 
   const steps = getScriptSteps().filter((s) => s.id !== id)
-  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
+  localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
   notifyUpdate() // Notify about update
 }
 
@@ -862,7 +812,7 @@ export function saveNote(userId: string, content: string) {
   }
 
   notes.push(newNote)
-  debouncedSave(STORAGE_KEYS.NOTES, notes)
+  localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes))
 }
 
 // Call sessions
@@ -886,7 +836,7 @@ export function createCallSession(operatorId: string, startStepId: string): Call
 
   const sessions: CallSession[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || "[]")
   sessions.push(session)
-  debouncedSave(STORAGE_KEYS.SESSIONS, sessions)
+  localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions))
 
   return session
 }
@@ -899,7 +849,7 @@ export function updateCallSession(session: CallSession) {
 
   if (index !== -1) {
     sessions[index] = session
-    debouncedSave(STORAGE_KEYS.SESSIONS, sessions)
+    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions))
   }
 }
 
@@ -920,7 +870,7 @@ export function createProduct(product: Omit<Product, "id" | "createdAt">): Produ
 
   const products = getProducts()
   products.push(newProduct)
-  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
+  localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
   notifyUpdate() // Notify about update
 
   return newProduct
@@ -934,7 +884,7 @@ export function updateProduct(product: Product) {
 
   if (index !== -1) {
     products[index] = product
-    debouncedSave(STORAGE_KEYS.PRODUCTS, products)
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
     clearCaches() // Clear cache
     notifyUpdate()
   }
@@ -944,7 +894,7 @@ export function deleteProduct(id: string) {
   if (typeof window === "undefined") return
 
   const products = getProducts().filter((p) => p.id !== id)
-  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
+  localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
   notifyUpdate() // Notify about update
 }
 
@@ -963,7 +913,7 @@ export function updateUser(user: User) {
 
     if (index !== -1) {
       users[index] = user
-      debouncedSave(STORAGE_KEYS.USERS, users)
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
       notifyUpdate()
     }
   } catch (error) {
@@ -976,7 +926,7 @@ export function deleteUser(userId: string) {
 
   try {
     const users = getAllUsers().filter((u) => u.id !== userId)
-    debouncedSave(STORAGE_KEYS.USERS, users)
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
     notifyUpdate()
   } catch (error) {
     console.error("[v0] Error deleting user:", error)
@@ -998,7 +948,7 @@ export function forceLogoutUser(userId: string) {
         user.isOnline = false
 
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
         notifyUpdate()
       }
     }
@@ -1052,7 +1002,7 @@ function notifyUpdate() {
   updateTimeout = setTimeout(() => {
     localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
     window.dispatchEvent(new CustomEvent("store-updated"))
-  }, 300) // Increased from 100ms to reduce event frequency
+  }, 100)
 }
 
 export function getLastUpdate(): number {
@@ -1073,51 +1023,33 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
   try {
     if (jsonData.marcas) {
       Object.entries(jsonData.marcas).forEach(([productName, productSteps]: [string, any]) => {
-        const steps: ScriptStep[] = []
-        const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
-
-        Object.entries(productSteps).forEach(([stepKey, stepData]: [string, any]) => {
-          const step: ScriptStep = {
-            id: stepData.id,
-            productId: productId,
-            title: stepData.title || "",
-            content: stepData.body || stepData.content || "", // Map 'body' to 'content' field
-            order: stepData.order || 0,
-            buttons: stepData.buttons || [],
-            contentSegments: stepData.contentSegments || [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-          steps.push(step)
-        })
-        // </CHANGE>
+        const steps = loadScriptFromJson(jsonData, productName)
 
         if (steps.length > 0) {
           const existingSteps = getScriptSteps()
-          // Remove existing steps for this product
-          const filteredSteps = existingSteps.filter((s) => s.productId !== productId)
-          const newSteps = [...filteredSteps, ...steps]
-          debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, newSteps)
+          const newSteps = [...existingSteps, ...steps]
+          localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(newSteps))
           stepCount += steps.length
 
+          const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
           const product: Product = {
             id: productId,
             name: productName,
             scriptId: steps[0].id,
-            category: productName.toLowerCase() as "habitacional" | "comercial" | "outros",
+            category: productName.toLowerCase(),
             isActive: true,
             createdAt: new Date(),
           }
 
           const existingProducts = getProducts()
-          const existingIndex = existingProducts.findIndex((p) => p.id === productId)
+          const existingIndex = existingProducts.findIndex((p) => p.name === productName)
           if (existingIndex !== -1) {
             existingProducts[existingIndex] = product
           } else {
             existingProducts.push(product)
             productCount++
           }
-          debouncedSave(STORAGE_KEYS.PRODUCTS, existingProducts)
+          localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(existingProducts))
         }
       })
 
@@ -1173,7 +1105,7 @@ export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "
 
   const options = getAttendanceTypes()
   options.push(newOption)
-  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
   notifyUpdate()
 
   return newOption
@@ -1187,7 +1119,7 @@ export function updateAttendanceType(option: AttendanceTypeOption) {
 
   if (index !== -1) {
     options[index] = option
-    debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
     notifyUpdate()
   }
 }
@@ -1196,7 +1128,7 @@ export function deleteAttendanceType(id: string) {
   if (typeof window === "undefined") return
 
   const options = getAttendanceTypes().filter((o) => o.id !== id)
-  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
   notifyUpdate()
 }
 
@@ -1217,7 +1149,7 @@ export function createPersonType(option: Omit<PersonTypeOption, "id" | "createdA
 
   const options = getPersonTypes()
   options.push(newOption)
-  debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
+  localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
   notifyUpdate()
 
   return newOption
@@ -1231,7 +1163,7 @@ export function updatePersonType(option: PersonTypeOption) {
 
   if (index !== -1) {
     options[index] = option
-    debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
+    localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
     notifyUpdate()
   }
 }
@@ -1240,7 +1172,7 @@ export function deletePersonType(id: string) {
   if (typeof window === "undefined") return
 
   const options = getPersonTypes().filter((o) => o.id !== id)
-  debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
+  localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
   notifyUpdate()
 }
 
@@ -1266,7 +1198,7 @@ export function createMessage(message: Omit<Message, "id" | "createdAt" | "seenB
 
   const messages = getMessages()
   messages.push(newMessage)
-  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
   notifyUpdate()
 
   return newMessage
@@ -1280,7 +1212,7 @@ export function updateMessage(message: Message) {
 
   if (index !== -1) {
     messages[index] = message
-    debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
     notifyUpdate()
   }
 }
@@ -1289,7 +1221,7 @@ export function deleteMessage(id: string) {
   if (typeof window === "undefined") return
 
   const messages = getMessages().filter((m) => m.id !== id)
-  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
   notifyUpdate()
 }
 
@@ -1364,7 +1296,7 @@ export function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Quiz {
 
   const quizzes = getQuizzes()
   quizzes.push(newQuiz)
-  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+  localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
   notifyUpdate()
 
   return newQuiz
@@ -1378,7 +1310,7 @@ export function updateQuiz(quiz: Quiz) {
 
   if (index !== -1) {
     quizzes[index] = quiz
-    debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
     notifyUpdate()
   }
 }
@@ -1387,7 +1319,7 @@ export function deleteQuiz(id: string) {
   if (typeof window === "undefined") return
 
   const quizzes = getQuizzes().filter((q) => q.id !== id)
-  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+  localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
   notifyUpdate()
 }
 
@@ -1451,7 +1383,7 @@ export function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt
 
   const attempts = getQuizAttempts()
   attempts.push(newAttempt)
-  debouncedSave(STORAGE_KEYS.QUIZ_ATTEMPTS, attempts)
+  localStorage.setItem(STORAGE_KEYS.QUIZ_ATTEMPTS, JSON.stringify(attempts))
   notifyUpdate()
 
   return newAttempt
@@ -1601,7 +1533,7 @@ export function createAdminUser(username: string, fullName: string): User | null
     }
 
     users.push(newUser)
-    debouncedSave(STORAGE_KEYS.USERS, users)
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
     notifyUpdate()
 
     return newUser
@@ -1619,27 +1551,4 @@ export function canDeleteAdminUser(userId: string): boolean {
 
   // Cannot delete the main admin user
   return user !== undefined && user.username !== "admin"
-}
-
-export function cleanupOldSessions() {
-  if (typeof window === "undefined") return
-
-  try {
-    const users = getAllUsers()
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-    users.forEach((user) => {
-      if (user.loginSessions && user.loginSessions.length > 50) {
-        // Keep only last 50 sessions
-        user.loginSessions = user.loginSessions
-          .filter((session) => new Date(session.loginAt) > thirtyDaysAgo)
-          .slice(-50)
-      }
-    })
-
-    debouncedSave(STORAGE_KEYS.USERS, users)
-  } catch (error) {
-    console.error("[v0] Error cleaning up sessions:", error)
-  }
 }

@@ -48,17 +48,16 @@ function saveAccessibilitySettings(textSize: number, buttonSize: number) {
   }
 }
 
-const renderContentWithSegments = memo(function renderContentWithSegments(
+function renderContentWithSegments(
   content: string,
   segments: ContentSegment[] | undefined,
   textFontSize: number,
   operatorName: string,
   customerFirstName: string,
 ): React.ReactNode {
-  const safeContent = content || ""
-
   if (!segments || segments.length === 0) {
-    return safeContent
+    // Fallback to original HTML rendering if no segments
+    return content
       .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
       .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
       .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
@@ -83,22 +82,26 @@ const renderContentWithSegments = memo(function renderContentWithSegments(
     return elements
   }
 
+  // Build a map of segments by their text for quick lookup
   const segmentMap = new Map<string, ContentSegment>()
   segments.forEach((seg) => {
     segmentMap.set(seg.text, seg)
   })
 
+  // Split content by segments and render with formatting
   let lastIndex = 0
   const elements: React.ReactNode[] = []
 
   segments.forEach((segment, idx) => {
-    const index = safeContent.indexOf(segment.text, lastIndex)
+    const index = content.indexOf(segment.text, lastIndex)
     if (index !== -1) {
+      // Add text before segment (with line breaks)
       if (index > lastIndex) {
-        const textBefore = safeContent.substring(lastIndex, index)
+        const textBefore = content.substring(lastIndex, index)
         elements.push(...textToElements(textBefore, `text-${idx}`))
       }
 
+      // Add formatted segment
       const segmentStyle: React.CSSProperties = {
         fontWeight: segment.formatting.bold ? "bold" : "normal",
         fontStyle: segment.formatting.italic ? "italic" : "normal",
@@ -138,13 +141,14 @@ const renderContentWithSegments = memo(function renderContentWithSegments(
     }
   })
 
-  if (lastIndex < safeContent.length) {
-    const remainingText = safeContent.substring(lastIndex)
+  // Add remaining text (with line breaks)
+  if (lastIndex < content.length) {
+    const remainingText = content.substring(lastIndex)
     elements.push(...textToElements(remainingText, "text-end"))
   }
 
   return elements
-})
+}
 
 export const ScriptCard = memo(function ScriptCard({
   step,
@@ -196,17 +200,15 @@ export const ScriptCard = memo(function ScriptCard({
   }, [canGoBack, onGoBack])
 
   const processedContent = useMemo(
-    () => {
-      const safeContent = step.content || ""
-      return safeContent
+    () =>
+      step.content
         .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
         .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/$$nome completo do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>")
-        .replace(/\n/g, "<br>")
-    },
-    [step.content, step.id, operatorName, customerFirstName], // Added step.id for proper cache invalidation
+        .replace(/\n/g, "<br>"),
+    [step.content, operatorName, customerFirstName],
   )
 
   const highlightedTitle = useMemo(
@@ -267,34 +269,6 @@ export const ScriptCard = memo(function ScriptCard({
     }
     return processedContent
   }, [step.content, step.contentSegments, textFontSize, operatorName, customerFirstName, processedContent])
-
-  const renderedButtons = useMemo(() => {
-    return step.buttons
-      .sort((a, b) => a.order - b.order)
-      .map((button) => {
-        const isPrimary = button.primary || button.variant === "primary" || button.variant === "default"
-
-        return (
-          <Button
-            key={button.id}
-            size="lg"
-            onClick={() => onButtonClick(button.nextStepId)}
-            className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
-              isPrimary
-                ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
-                : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
-            }`}
-            style={{
-              fontSize: `${navButtonFontSize}px`,
-              padding: `${navButtonPadding}px ${navButtonPadding * 2}px`,
-              minHeight: `${navButtonPadding * 3}px`,
-            }}
-          >
-            {button.label}
-          </Button>
-        )
-      })
-  }, [step.buttons, step.id, navButtonFontSize, navButtonPadding, onButtonClick])
 
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto">
@@ -411,7 +385,33 @@ export const ScriptCard = memo(function ScriptCard({
       </Card>
 
       <div className="flex justify-center items-center pt-6 px-2">
-        <div className="flex flex-wrap justify-center gap-4 md:gap-5 w-full max-w-3xl">{renderedButtons}</div>
+        <div className="flex flex-wrap justify-center gap-4 md:gap-5 w-full max-w-3xl">
+          {step.buttons
+            .sort((a, b) => a.order - b.order)
+            .map((button) => {
+              const isPrimary = button.primary || button.variant === "primary" || button.variant === "default"
+
+              return (
+                <Button
+                  key={button.id}
+                  size="lg"
+                  onClick={() => onButtonClick(button.nextStepId)}
+                  className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
+                    isPrimary
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
+                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
+                  }`}
+                  style={{
+                    fontSize: `${navButtonFontSize}px`,
+                    padding: `${navButtonPadding}px ${navButtonPadding * 2}px`,
+                    minHeight: `${navButtonPadding * 3}px`,
+                  }}
+                >
+                  {button.label}
+                </Button>
+              )
+            })}
+        </div>
       </div>
 
       <Dialog open={showAlert} onOpenChange={setShowAlert}>

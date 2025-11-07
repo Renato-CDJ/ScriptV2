@@ -5,13 +5,13 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CalendarIcon, CheckCircle2, Info, CreditCard, Building2, Home } from "lucide-react"
 import { getMaxPromiseDate, isBusinessDay } from "@/lib/business-days"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ProductType = "cartao" | "comercial" | "habitacional"
 
 export function PromiseCalendarInline() {
   const [selectedProduct, setSelectedProduct] = useState<ProductType | "">("")
   const [selectedDate, setSelectedDate] = useState<Date>()
+  const [hoveredProduct, setHoveredProduct] = useState<ProductType | null>(null)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -46,20 +46,23 @@ export function PromiseCalendarInline() {
     {
       value: "cartao" as ProductType,
       name: "Cartão fase 1",
-      deadline: "7 dias úteis",
+      deadline: "até 6 dias úteis",
       icon: CreditCard,
+      color: "blue",
     },
     {
       value: "comercial" as ProductType,
       name: "Comercial",
-      deadline: "10 dias úteis",
+      deadline: "até 9 dias úteis",
       icon: Building2,
+      color: "purple",
     },
     {
       value: "habitacional" as ProductType,
       name: "Habitacional",
-      deadline: "10 dias úteis",
+      deadline: "até 9 dias úteis",
       icon: Home,
+      color: "green",
     },
   ]
 
@@ -74,43 +77,54 @@ export function PromiseCalendarInline() {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Product Selection */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
             <CheckCircle2 className="h-3 w-3 text-primary" />
             Tipo de Produto
           </label>
-          <TooltipProvider delayDuration={200}>
-            <div className="flex gap-3 justify-center">
-              {productOptions.map((product) => {
-                const Icon = product.icon
-                const isSelected = selectedProduct === product.value
-                return (
-                  <Tooltip key={product.value}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => handleProductSelect(product.value)}
-                        className={`w-20 h-20 p-2 rounded-xl transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
-                          isSelected
-                            ? "bg-orange-500 dark:bg-gradient-to-br dark:from-orange-500 dark:to-amber-500 shadow-lg scale-105"
-                            : "bg-muted/30 hover:bg-muted/50 hover:scale-102"
+          <div className="grid grid-cols-3 gap-1.5">
+            {productOptions.map((product) => {
+              const Icon = product.icon
+              const isSelected = selectedProduct === product.value
+              const isHovered = hoveredProduct === product.value
+              return (
+                <div key={product.value} className="relative">
+                  <button
+                    onClick={() => handleProductSelect(product.value)}
+                    onMouseEnter={() => setHoveredProduct(product.value)}
+                    onMouseLeave={() => setHoveredProduct(null)}
+                    className={`w-full p-1.5 rounded-lg border-2 transition-all duration-200 hover:shadow-md ${
+                      isSelected
+                        ? "border-primary bg-primary/10 shadow-md scale-[1.02]"
+                        : "border-border bg-card hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <div className={`p-1 rounded-md ${isSelected ? "bg-primary" : "bg-muted"}`}>
+                        <Icon
+                          className={`h-3 w-3 ${isSelected ? "text-primary-foreground" : "text-muted-foreground"}`}
+                        />
+                      </div>
+                      <p
+                        className={`font-semibold text-[10px] text-center leading-tight ${
+                          isSelected ? "text-primary" : "text-foreground"
                         }`}
                       >
-                        <Icon className={`h-7 w-7 ${isSelected ? "text-white" : "text-muted-foreground"}`} />
-                        <p
-                          className={`font-semibold text-[10px] text-center leading-tight ${isSelected ? "text-white" : "text-foreground"}`}
-                        >
-                          {product.name}
-                        </p>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="bg-orange-500 text-white border-orange-600">
-                      <p className="text-xs font-semibold">Prazo: {product.deadline}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )
-              })}
-            </div>
-          </TooltipProvider>
+                        {product.name}
+                      </p>
+                      {isSelected && <CheckCircle2 className="h-3 w-3 text-primary absolute top-0.5 right-0.5" />}
+                    </div>
+                  </button>
+                  {isHovered && (
+                    <div className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 w-max max-w-[180px] p-1.5 bg-popover border border-border rounded-md shadow-lg animate-in fade-in-0 zoom-in-95">
+                      <p className="text-[10px] text-popover-foreground font-medium">Prazo: {product.deadline}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {!selectedProduct ? (
