@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode, useMemo, useCallback } from "react"
 import type { User } from "./types"
-import { getCurrentUser, logout as logoutUser, initializeMockData } from "./store"
+import { getCurrentUser, logout as logoutUser, initializeMockData, cleanupOldSessions } from "./store"
 
 interface AuthContextType {
   user: User | null
@@ -25,6 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUser = getCurrentUser()
     setUser(currentUser)
     setIsLoading(false)
+
+    cleanupOldSessions()
   }, [])
 
   const logout = useCallback(() => {

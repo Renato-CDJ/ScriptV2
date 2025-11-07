@@ -460,7 +460,7 @@ export function MessagesQuizTab() {
           onClick={() => setActiveTab("messages")}
           className={`text-base px-6 py-5 transition-all duration-300 ${
             activeTab === "messages"
-              ? "bg-gradient-to-r from-primary via-accent to-primary hover:opacity-90 text-white shadow-lg scale-105"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 text-white shadow-lg scale-105"
               : "hover:scale-105"
           }`}
         >
@@ -472,7 +472,7 @@ export function MessagesQuizTab() {
           onClick={() => setActiveTab("quiz")}
           className={`text-base px-6 py-5 transition-all duration-300 ${
             activeTab === "quiz"
-              ? "bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg scale-105"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-chart-1 dark:via-chart-4 dark:to-chart-5 dark:hover:opacity-90 text-white shadow-lg scale-105"
               : "hover:scale-105"
           }`}
         >
@@ -486,7 +486,10 @@ export function MessagesQuizTab() {
           <div className="flex gap-3">
             <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
               <DialogTrigger asChild>
-                <Button onClick={resetMessageForm} className="bg-primary hover:bg-primary/90 text-white">
+                <Button
+                  onClick={resetMessageForm}
+                  className="bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Recado
                 </Button>
@@ -738,7 +741,7 @@ export function MessagesQuizTab() {
               <DialogTrigger asChild>
                 <Button
                   onClick={resetQuizForm}
-                  className="bg-gradient-to-r from-chart-1 to-chart-4 hover:opacity-90 text-white shadow-lg"
+                  className="bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-chart-1 dark:to-chart-4 dark:hover:opacity-90 text-white"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Quiz
@@ -832,7 +835,7 @@ export function MessagesQuizTab() {
             <Button
               onClick={handleExportRankingReport}
               variant="outline"
-              className="bg-gradient-to-r from-chart-4 to-chart-1 hover:opacity-90 text-white border-0 shadow-lg"
+              className="bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-chart-4 dark:to-chart-1 dark:hover:opacity-90 text-white border-0"
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Exportar Ranking

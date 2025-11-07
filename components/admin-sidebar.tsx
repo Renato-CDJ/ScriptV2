@@ -136,7 +136,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
         </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-white dark:text-white hover:bg-orange-500/20 dark:hover:bg-orange-500/30 border-0"
+          className="w-full justify-start gap-3 text-black dark:text-white hover:bg-orange-500/20 dark:hover:bg-orange-500/30 border-0"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />

@@ -5,6 +5,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CalendarIcon, CheckCircle2, Info, CreditCard, Building2, Home } from "lucide-react"
 import { getMaxPromiseDate, isBusinessDay } from "@/lib/business-days"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ProductType = "cartao" | "comercial" | "habitacional"
 
@@ -78,38 +79,38 @@ export function PromiseCalendarInline() {
             <CheckCircle2 className="h-3 w-3 text-primary" />
             Tipo de Produto
           </label>
-          <div className="grid grid-cols-1 gap-2">
-            {productOptions.map((product) => {
-              const Icon = product.icon
-              const isSelected = selectedProduct === product.value
-              return (
-                <button
-                  key={product.value}
-                  onClick={() => handleProductSelect(product.value)}
-                  className={`w-full p-3 rounded-lg border transition-all duration-200 ${
-                    isSelected
-                      ? "bg-orange-500 dark:bg-gradient-to-r dark:from-orange-500 dark:to-amber-500 border-orange-600 dark:border-orange-400 shadow-md"
-                      : "bg-card border-border hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-sm"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-md ${isSelected ? "bg-white/20 dark:bg-white/10" : "bg-muted"}`}>
-                      <Icon className={`h-5 w-5 ${isSelected ? "text-white" : "text-muted-foreground"}`} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className={`font-semibold text-sm ${isSelected ? "text-white" : "text-foreground"}`}>
-                        {product.name}
-                      </p>
-                      <p className={`text-xs ${isSelected ? "text-white/90" : "text-muted-foreground"}`}>
-                        Prazo: {product.deadline}
-                      </p>
-                    </div>
-                    {isSelected && <CheckCircle2 className="h-5 w-5 text-white flex-shrink-0" />}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+          <TooltipProvider delayDuration={200}>
+            <div className="flex gap-3 justify-center">
+              {productOptions.map((product) => {
+                const Icon = product.icon
+                const isSelected = selectedProduct === product.value
+                return (
+                  <Tooltip key={product.value}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => handleProductSelect(product.value)}
+                        className={`w-20 h-20 p-2 rounded-xl transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
+                          isSelected
+                            ? "bg-orange-500 dark:bg-gradient-to-br dark:from-orange-500 dark:to-amber-500 shadow-lg scale-105"
+                            : "bg-muted/30 hover:bg-muted/50 hover:scale-102"
+                        }`}
+                      >
+                        <Icon className={`h-7 w-7 ${isSelected ? "text-white" : "text-muted-foreground"}`} />
+                        <p
+                          className={`font-semibold text-[10px] text-center leading-tight ${isSelected ? "text-white" : "text-foreground"}`}
+                        >
+                          {product.name}
+                        </p>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-orange-500 text-white border-orange-600">
+                      <p className="text-xs font-semibold">Prazo: {product.deadline}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </div>
+          </TooltipProvider>
         </div>
 
         {!selectedProduct ? (

@@ -48,7 +48,7 @@ function saveAccessibilitySettings(textSize: number, buttonSize: number) {
   }
 }
 
-function renderContentWithSegments(
+const renderContentWithSegments = memo(function renderContentWithSegments(
   content: string,
   segments: ContentSegment[] | undefined,
   textFontSize: number,
@@ -144,7 +144,7 @@ function renderContentWithSegments(
   }
 
   return elements
-}
+})
 
 export const ScriptCard = memo(function ScriptCard({
   step,
@@ -196,15 +196,17 @@ export const ScriptCard = memo(function ScriptCard({
   }, [canGoBack, onGoBack])
 
   const processedContent = useMemo(
-    () =>
-      (step.content || "")
+    () => {
+      const safeContent = step.content || ""
+      return safeContent
         .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
         .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/$$nome completo do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
         .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>")
-        .replace(/\n/g, "<br>"),
-    [step.content, operatorName, customerFirstName],
+        .replace(/\n/g, "<br>")
+    },
+    [step.content, step.id, operatorName, customerFirstName], // Added step.id for proper cache invalidation
   )
 
   const highlightedTitle = useMemo(
@@ -265,6 +267,34 @@ export const ScriptCard = memo(function ScriptCard({
     }
     return processedContent
   }, [step.content, step.contentSegments, textFontSize, operatorName, customerFirstName, processedContent])
+
+  const renderedButtons = useMemo(() => {
+    return step.buttons
+      .sort((a, b) => a.order - b.order)
+      .map((button) => {
+        const isPrimary = button.primary || button.variant === "primary" || button.variant === "default"
+
+        return (
+          <Button
+            key={button.id}
+            size="lg"
+            onClick={() => onButtonClick(button.nextStepId)}
+            className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
+              isPrimary
+                ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
+                : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
+            }`}
+            style={{
+              fontSize: `${navButtonFontSize}px`,
+              padding: `${navButtonPadding}px ${navButtonPadding * 2}px`,
+              minHeight: `${navButtonPadding * 3}px`,
+            }}
+          >
+            {button.label}
+          </Button>
+        )
+      })
+  }, [step.buttons, step.id, navButtonFontSize, navButtonPadding, onButtonClick])
 
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto">
@@ -381,33 +411,7 @@ export const ScriptCard = memo(function ScriptCard({
       </Card>
 
       <div className="flex justify-center items-center pt-6 px-2">
-        <div className="flex flex-wrap justify-center gap-4 md:gap-5 w-full max-w-3xl">
-          {step.buttons
-            .sort((a, b) => a.order - b.order)
-            .map((button) => {
-              const isPrimary = button.primary || button.variant === "primary" || button.variant === "default"
-
-              return (
-                <Button
-                  key={button.id}
-                  size="lg"
-                  onClick={() => onButtonClick(button.nextStepId)}
-                  className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
-                    isPrimary
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
-                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
-                  }`}
-                  style={{
-                    fontSize: `${navButtonFontSize}px`,
-                    padding: `${navButtonPadding}px ${navButtonPadding * 2}px`,
-                    minHeight: `${navButtonPadding * 3}px`,
-                  }}
-                >
-                  {button.label}
-                </Button>
-              )
-            })}
-        </div>
+        <div className="flex flex-wrap justify-center gap-4 md:gap-5 w-full max-w-3xl">{renderedButtons}</div>
       </div>
 
       <Dialog open={showAlert} onOpenChange={setShowAlert}>

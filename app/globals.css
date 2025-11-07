@@ -226,6 +226,51 @@
   }
 }
 
+/* Add will-change for better animation performance */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-float-slow {
+  animation: float-slow 25s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-float-slower {
+  animation: float-slower 30s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Optimize for low-end devices */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Add GPU acceleration hints */
+.shadow-2xl,
+.hover\\:shadow-2xl:hover,
+.hover\\:shadow-3xl:hover {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 @keyframes float {
   0%,
   100% {

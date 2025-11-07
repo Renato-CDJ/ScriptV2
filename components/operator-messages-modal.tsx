@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -70,34 +70,55 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
 
-  useEffect(() => {
-    if (open) {
-      loadData()
+  const loadDataDebounced = useCallback(() => {
+    if (!user) return
+
+    // Use requestIdleCallback for non-critical updates
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(() => {
+        setMessages(getActiveMessagesForOperator(user.id))
+        setHistoricalMessages(getHistoricalMessagesForOperator(user.id))
+        setQuizzes(getActiveQuizzesForOperator())
+        setHistoricalQuizzes(getHistoricalQuizzes())
+      })
+    } else {
+      setTimeout(() => {
+        setMessages(getActiveMessagesForOperator(user.id))
+        setHistoricalMessages(getHistoricalMessagesForOperator(user.id))
+        setQuizzes(getActiveQuizzesForOperator())
+        setHistoricalQuizzes(getHistoricalQuizzes())
+      }, 0)
     }
-  }, [open, user])
+  }, [user])
 
   useEffect(() => {
+    if (open) {
+      loadDataDebounced()
+    }
+  }, [open, loadDataDebounced])
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
     const handleStoreUpdate = () => {
-      loadData()
+      // Debounce updates
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        loadDataDebounced()
+      }, 500)
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [user])
-
-  const loadData = () => {
-    if (!user) return
-
-    setMessages(getActiveMessagesForOperator(user.id))
-    setHistoricalMessages(getHistoricalMessagesForOperator(user.id))
-    setQuizzes(getActiveQuizzesForOperator())
-    setHistoricalQuizzes(getHistoricalQuizzes())
-  }
+    return () => {
+      window.removeEventListener("store-updated", handleStoreUpdate)
+      clearTimeout(timeoutId)
+    }
+  }, [loadDataDebounced])
 
   const handleMarkAsSeen = (messageId: string) => {
     if (user) {
       markMessageAsSeen(messageId, user.id)
-      loadData()
+      loadDataDebounced() // Use debounced version
       toast({
         title: "Mensagem marcada como vista",
         description: "A mensagem foi marcada como vista com sucesso.",
@@ -134,7 +155,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     })
 
     setTimeout(() => {
-      loadData()
+      loadDataDebounced() // Use debounced version
     }, 1000)
   }
 
@@ -386,14 +407,16 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="text-sm sm:text-base md:text-lg whitespace-pre-wrap mb-4 sm:mb-6 leading-relaxed break-words hyphens-auto max-w-full">
-                            {message.content}
-                          </p>
+                          <div className="bg-gradient-to-br from-muted/30 to-muted/20 rounded-xl p-4 sm:p-5 md:p-6 border-2 border-orange-500/20 dark:border-primary/20 mb-4 sm:mb-6 shadow-sm">
+                            <p className="text-sm sm:text-base md:text-lg whitespace-pre-wrap leading-relaxed break-words hyphens-auto max-w-full">
+                              {message.content}
+                            </p>
+                          </div>
                           {!seen && !showHistory && (
                             <Button
                               size="lg"
                               onClick={() => handleMarkAsSeen(message.id)}
-                              className="w-full text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                              className="w-auto px-6 sm:px-8 md:px-10 mx-auto block text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center"
                             >
                               <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2" />
                               Marcar como Visto
@@ -732,10 +755,12 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       </Badge>
                                     )}
                                   </div>
-                                  <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent break-words hyphens-auto">
-                                    {quiz.question}
-                                  </CardTitle>
-                                  <CardDescription className="mt-2 sm:mt-3 text-sm sm:text-base md:text-lg break-words">
+                                  <div className="bg-gradient-to-br from-muted/30 to-muted/20 rounded-xl p-4 sm:p-5 md:p-6 border-2 border-orange-500/20 dark:border-primary/20 mb-3 sm:mb-4 shadow-sm">
+                                    <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold text-foreground dark:text-white break-words hyphens-auto">
+                                      {quiz.question}
+                                    </CardTitle>
+                                  </div>
+                                  <CardDescription className="text-sm sm:text-base md:text-lg break-words">
                                     Por {quiz.createdByName} • {new Date(quiz.createdAt).toLocaleDateString("pt-BR")} às{" "}
                                     {new Date(quiz.createdAt).toLocaleTimeString("pt-BR", {
                                       hour: "2-digit",
@@ -758,9 +783,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                               <Button
                                 size="lg"
                                 onClick={() => handleSelectQuiz(quiz)}
-                                className={`w-full text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 transition-all duration-300 ${
+                                className={`w-auto px-6 sm:px-8 md:px-10 mx-auto block text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 transition-all duration-300 flex items-center justify-center ${
                                   !answered && !showHistory
-                                    ? "bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105"
+                                    ? "bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-chart-1 dark:via-chart-4 dark:to-chart-5 dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105"
                                     : ""
                                 }`}
                                 disabled={answered || showHistory}
@@ -792,7 +817,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           Quiz Ativo
                         </Badge>
                       </div>
-                      <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words hyphens-auto">
+                      <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground dark:text-white break-words hyphens-auto">
                         {selectedQuiz.question}
                       </CardTitle>
                       <CardDescription className="text-sm sm:text-base md:text-lg mt-2 sm:mt-3 break-words">
@@ -913,7 +938,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           <Button
                             onClick={handleSubmitQuiz}
                             disabled={!selectedAnswer}
-                            className="flex-1 text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                            className="flex-1 text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-chart-1 dark:via-chart-4 dark:to-chart-5 dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105"
                           >
                             <Zap className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
                             Enviar Resposta
@@ -968,7 +993,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
               </div>
             </div>
 
-            <DialogTitle className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500 dark:from-primary dark:via-accent dark:to-primary bg-clip-text text-transparent break-words hyphens-auto leading-tight mb-2">
+            <DialogTitle className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground dark:text-white break-words hyphens-auto leading-tight mb-2">
               {expandedMessage?.title}
             </DialogTitle>
           </DialogHeader>
@@ -993,7 +1018,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   handleMarkAsSeen(expandedMessage.id)
                   setExpandedMessage(null)
                 }}
-                className="flex-1 text-base sm:text-lg md:text-xl py-5 sm:py-6 md:py-7 bg-orange-500 hover:bg-orange-600 dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
+                className="flex-1 text-base sm:text-lg md:text-xl py-5 sm:py-6 md:py-7 bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
               >
                 <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
                 Marcar como Visto

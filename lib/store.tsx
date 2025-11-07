@@ -20,6 +20,28 @@ import type {
 } from "./types"
 import { getAutoLoadScripts } from "./auto-load-scripts"
 
+const saveQueue: Map<string, any> = new Map()
+let saveTimeout: NodeJS.Timeout | null = null
+
+function debouncedSave(key: string, data: any) {
+  saveQueue.set(key, data)
+
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+  }
+
+  saveTimeout = setTimeout(() => {
+    saveQueue.forEach((value, storageKey) => {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(value))
+      } catch (error) {
+        console.error(`[v0] Error saving ${storageKey}:`, error)
+      }
+    })
+    saveQueue.clear()
+  }, 250) // Batch writes every 250ms
+}
+
 export function loadScriptsFromDataFolder() {
   if (typeof window === "undefined") return
 
@@ -389,7 +411,7 @@ const MOCK_SITUATIONS: ServiceSituation[] = [
     id: "sit-3",
     name: "SE O CLIENTE CITAR A LGPD OU PERGUNTAR POR QUE TEMOS OS SEUS DADOS",
     description:
-      '"(NOME DO CLIENTE), seguindo a lei LGPD, n°13.709, possuímos alguns dados representando a CAIXA ECONÔMICA FEDERAL, para garantir sua segurança. Caso você possua qualquer dúvida ou solicitação em relação a isso, pedimos que entre em contato conosco enviando um e-mail para: dpo@gruporoveri.com.br ."\n\nEXEMPLOS DE QUESTIONAMENTOS FEITOS PELOS CLIENTES:\n- Como você possui meus dados pessoais?\n- Vocês têm o direito de me ligar?\n- Isso está conforme a LGPD?\n- Quero que excluam meus dados!',
+      '"(NOME DO CLIENTE), seguindo a lei LGPD, n°13.709, possuímos alguns dados representando a CAIXAECONÔMICA FEDERAL, para garantir sua segurança. Caso você possua qualquer dúvida ou solicitação em relação a isso, pedimos que entre em contato conosco enviando um e-mail para: dpo@gruporoveri.com.br ."\n\nEXEMPLOS DE QUESTIONAMENTOS FEITOS PELOS CLIENTES:\n- Como você possui meus dados pessoais?\n- Vocês têm o direito de me ligar?\n- Isso está conforme a LGPD?\n- Quero que excluam meus dados!',
     isActive: true,
     createdAt: new Date(),
   },
@@ -650,7 +672,7 @@ export function authenticateUser(username: string, password: string): User | nul
 
       // Update user in storage
       const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+      debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
 
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
       return user
@@ -668,7 +690,7 @@ export function authenticateUser(username: string, password: string): User | nul
 
     // Update user in storage
     const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+    debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
 
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
     return user
@@ -701,7 +723,7 @@ export function logout() {
 
         // Update user in storage
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
         notifyUpdate()
       }
     }
@@ -770,7 +792,7 @@ export function updateScriptStep(step: ScriptStep) {
 
   if (index !== -1) {
     steps[index] = { ...step, updatedAt: new Date() }
-    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
+    debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
     clearCaches() // Clear cache
     notifyUpdate()
   }
@@ -788,7 +810,7 @@ export function createScriptStep(step: Omit<ScriptStep, "id" | "createdAt" | "up
 
   const steps = getScriptSteps()
   steps.push(newStep)
-  localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
+  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
   notifyUpdate() // Notify about update
 
   return newStep
@@ -798,7 +820,7 @@ export function deleteScriptStep(id: string) {
   if (typeof window === "undefined") return
 
   const steps = getScriptSteps().filter((s) => s.id !== id)
-  localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
+  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
   notifyUpdate() // Notify about update
 }
 
@@ -840,7 +862,7 @@ export function saveNote(userId: string, content: string) {
   }
 
   notes.push(newNote)
-  localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes))
+  debouncedSave(STORAGE_KEYS.NOTES, notes)
 }
 
 // Call sessions
@@ -864,7 +886,7 @@ export function createCallSession(operatorId: string, startStepId: string): Call
 
   const sessions: CallSession[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || "[]")
   sessions.push(session)
-  localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions))
+  debouncedSave(STORAGE_KEYS.SESSIONS, sessions)
 
   return session
 }
@@ -877,7 +899,7 @@ export function updateCallSession(session: CallSession) {
 
   if (index !== -1) {
     sessions[index] = session
-    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions))
+    debouncedSave(STORAGE_KEYS.SESSIONS, sessions)
   }
 }
 
@@ -898,7 +920,7 @@ export function createProduct(product: Omit<Product, "id" | "createdAt">): Produ
 
   const products = getProducts()
   products.push(newProduct)
-  localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
+  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
   notifyUpdate() // Notify about update
 
   return newProduct
@@ -912,7 +934,7 @@ export function updateProduct(product: Product) {
 
   if (index !== -1) {
     products[index] = product
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
+    debouncedSave(STORAGE_KEYS.PRODUCTS, products)
     clearCaches() // Clear cache
     notifyUpdate()
   }
@@ -922,7 +944,7 @@ export function deleteProduct(id: string) {
   if (typeof window === "undefined") return
 
   const products = getProducts().filter((p) => p.id !== id)
-  localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
+  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
   notifyUpdate() // Notify about update
 }
 
@@ -941,7 +963,7 @@ export function updateUser(user: User) {
 
     if (index !== -1) {
       users[index] = user
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+      debouncedSave(STORAGE_KEYS.USERS, users)
       notifyUpdate()
     }
   } catch (error) {
@@ -954,7 +976,7 @@ export function deleteUser(userId: string) {
 
   try {
     const users = getAllUsers().filter((u) => u.id !== userId)
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+    debouncedSave(STORAGE_KEYS.USERS, users)
     notifyUpdate()
   } catch (error) {
     console.error("[v0] Error deleting user:", error)
@@ -976,7 +998,7 @@ export function forceLogoutUser(userId: string) {
         user.isOnline = false
 
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
         notifyUpdate()
       }
     }
@@ -1030,7 +1052,7 @@ function notifyUpdate() {
   updateTimeout = setTimeout(() => {
     localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
     window.dispatchEvent(new CustomEvent("store-updated"))
-  }, 100)
+  }, 300) // Increased from 100ms to reduce event frequency
 }
 
 export function getLastUpdate(): number {
@@ -1075,7 +1097,7 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
           // Remove existing steps for this product
           const filteredSteps = existingSteps.filter((s) => s.productId !== productId)
           const newSteps = [...filteredSteps, ...steps]
-          localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(newSteps))
+          debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, newSteps)
           stepCount += steps.length
 
           const product: Product = {
@@ -1095,7 +1117,7 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
             existingProducts.push(product)
             productCount++
           }
-          localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(existingProducts))
+          debouncedSave(STORAGE_KEYS.PRODUCTS, existingProducts)
         }
       })
 
@@ -1151,7 +1173,7 @@ export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "
 
   const options = getAttendanceTypes()
   options.push(newOption)
-  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
   notifyUpdate()
 
   return newOption
@@ -1165,7 +1187,7 @@ export function updateAttendanceType(option: AttendanceTypeOption) {
 
   if (index !== -1) {
     options[index] = option
-    localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+    debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
     notifyUpdate()
   }
 }
@@ -1174,7 +1196,7 @@ export function deleteAttendanceType(id: string) {
   if (typeof window === "undefined") return
 
   const options = getAttendanceTypes().filter((o) => o.id !== id)
-  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
   notifyUpdate()
 }
 
@@ -1195,7 +1217,7 @@ export function createPersonType(option: Omit<PersonTypeOption, "id" | "createdA
 
   const options = getPersonTypes()
   options.push(newOption)
-  localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+  debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
   notifyUpdate()
 
   return newOption
@@ -1209,7 +1231,7 @@ export function updatePersonType(option: PersonTypeOption) {
 
   if (index !== -1) {
     options[index] = option
-    localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+    debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
     notifyUpdate()
   }
 }
@@ -1218,7 +1240,7 @@ export function deletePersonType(id: string) {
   if (typeof window === "undefined") return
 
   const options = getPersonTypes().filter((o) => o.id !== id)
-  localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+  debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
   notifyUpdate()
 }
 
@@ -1244,7 +1266,7 @@ export function createMessage(message: Omit<Message, "id" | "createdAt" | "seenB
 
   const messages = getMessages()
   messages.push(newMessage)
-  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
   notifyUpdate()
 
   return newMessage
@@ -1258,7 +1280,7 @@ export function updateMessage(message: Message) {
 
   if (index !== -1) {
     messages[index] = message
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+    debouncedSave(STORAGE_KEYS.MESSAGES, messages)
     notifyUpdate()
   }
 }
@@ -1267,7 +1289,7 @@ export function deleteMessage(id: string) {
   if (typeof window === "undefined") return
 
   const messages = getMessages().filter((m) => m.id !== id)
-  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
   notifyUpdate()
 }
 
@@ -1342,7 +1364,7 @@ export function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Quiz {
 
   const quizzes = getQuizzes()
   quizzes.push(newQuiz)
-  localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
   notifyUpdate()
 
   return newQuiz
@@ -1356,7 +1378,7 @@ export function updateQuiz(quiz: Quiz) {
 
   if (index !== -1) {
     quizzes[index] = quiz
-    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+    debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
     notifyUpdate()
   }
 }
@@ -1365,7 +1387,7 @@ export function deleteQuiz(id: string) {
   if (typeof window === "undefined") return
 
   const quizzes = getQuizzes().filter((q) => q.id !== id)
-  localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
   notifyUpdate()
 }
 
@@ -1429,7 +1451,7 @@ export function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt
 
   const attempts = getQuizAttempts()
   attempts.push(newAttempt)
-  localStorage.setItem(STORAGE_KEYS.QUIZ_ATTEMPTS, JSON.stringify(attempts))
+  debouncedSave(STORAGE_KEYS.QUIZ_ATTEMPTS, attempts)
   notifyUpdate()
 
   return newAttempt
@@ -1579,7 +1601,7 @@ export function createAdminUser(username: string, fullName: string): User | null
     }
 
     users.push(newUser)
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+    debouncedSave(STORAGE_KEYS.USERS, users)
     notifyUpdate()
 
     return newUser
@@ -1597,4 +1619,27 @@ export function canDeleteAdminUser(userId: string): boolean {
 
   // Cannot delete the main admin user
   return user !== undefined && user.username !== "admin"
+}
+
+export function cleanupOldSessions() {
+  if (typeof window === "undefined") return
+
+  try {
+    const users = getAllUsers()
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    users.forEach((user) => {
+      if (user.loginSessions && user.loginSessions.length > 50) {
+        // Keep only last 50 sessions
+        user.loginSessions = user.loginSessions
+          .filter((session) => new Date(session.loginAt) > thirtyDaysAgo)
+          .slice(-50)
+      }
+    })
+
+    debouncedSave(STORAGE_KEYS.USERS, users)
+  } catch (error) {
+    console.error("[v0] Error cleaning up sessions:", error)
+  }
 }
