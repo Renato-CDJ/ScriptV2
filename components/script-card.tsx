@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 interface ScriptCardProps {
   step: ScriptStep
-  onButtonClick: (nextStepId: string | null) => void
+  onButtonClick: (nextStepId: string | null, buttonLabel?: string) => void
   onGoBack?: () => void
   canGoBack?: boolean
   operatorName: string
@@ -48,16 +48,17 @@ function saveAccessibilitySettings(textSize: number, buttonSize: number) {
   }
 }
 
-function renderContentWithSegments(
+const renderContentWithSegments = memo(function renderContentWithSegments(
   content: string,
   segments: ContentSegment[] | undefined,
   textFontSize: number,
   operatorName: string,
   customerFirstName: string,
 ): React.ReactNode {
+  const safeContent = content || ""
+
   if (!segments || segments.length === 0) {
-    // Fallback to original HTML rendering if no segments
-    return content
+    return safeContent
       .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
       .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
       .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
@@ -82,26 +83,22 @@ function renderContentWithSegments(
     return elements
   }
 
-  // Build a map of segments by their text for quick lookup
   const segmentMap = new Map<string, ContentSegment>()
   segments.forEach((seg) => {
     segmentMap.set(seg.text, seg)
   })
 
-  // Split content by segments and render with formatting
   let lastIndex = 0
   const elements: React.ReactNode[] = []
 
   segments.forEach((segment, idx) => {
-    const index = content.indexOf(segment.text, lastIndex)
+    const index = safeContent.indexOf(segment.text, lastIndex)
     if (index !== -1) {
-      // Add text before segment (with line breaks)
       if (index > lastIndex) {
-        const textBefore = content.substring(lastIndex, index)
+        const textBefore = safeContent.substring(lastIndex, index)
         elements.push(...textToElements(textBefore, `text-${idx}`))
       }
 
-      // Add formatted segment
       const segmentStyle: React.CSSProperties = {
         fontWeight: segment.formatting.bold ? "bold" : "normal",
         fontStyle: segment.formatting.italic ? "italic" : "normal",
@@ -141,14 +138,13 @@ function renderContentWithSegments(
     }
   })
 
-  // Add remaining text (with line breaks)
-  if (lastIndex < content.length) {
-    const remainingText = content.substring(lastIndex)
+  if (lastIndex < safeContent.length) {
+    const remainingText = safeContent.substring(lastIndex)
     elements.push(...textToElements(remainingText, "text-end"))
   }
 
   return elements
-}
+})
 
 export const ScriptCard = memo(function ScriptCard({
   step,
@@ -199,17 +195,16 @@ export const ScriptCard = memo(function ScriptCard({
     return () => window.removeEventListener("keydown", handleKeyPress)
   }, [canGoBack, onGoBack])
 
-  const processedContent = useMemo(
-    () =>
-      step.content
-        .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
-        .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
-        .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
-        .replace(/$$nome completo do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
-        .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>")
-        .replace(/\n/g, "<br>"),
-    [step.content, operatorName, customerFirstName],
-  )
+  const processedContent = useMemo(() => {
+    const safeContent = step.content || ""
+    return safeContent
+      .replace(/\[Nome do operador\]/gi, `<strong>${operatorName}</strong>`)
+      .replace(/\[Primeiro nome do cliente\]/gi, `<strong>${customerFirstName}</strong>`)
+      .replace(/$$Primeiro nome do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
+      .replace(/$$nome completo do cliente$$/gi, `<strong>${customerFirstName}</strong>`)
+      .replace(/\[CPF do cliente\]/gi, "<strong>***.***.***-**</strong>")
+      .replace(/\n/g, "<br>")
+  }, [step.content, operatorName, customerFirstName])
 
   const highlightedTitle = useMemo(
     () =>
@@ -269,6 +264,34 @@ export const ScriptCard = memo(function ScriptCard({
     }
     return processedContent
   }, [step.content, step.contentSegments, textFontSize, operatorName, customerFirstName, processedContent])
+
+  const renderedButtons = useMemo(() => {
+    return step.buttons
+      .sort((a, b) => a.order - b.order)
+      .map((button) => {
+        const isPrimary = button.primary || button.variant === "primary" || button.variant === "default"
+
+        return (
+          <Button
+            key={button.id}
+            size="lg"
+            onClick={() => onButtonClick(button.nextStepId, button.label)}
+            className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
+              isPrimary
+                ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
+                : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
+            }`}
+            style={{
+              fontSize: `${navButtonFontSize}px`,
+              padding: `${navButtonPadding}px ${navButtonPadding * 2}px`,
+              minHeight: `${navButtonPadding * 3}px`,
+            }}
+          >
+            {button.label}
+          </Button>
+        )
+      })
+  }, [step.buttons, step.id, navButtonFontSize, navButtonPadding, onButtonClick])
 
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto">
@@ -385,33 +408,7 @@ export const ScriptCard = memo(function ScriptCard({
       </Card>
 
       <div className="flex justify-center items-center pt-6 px-2">
-        <div className="flex flex-wrap justify-center gap-4 md:gap-5 w-full max-w-3xl">
-          {step.buttons
-            .sort((a, b) => a.order - b.order)
-            .map((button) => {
-              const isPrimary = button.primary || button.variant === "primary" || button.variant === "default"
-
-              return (
-                <Button
-                  key={button.id}
-                  size="lg"
-                  onClick={() => onButtonClick(button.nextStepId)}
-                  className={`font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl border-0 rounded-xl ${
-                    isPrimary
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
-                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
-                  }`}
-                  style={{
-                    fontSize: `${navButtonFontSize}px`,
-                    padding: `${navButtonPadding}px ${navButtonPadding * 2}px`,
-                    minHeight: `${navButtonPadding * 3}px`,
-                  }}
-                >
-                  {button.label}
-                </Button>
-              )
-            })}
-        </div>
+        <div className="flex flex-wrap justify-center gap-4 md:gap-5 w-full max-w-3xl">{renderedButtons}</div>
       </div>
 
       <Dialog open={showAlert} onOpenChange={setShowAlert}>
@@ -451,7 +448,7 @@ export const ScriptCard = memo(function ScriptCard({
         <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto border-2 border-orange-200 dark:border-zinc-700">
           <DialogHeader className="space-y-3 pb-4 border-b border-border">
             <DialogTitle className="flex items-center gap-3 text-xl font-bold">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-400 dark:to-orange-500">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-400 dark:to-orange-300">
                 <CheckCircle2 className="h-6 w-6 text-white" />
               </div>
               <span className="bg-gradient-to-r from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">

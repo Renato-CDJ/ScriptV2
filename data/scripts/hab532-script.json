@@ -25,17 +25,13 @@
         "id": "hab532_sem_resposta",
         "title": "Cliente/Terceiro não responde",
         "body": "Por falta de comunicação encerro o contato.",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       },
       "hab532_desconhecido": {
         "id": "hab532_nao_conhece",
         "title": "Finalização",
         "body": "Peço desculpas pelo incômodo. A CAIXA agradece, tenha um bom dia/tarde/noite.",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       },
       "hab532_terceiro_conhece": {
         "id": "hab532_terceiro_conhece",
@@ -50,33 +46,25 @@
         "id": "hab532_faleceu",
         "title": "Falecido",
         "body": "Peça que o herdeiro ou inventariante leve o atestado de óbito na agência",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       },
       "hab532_terceiro_recado": {
         "id": "hab532_recado",
         "title": "Recado",
         "body": "Por favor, solicite que o (Cliente) entre em contato com a Central de Negócios da CAIXA, nos telefones 0800 025 8833 ou 4020-0088<br><br>A CAIXA agradece, tenha um ótimo dia/tarde/noite.",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       },
       "hab532_finalizacao_terceiro": {
         "id": "hab532_finalizacao_terceiro",
         "title": "Finalização",
         "body": "OK! A CAIXA agradece, tenha um bom dia/tarde/noite.",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       },
       "hab532_identificacao": {
         "id": "hab532_identificacao",
         "title": "Identifique-se",
         "body": "Aqui é o [nome do operador] eu falo em nome da CAIXA. Tudo bem?",
-        "buttons": [
-          { "label": "AVANÇAR", "next": "hab532_identificacao_parte2", "primary": true }
-        ]
+        "buttons": [{ "label": "AVANÇAR", "next": "hab532_identificacao_parte2", "primary": true }]
       },
       "hab532_identificacao_parte2": {
         "id": "hab532_identificacao_parte2",
@@ -110,17 +98,13 @@
         "id": "hab532_questiona_origem",
         "title": "Cliente questiona origem do contato",
         "body": "A Roveri é autorizada pela CAIXA a realizar o contato. Se você estiver inseguro sobre a nossa empresa, você pode acessar o site da CAIXA e confirmar www.caixa.gov.br/voce/negociacao/telefones e ver em Empresas terceirizadas o nome da ROVERI.",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       },
       "hab532_nome_completo_cliente": {
         "id": "hab532_nome_completo_cliente",
         "title": "Nome completo do cliente",
         "body": "Obrigado(a), pela confirmação. Seu nome completo é (nome completo do cliente)?",
-        "buttons": [
-          { "label": "APRESENTAR DIVIDA", "next": "hab532_apresentacao", "primary": true }
-        ]
+        "buttons": [{ "label": "APRESENTAR DIVIDA", "next": "hab532_apresentacao", "primary": true }]
       },
       "hab532_apresentacao": {
         "id": "hab532_apresentacao",
@@ -135,9 +119,7 @@
         "id": "hab532_pagamento_efetuado",
         "title": "Fraseologia de Pagamento Efetuado",
         "body": "Caso seu pagamento tenha sido efetuado há menos de 5 dias úteis, possivelmente não foi atualizado pelo sistema, mas caso tenha mais de 5 dias úteis você pode esclarecer pelo WhatsApp 0800 104 0104.<br><br>ATENÇÃO!<br>Não pergunte qual foi a forma de pagamento e nem a data em que foi realizado, pois o script já informa o necessário.",
-        "buttons": [
-          { "label": "IR PARA ATUALIZAÇÃO CADASTRAL", "next": "hab532_atualizacao_cadastral" }
-        ]
+        "buttons": [{ "label": "IR PARA ATUALIZAÇÃO CADASTRAL", "next": "hab532_atualizacao_cadastral" }]
       },
       "hab532_negociacao": {
         "id": "hab532_negociacao",
@@ -186,14 +168,12 @@
         "id": "hab532_pesquisa_satisfacao_recusa",
         "title": "Pesquisa de Satisfação",
         "body": "Peço que aguarde em linha para avaliar o nosso atendimento.<br><br>A CAIXA agradece, tenha um ótimo dia/tarde/noite.",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       },
       "hab532_ratificacao_aceite": {
         "id": "hab532_ratificacao_aceite",
         "title": "Verificar valores no CIWEB",
-        "body": "Observe se o boleto está disponível.<br><br>[Se aparecer a mensagem “não calculou mora”, significa que não estará disponível]",
+        "body": "Observe se o boleto está disponível.<br><br>[Se aparecer a mensagem 'não calculou mora', significa que não estará disponível]",
         "buttons": [
           { "label": "PAGAMENTO TOTAL", "next": "hab532_pagamento_total" },
           { "label": "PAGAMENTO PARCIAL", "next": "hab532_pagamento_parcial" }
@@ -203,9 +183,7 @@
         "id": "hab532_pagamento_total",
         "title": "Pagamento Total",
         "body": "Agradeço a confirmação, contamos com seu pagamento.",
-        "buttons": [
-          { "label": "AVANÇAR", "next": "hab532_atualizacao_cadastral_aceite" }
-        ]
+        "buttons": [{ "label": "AVANÇAR", "next": "hab532_atualizacao_cadastral_aceite" }]
       },
       "hab532_atualizacao_cadastral_aceite": {
         "id": "hab532_atualizacao_cadastral_aceite",
@@ -219,17 +197,13 @@
         "id": "hab532_pesquisa_satisfacao_aceite",
         "title": "Pesquisa de Satisfação",
         "body": "Peço que aguarde em linha para avaliar o nosso atendimento.<br><br>A CAIXA agradece, tenha um ótimo dia/tarde/noite.",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       },
       "hab532_pagamento_parcial": {
         "id": "hab532_pagamento_parcial",
         "title": "Parcial [no mínimo, uma prestação mais antiga]",
         "body": "Como não se trata do pagamento de total e sim parcial, permanecem os juros diários, ligações de cobrança e a restrição do CPF/CNPJ no SPC/SERASA.<br><br>CASO O ENVIO DO BOLETO NÃO ESTEJA DISPONÍVEL NO CIWEB:<br>O boleto dessa proposta no momento não está disponível para emissão por esse canal. Você pode solicitar/consultar pelo WhatsApp 0800 104 0104 a emissão do boleto.",
-        "buttons": [
-          { "label": "AVANÇAR", "next": "hab532_atualizacao_cadastral_aceite" }
-        ]
+        "buttons": [{ "label": "AVANÇAR", "next": "hab532_atualizacao_cadastral_aceite" }]
       },
       "hab532_atualizacao_cadastral": {
         "id": "hab532_atualizacao_cadastral",
@@ -243,9 +217,7 @@
         "id": "hab532_pesquisa_satisfacao",
         "title": "Pesquisa de Satisfação",
         "body": "Peço que aguarde em linha para avaliar o nosso atendimento.<br><br>A CAIXA agradece, tenha um ótimo dia/tarde/noite.",
-        "buttons": [
-          { "label": "FINALIZAR", "next": "fim", "primary": true }
-        ]
+        "buttons": [{ "label": "FINALIZAR", "next": "fim", "primary": true }]
       }
     }
   }

@@ -155,11 +155,17 @@ export function OperatorsTab() {
       allUsers.push(newOperator)
       localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
 
-      toast({
-        title: "Sucesso",
-        description: "Operador adicionado com sucesso",
-      })
+      // Trigger store update notification
+      window.dispatchEvent(new CustomEvent("store-updated"))
+
+      // Update local state immediately
+      setOperators([...operators, newOperator])
     }
+
+    toast({
+      title: "Sucesso",
+      description: "Operador adicionado com sucesso",
+    })
 
     setIsDialogOpen(false)
   }

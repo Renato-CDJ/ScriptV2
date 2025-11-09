@@ -17,8 +17,35 @@ import type {
   Quiz,
   QuizAttempt,
   AdminPermissions,
+  ChatMessage, // Imported for chat
+  ChatSettings, // Imported for chat
 } from "./types"
-import { loadHabitacionalScript, loadScriptFromJson } from "./habitacional-loader"
+
+const saveQueue: Map<string, any> = new Map()
+let saveTimeout: NodeJS.Timeout | null = null
+
+function debouncedSave(key: string, data: any) {
+  saveQueue.set(key, data)
+
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+  }
+
+  saveTimeout = setTimeout(() => {
+    saveQueue.forEach((value, storageKey) => {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(value))
+      } catch (error) {
+        console.error(`[v0] Error saving ${storageKey}:`, error)
+      }
+    })
+    saveQueue.clear()
+  }, 250) // Batch writes every 250ms
+}
+
+export function loadScriptsFromDataFolder() {
+  return
+}
 
 // Mock data for demonstration
 const MOCK_USERS: User[] = [
@@ -129,7 +156,7 @@ const MOCK_USERS: User[] = [
   },
 ]
 
-const MOCK_SCRIPT_STEPS: ScriptStep[] = loadHabitacionalScript()
+const MOCK_SCRIPT_STEPS: ScriptStep[] = []
 
 const MOCK_TABULATIONS: Tabulation[] = [
   // Identification Issues
@@ -353,7 +380,7 @@ const MOCK_SITUATIONS: ServiceSituation[] = [
     id: "sit-3",
     name: "SE O CLIENTE CITAR A LGPD OU PERGUNTAR POR QUE TEMOS OS SEUS DADOS",
     description:
-      '"(NOME DO CLIENTE), seguindo a lei LGPD, n°13.709, possuímos alguns dados representando a CAIXA ECONÔMICA FEDERAL, para garantir sua segurança. Caso você possua qualquer dúvida ou solicitação em relação a isso, pedimos que entre em contato conosco enviando um e-mail para: dpo@gruporoveri.com.br ."\n\nEXEMPLOS DE QUESTIONAMENTOS FEITOS PELOS CLIENTES:\n- Como você possui meus dados pessoais?\n- Vocês têm o direito de me ligar?\n- Isso está conforme a LGPD?\n- Quero que excluam meus dados!',
+      '"(NOME DO CLIENTE), seguindo a lei LGPD, n°13.709, possuímos alguns dados representando a CAIXAECONÔMICA FEDERAL, para garantir sua segurança. Caso você possua qualquer dúvida ou solicitação em relação a isso, pedimos que entre em contato conosco enviando um e-mail para: dpo@gruporoveri.com.br ."\n\nEXEMPLOS DE QUESTIONAMENTOS FEITOS PELOS CLIENTES:\n- Como você possui meus dados pessoais?\n- Vocês têm o direito de me ligar?\n- Isso está conforme a LGPD?\n- Quero que excluam meus dados!',
     isActive: true,
     createdAt: new Date(),
   },
@@ -377,7 +404,7 @@ const MOCK_SITUATIONS: ServiceSituation[] = [
     id: "sit-6",
     name: "CLIENTE SOLICITOU A LIGAÇÃO DO ATENDIMENTO",
     description:
-      'CASO O CONTRATO SEJA DOS ESTADOS:\nPARANÁ - DDD (41,42,43,44,45 e 46)\nRIO DE JANEIRO - DDD (21)\nSÃO PAULO - DDD (11)\nMATO GROSSO - DDD (65)\n\nDevemos informar: "A solicitação será repassada à CAIXA para verificação e atendimento no prazo de até 7 (sete) dias úteis."\n\n(PARA OUTROS ESTADOS)\nNesses casos, o que deve ser repassado para o cliente é: "Você pode solicitar a escuta da ligação na sua agência de relacionamento."',
+      'CASO O CONTRATO SEJA DOS ESTADOS:\nPARANÁ - DDD (41,42,43,44,45 e 46)\nRIO DE JANEIRO - DDD (21)\nSÃO PAULO - DDD (11)\nM ATO GROSSO - DDD (65)\n\nDevemos informar: "A solicitação será repassada à CAIXA para verificação e atendimento no prazo de até 7 (sete) dias úteis."\n\n(PARA OUTROS ESTADOS)\nNesses casos, o que deve ser repassado para o cliente é: "Você pode solicitar a escuta da ligação na sua agência de relacionamento."',
     isActive: true,
     createdAt: new Date(),
   },
@@ -433,7 +460,7 @@ const MOCK_SITUATIONS: ServiceSituation[] = [
     id: "sit-13",
     name: "A Lei 12395/2024 do Estado do Mato Grosso e a Lei 16276/2025 do Rio Grande Sul",
     description:
-      "A Lei 12395/2024 do Estado do Mato Grosso e a Lei 16276/2025 do Rio Grande Sul também determinam que deve ser informado a composição dos valores cobrados quanto ao que efetivamente correspondem, destacando-se o valor originário e seus adicionais (juros, multas, taxas, custas, honorários e outros que, somados, correspondam ao valor total cobrado do consumidor) ao cliente desse estado que solicitar.",
+      "A Lei 12395/2024 do Estado do Mato Grosso e a Lei 16276/2025 do Rio Grande Sul também determinam que deve ser informado a composição dos valores cobrados quanto a o que efetivamente correspondem, destacando-se o valor originário e seus adicionais (juros, multas, taxas, custas, honorários e outros que, somados, correspondam ao valor total cobrado do consumidor) ao cliente desse estado que solicitar.",
     isActive: true,
     createdAt: new Date(),
   },
@@ -508,6 +535,8 @@ const STORAGE_KEYS = {
   MESSAGES: "callcenter_messages",
   QUIZZES: "callcenter_quizzes",
   QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
+  CHAT_MESSAGES: "callcenter_chat_messages",
+  CHAT_SETTINGS: "callcenter_chat_settings",
 }
 
 // Initialize mock data
@@ -520,9 +549,8 @@ export function initializeMockData() {
     MOCK_USERS.map((u) => u.username),
   )
 
-  const habitacionalSteps = loadHabitacionalScript()
   if (!localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS)) {
-    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(habitacionalSteps))
+    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify([]))
   }
 
   localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(MOCK_TABULATIONS))
@@ -541,16 +569,7 @@ export function initializeMockData() {
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
-    const habitacionalProduct: Product = {
-      id: "prod-habitacional",
-      name: "HABITACIONAL",
-      description: "Financiamento Habitacional",
-      scriptId: habitacionalSteps[0]?.id || "hab_abordagem",
-      category: "habitacional",
-      isActive: true,
-      createdAt: new Date(),
-    }
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([habitacionalProduct]))
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]))
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.ATTENDANCE_TYPES)) {
@@ -592,6 +611,23 @@ export function initializeMockData() {
   if (!localStorage.getItem(STORAGE_KEYS.LAST_UPDATE)) {
     localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
   }
+
+  if (!localStorage.getItem(STORAGE_KEYS.CHAT_SETTINGS)) {
+    const defaultChatSettings: ChatSettings = {
+      isEnabled: true,
+      updatedAt: new Date(),
+      updatedBy: "system",
+    }
+    localStorage.setItem(STORAGE_KEYS.CHAT_SETTINGS, JSON.stringify(defaultChatSettings))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES)) {
+    localStorage.setItem(STORAGE_KEYS.CHAT_MESSAGES, JSON.stringify([]))
+  }
+
+  cleanupOldSessions()
+
+  loadScriptsFromDataFolder()
 }
 
 // User authentication
@@ -622,7 +658,7 @@ export function authenticateUser(username: string, password: string): User | nul
 
       // Update user in storage
       const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+      debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
 
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
       return user
@@ -640,7 +676,7 @@ export function authenticateUser(username: string, password: string): User | nul
 
     // Update user in storage
     const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+    debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
 
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
     return user
@@ -673,7 +709,7 @@ export function logout() {
 
         // Update user in storage
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
         notifyUpdate()
       }
     }
@@ -742,7 +778,7 @@ export function updateScriptStep(step: ScriptStep) {
 
   if (index !== -1) {
     steps[index] = { ...step, updatedAt: new Date() }
-    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
+    debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
     clearCaches() // Clear cache
     notifyUpdate()
   }
@@ -760,7 +796,7 @@ export function createScriptStep(step: Omit<ScriptStep, "id" | "createdAt" | "up
 
   const steps = getScriptSteps()
   steps.push(newStep)
-  localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
+  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
   notifyUpdate() // Notify about update
 
   return newStep
@@ -770,7 +806,7 @@ export function deleteScriptStep(id: string) {
   if (typeof window === "undefined") return
 
   const steps = getScriptSteps().filter((s) => s.id !== id)
-  localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(steps))
+  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
   notifyUpdate() // Notify about update
 }
 
@@ -812,7 +848,7 @@ export function saveNote(userId: string, content: string) {
   }
 
   notes.push(newNote)
-  localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes))
+  debouncedSave(STORAGE_KEYS.NOTES, notes)
 }
 
 // Call sessions
@@ -836,7 +872,7 @@ export function createCallSession(operatorId: string, startStepId: string): Call
 
   const sessions: CallSession[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || "[]")
   sessions.push(session)
-  localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions))
+  debouncedSave(STORAGE_KEYS.SESSIONS, sessions)
 
   return session
 }
@@ -849,7 +885,7 @@ export function updateCallSession(session: CallSession) {
 
   if (index !== -1) {
     sessions[index] = session
-    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions))
+    debouncedSave(STORAGE_KEYS.SESSIONS, sessions)
   }
 }
 
@@ -870,7 +906,7 @@ export function createProduct(product: Omit<Product, "id" | "createdAt">): Produ
 
   const products = getProducts()
   products.push(newProduct)
-  localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
+  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
   notifyUpdate() // Notify about update
 
   return newProduct
@@ -884,7 +920,7 @@ export function updateProduct(product: Product) {
 
   if (index !== -1) {
     products[index] = product
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
+    debouncedSave(STORAGE_KEYS.PRODUCTS, products)
     clearCaches() // Clear cache
     notifyUpdate()
   }
@@ -894,7 +930,7 @@ export function deleteProduct(id: string) {
   if (typeof window === "undefined") return
 
   const products = getProducts().filter((p) => p.id !== id)
-  localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products))
+  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
   notifyUpdate() // Notify about update
 }
 
@@ -913,7 +949,7 @@ export function updateUser(user: User) {
 
     if (index !== -1) {
       users[index] = user
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+      debouncedSave(STORAGE_KEYS.USERS, users)
       notifyUpdate()
     }
   } catch (error) {
@@ -926,7 +962,7 @@ export function deleteUser(userId: string) {
 
   try {
     const users = getAllUsers().filter((u) => u.id !== userId)
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+    debouncedSave(STORAGE_KEYS.USERS, users)
     notifyUpdate()
   } catch (error) {
     console.error("[v0] Error deleting user:", error)
@@ -948,7 +984,7 @@ export function forceLogoutUser(userId: string) {
         user.isOnline = false
 
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers))
+        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
         notifyUpdate()
       }
     }
@@ -1002,7 +1038,7 @@ function notifyUpdate() {
   updateTimeout = setTimeout(() => {
     localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
     window.dispatchEvent(new CustomEvent("store-updated"))
-  }, 100)
+  }, 300) // Increased from 100ms to reduce event frequency
 }
 
 export function getLastUpdate(): number {
@@ -1023,40 +1059,93 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
   try {
     if (jsonData.marcas) {
       Object.entries(jsonData.marcas).forEach(([productName, productSteps]: [string, any]) => {
-        const steps = loadScriptFromJson(jsonData, productName)
+        if (!productSteps || typeof productSteps !== "object") {
+          console.warn(`[v0] Skipping invalid product: ${productName}`)
+          return
+        }
+
+        const steps: ScriptStep[] = []
+        const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
+
+        Object.entries(productSteps).forEach(([stepKey, stepData]: [string, any]) => {
+          if (!stepData || typeof stepData !== "object" || !stepData.id || !stepData.title) {
+            console.warn(`[v0] Skipping invalid step: ${stepKey} in product ${productName}`)
+            return
+          }
+
+          const content = stepData.body || stepData.content || ""
+          if (!content.trim()) {
+            console.warn(`[v0] Warning: Empty content for step ${stepData.id}`)
+          }
+
+          const step: ScriptStep = {
+            id: stepData.id,
+            productId: productId,
+            title: stepData.title || "",
+            content: content,
+            order: stepData.order || 0,
+            buttons: (stepData.buttons || []).map((btn: any, index: number) => ({
+              id: `btn-${stepData.id}-${index}`,
+              label: btn.label || "",
+              nextStepId: btn.next || btn.nextStepId || null,
+              primary: btn.primary || false,
+              variant: btn.variant || (btn.primary ? "primary" : "secondary"),
+              order: btn.order || index,
+            })),
+            contentSegments: stepData.contentSegments || [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }
+          steps.push(step)
+        })
 
         if (steps.length > 0) {
           const existingSteps = getScriptSteps()
-          const newSteps = [...existingSteps, ...steps]
-          localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(newSteps))
+          const filteredSteps = existingSteps.filter((s) => s.productId !== productId)
+          const newSteps = [...filteredSteps, ...steps]
+          debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, newSteps)
           stepCount += steps.length
 
-          const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
+          const firstStep =
+            steps.find(
+              (s) =>
+                s.title.toLowerCase().includes("abordagem") ||
+                s.id.toLowerCase().includes("abordagem") ||
+                s.order === 1,
+            ) || steps[0]
+
+          if (!firstStep) {
+            console.error(`[v0] No valid first step found for product ${productName}`)
+            return
+          }
+
           const product: Product = {
             id: productId,
             name: productName,
-            scriptId: steps[0].id,
-            category: productName.toLowerCase(),
+            scriptId: firstStep.id,
+            category: productName.toLowerCase() as "habitacional" | "comercial" | "outros",
             isActive: true,
             createdAt: new Date(),
           }
 
           const existingProducts = getProducts()
-          const existingIndex = existingProducts.findIndex((p) => p.name === productName)
+          const existingIndex = existingProducts.findIndex((p) => p.id === productId)
           if (existingIndex !== -1) {
             existingProducts[existingIndex] = product
           } else {
             existingProducts.push(product)
             productCount++
           }
-          localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(existingProducts))
+          debouncedSave(STORAGE_KEYS.PRODUCTS, existingProducts)
         }
       })
 
+      clearCaches()
       notifyUpdate()
     }
   } catch (error) {
     console.error("[v0] Error importing script from JSON:", error)
+    throw error // Re-throw to allow caller to handle the error
   }
 
   return { productCount, stepCount }
@@ -1105,7 +1194,7 @@ export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "
 
   const options = getAttendanceTypes()
   options.push(newOption)
-  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
   notifyUpdate()
 
   return newOption
@@ -1119,7 +1208,7 @@ export function updateAttendanceType(option: AttendanceTypeOption) {
 
   if (index !== -1) {
     options[index] = option
-    localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+    debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
     notifyUpdate()
   }
 }
@@ -1128,7 +1217,7 @@ export function deleteAttendanceType(id: string) {
   if (typeof window === "undefined") return
 
   const options = getAttendanceTypes().filter((o) => o.id !== id)
-  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(options))
+  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
   notifyUpdate()
 }
 
@@ -1149,7 +1238,7 @@ export function createPersonType(option: Omit<PersonTypeOption, "id" | "createdA
 
   const options = getPersonTypes()
   options.push(newOption)
-  localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+  debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
   notifyUpdate()
 
   return newOption
@@ -1163,7 +1252,7 @@ export function updatePersonType(option: PersonTypeOption) {
 
   if (index !== -1) {
     options[index] = option
-    localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+    debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
     notifyUpdate()
   }
 }
@@ -1172,7 +1261,7 @@ export function deletePersonType(id: string) {
   if (typeof window === "undefined") return
 
   const options = getPersonTypes().filter((o) => o.id !== id)
-  localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(options))
+  debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
   notifyUpdate()
 }
 
@@ -1198,7 +1287,7 @@ export function createMessage(message: Omit<Message, "id" | "createdAt" | "seenB
 
   const messages = getMessages()
   messages.push(newMessage)
-  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
   notifyUpdate()
 
   return newMessage
@@ -1212,7 +1301,7 @@ export function updateMessage(message: Message) {
 
   if (index !== -1) {
     messages[index] = message
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+    debouncedSave(STORAGE_KEYS.MESSAGES, messages)
     notifyUpdate()
   }
 }
@@ -1221,7 +1310,7 @@ export function deleteMessage(id: string) {
   if (typeof window === "undefined") return
 
   const messages = getMessages().filter((m) => m.id !== id)
-  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages))
+  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
   notifyUpdate()
 }
 
@@ -1296,7 +1385,7 @@ export function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Quiz {
 
   const quizzes = getQuizzes()
   quizzes.push(newQuiz)
-  localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
   notifyUpdate()
 
   return newQuiz
@@ -1310,7 +1399,7 @@ export function updateQuiz(quiz: Quiz) {
 
   if (index !== -1) {
     quizzes[index] = quiz
-    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+    debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
     notifyUpdate()
   }
 }
@@ -1319,7 +1408,7 @@ export function deleteQuiz(id: string) {
   if (typeof window === "undefined") return
 
   const quizzes = getQuizzes().filter((q) => q.id !== id)
-  localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(quizzes))
+  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
   notifyUpdate()
 }
 
@@ -1383,7 +1472,7 @@ export function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt
 
   const attempts = getQuizAttempts()
   attempts.push(newAttempt)
-  localStorage.setItem(STORAGE_KEYS.QUIZ_ATTEMPTS, JSON.stringify(attempts))
+  debouncedSave(STORAGE_KEYS.QUIZ_ATTEMPTS, attempts)
   notifyUpdate()
 
   return newAttempt
@@ -1533,7 +1622,7 @@ export function createAdminUser(username: string, fullName: string): User | null
     }
 
     users.push(newUser)
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+    debouncedSave(STORAGE_KEYS.USERS, users)
     notifyUpdate()
 
     return newUser
@@ -1551,4 +1640,143 @@ export function canDeleteAdminUser(userId: string): boolean {
 
   // Cannot delete the main admin user
   return user !== undefined && user.username !== "admin"
+}
+
+export function cleanupOldSessions() {
+  if (typeof window === "undefined") return
+
+  try {
+    const users = getAllUsers()
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    let cleanedCount = 0
+
+    users.forEach((user) => {
+      if (user.loginSessions && user.loginSessions.length > 50) {
+        const originalLength = user.loginSessions.length
+        // Keep only last 50 sessions and those within 30 days
+        user.loginSessions = user.loginSessions
+          .filter((session) => new Date(session.loginAt) > thirtyDaysAgo)
+          .slice(-50)
+
+        cleanedCount += originalLength - user.loginSessions.length
+      }
+    })
+
+    if (cleanedCount > 0) {
+      console.log(`[v0] Cleaned up ${cleanedCount} old sessions`)
+      debouncedSave(STORAGE_KEYS.USERS, users)
+    }
+  } catch (error) {
+    console.error("[v0] Error cleaning up sessions:", error)
+  }
+}
+
+export function getAllChatMessages(): ChatMessage[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES) || "[]")
+}
+
+export function getChatSettings(): ChatSettings {
+  if (typeof window === "undefined") return { isEnabled: true, updatedAt: new Date(), updatedBy: "system" }
+  return JSON.parse(
+    localStorage.getItem(STORAGE_KEYS.CHAT_SETTINGS) ||
+      JSON.stringify({ isEnabled: true, updatedAt: new Date(), updatedBy: "system" }),
+  )
+}
+
+export function updateChatSettings(settings: ChatSettings) {
+  if (typeof window === "undefined") return
+  debouncedSave(STORAGE_KEYS.CHAT_SETTINGS, settings)
+  notifyUpdate()
+}
+
+export function sendChatMessage(
+  senderId: string,
+  senderName: string,
+  senderRole: "operator" | "admin",
+  content: string,
+  recipientId?: string,
+  attachment?: {
+    type: "image"
+    url: string
+    name: string
+  },
+): ChatMessage {
+  if (typeof window === "undefined")
+    return {
+      id: "",
+      senderId,
+      senderName,
+      senderRole,
+      recipientId,
+      content,
+      attachment,
+      createdAt: new Date(),
+      isRead: false,
+    }
+
+  const newMessage: ChatMessage = {
+    id: `chat-${Date.now()}`,
+    senderId,
+    senderName,
+    senderRole,
+    recipientId,
+    content,
+    attachment,
+    createdAt: new Date(),
+    isRead: false,
+  }
+
+  const messages = getAllChatMessages()
+  messages.push(newMessage)
+  debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
+  notifyUpdate()
+
+  return newMessage
+}
+
+export function markChatMessageAsRead(messageId: string) {
+  if (typeof window === "undefined") return
+
+  const messages = getAllChatMessages()
+  const message = messages.find((m) => m.id === messageId)
+
+  if (message && !message.isRead) {
+    message.isRead = true
+    debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
+    notifyUpdate()
+  }
+}
+
+export function getChatMessagesForUser(userId: string, userRole: "operator" | "admin"): ChatMessage[] {
+  const messages = getAllChatMessages()
+
+  if (userRole === "operator") {
+    // Operator sees: messages they sent + messages from admins to them or all operators
+    return messages
+      .filter(
+        (m) => m.senderId === userId || (m.senderRole === "admin" && (!m.recipientId || m.recipientId === userId)),
+      )
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  } else {
+    // Admin sees: all messages from operators + messages they sent
+    return messages
+      .filter((m) => m.senderRole === "operator" || m.senderId === userId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  }
+}
+
+export function getUnreadChatCount(userId: string, userRole: "operator" | "admin"): number {
+  const messages = getChatMessagesForUser(userId, userRole)
+  return messages.filter((m) => !m.isRead && m.senderId !== userId).length
+}
+
+export function deleteChatMessage(messageId: string) {
+  if (typeof window === "undefined") return
+
+  const messages = getAllChatMessages().filter((m) => m.id !== messageId)
+  debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
+  notifyUpdate()
 }

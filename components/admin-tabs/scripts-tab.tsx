@@ -38,6 +38,8 @@ import type { ScriptStep, ScriptButton, Product } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { AdminScriptPreview } from "@/components/admin-script-preview"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { validateScriptJson } from "@/lib/scripts-loader"
+import { getAutoLoadScripts } from "@/lib/auto-load-scripts"
 
 export function ScriptsTab() {
   const [steps, setSteps] = useState<ScriptStep[]>(getScriptSteps())
@@ -46,6 +48,7 @@ export function ScriptsTab() {
   const [isCreating, setIsCreating] = useState(false)
   const [previewStep, setPreviewStep] = useState<ScriptStep | null>(null)
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
+  const [availableScripts, setAvailableScripts] = useState<any[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
@@ -54,12 +57,49 @@ export function ScriptsTab() {
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
+    loadAvailableScripts()
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
+
+  const loadAvailableScripts = () => {
+    try {
+      const scripts = getAutoLoadScripts()
+      setAvailableScripts(scripts)
+    } catch (error) {
+      console.error("[v0] Error loading available scripts:", error)
+    }
+  }
 
   const refreshSteps = () => {
     setSteps(getScriptSteps())
     setProducts(getProducts())
+  }
+
+  const isScriptImported = (scriptName: string): boolean => {
+    const productId = `prod-${scriptName.toLowerCase().replace(/\s+/g, "-")}`
+    return products.some((p) => p.id === productId)
+  }
+
+  const handleImportAvailableScript = (scriptData: any, scriptName: string) => {
+    try {
+      const result = importScriptFromJson(scriptData)
+
+      if (result.stepCount > 0) {
+        refreshSteps()
+        toast({
+          title: "Script importado com sucesso!",
+          description: `${result.productCount} produto(s) e ${result.stepCount} tela(s) foram importados de ${scriptName}.`,
+        })
+      } else {
+        throw new Error("Nenhuma tela foi importada")
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao importar",
+        description: `Não foi possível importar o script ${scriptName}.`,
+        variant: "destructive",
+      })
+    }
   }
 
   const toggleProductExpansion = (productId: string) => {
@@ -109,6 +149,16 @@ export function ScriptsTab() {
           return
         }
 
+        const validation = validateScriptJson(data)
+        if (!validation.valid) {
+          toast({
+            title: "Erro de validação",
+            description: validation.errors.join(", "),
+            variant: "destructive",
+          })
+          return
+        }
+
         const result = importScriptFromJson(data)
 
         if (result.stepCount > 0) {
@@ -135,8 +185,51 @@ export function ScriptsTab() {
     input.click()
   }
 
+  const handleLoadScripts = async () => {
+    try {
+      const scripts = getAutoLoadScripts()
+
+      if (scripts.length === 0) {
+        toast({
+          title: "Nenhum script encontrado",
+          description: "Não há arquivos JSON na pasta data/scripts para carregar.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      let totalProducts = 0
+      let totalSteps = 0
+
+      scripts.forEach((scriptData) => {
+        try {
+          const result = importScriptFromJson(scriptData)
+          totalProducts += result.productCount
+          totalSteps += result.stepCount
+        } catch (error) {
+          console.error("[v0] Error loading individual script:", error)
+        }
+      })
+
+      refreshSteps()
+      toast({
+        title: "Scripts carregados com sucesso!",
+        description: `${totalProducts} produto(s) e ${totalSteps} tela(s) foram importados da pasta data/scripts.`,
+      })
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar scripts",
+        description: "Não foi possível carregar os scripts da pasta data/scripts.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleEdit = (step: ScriptStep) => {
-    setEditingStep({ ...step })
+    setEditingStep({
+      ...step,
+      content: step.content || "", // Ensure content is never undefined
+    })
     setIsCreating(false)
     setPreviewStep(null)
   }

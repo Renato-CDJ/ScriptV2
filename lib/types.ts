@@ -157,6 +157,33 @@ export interface QuizAttempt {
   attemptedAt: Date
 }
 
+export interface ChatMessage {
+  id: string
+  senderId: string
+  senderName: string
+  senderRole: "operator" | "admin"
+  recipientId?: string // If undefined, message goes to all admins (from operator) or all operators (from admin)
+  content: string
+  attachment?: {
+    type: "image"
+    url: string
+    name: string
+  }
+  replyTo?: {
+    messageId: string
+    content: string
+    senderName: string
+  }
+  createdAt: Date
+  isRead: boolean
+}
+
+export interface ChatSettings {
+  isEnabled: boolean // Admin can enable/disable chat globally
+  updatedAt: Date
+  updatedBy: string
+}
+
 export interface CallSession {
   id: string
   operatorId: string

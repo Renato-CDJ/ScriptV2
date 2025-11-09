@@ -18,6 +18,7 @@ import {
   Settings2,
   MessageSquare,
   Shield,
+  MessageCircle,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -40,6 +41,7 @@ const menuItems = [
   { id: "notes", label: "Bloco de Notas", icon: StickyNote, permission: "notes" },
   { id: "operators", label: "Operadores", icon: Users, permission: "operators" },
   { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
+  { id: "chat", label: "Chat", icon: MessageCircle, permission: "chat" },
   { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]
 
@@ -136,7 +138,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
         </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-white dark:text-white hover:bg-orange-500/20 dark:hover:bg-orange-500/30 border-0"
+          className="w-full justify-start gap-3 text-black dark:text-white hover:bg-orange-500/20 dark:hover:bg-orange-500/30 border-0"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />

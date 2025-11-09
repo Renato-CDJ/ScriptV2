@@ -6,6 +6,7 @@ import { OperatorHeader } from "@/components/operator-header"
 import { OperatorSidebar } from "@/components/operator-sidebar"
 import { ScriptCard } from "@/components/script-card"
 import { AttendanceConfig } from "@/components/attendance-config"
+import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { useAuth } from "@/lib/auth-context"
 import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/store"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
@@ -23,6 +24,17 @@ const OperatorContent = memo(function OperatorContent() {
   const [attendanceConfig, setAttendanceConfig] = useState<AttendanceConfigType | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [currentProductId, setCurrentProductId] = useState<string | null>(null)
+  const [showChatModal, setShowChatModal] = useState(false)
+
+  const handleBackToStart = useCallback(() => {
+    setIsSessionActive(false)
+    setCurrentStep(null)
+    setShowConfig(true)
+    setAttendanceConfig(null)
+    setSearchQuery("")
+    setStepHistory([])
+    setCurrentProductId(null)
+  }, [])
 
   useEffect(() => {
     const checkAutoLogout = () => {
@@ -104,19 +116,44 @@ const OperatorContent = memo(function OperatorContent() {
   }, [])
 
   const handleButtonClick = useCallback(
-    (nextStepId: string | null) => {
-      if (nextStepId && currentProductId) {
+    (nextStepId: string | null, buttonLabel?: string) => {
+      console.log("[v0] Button clicked with nextStepId:", nextStepId)
+      console.log("[v0] Button label:", buttonLabel)
+      console.log("[v0] Current productId:", currentProductId)
+
+      if (buttonLabel && buttonLabel.toUpperCase().includes("FINALIZAR")) {
+        console.log("[v0] FINALIZAR button clicked - returning to config")
+        handleBackToStart()
+        return
+      }
+
+      if (!currentProductId) {
+        console.error("[v0] Missing productId - cannot navigate")
+        alert("Erro: Produto não identificado. Por favor, reinicie o atendimento.")
+        handleBackToStart()
+        return
+      }
+
+      if (nextStepId) {
         const nextStep = getScriptStepById(nextStepId, currentProductId)
+        console.log("[v0] Next step found:", nextStep?.title || "Not found")
+
         if (nextStep) {
           setStepHistory((prev) => [...prev, nextStep.id])
           setCurrentStep(nextStep)
           setSearchQuery("")
+        } else {
+          console.log("[v0] Next step not found for ID:", nextStepId)
+          alert(`Próxima tela não encontrada. ID: ${nextStepId}. Por favor, contate o administrador.`)
         }
       } else {
-        handleBackToStart()
+        console.log("[v0] No nextStepId provided - end of script flow")
+        alert(
+          "Fim do roteiro atingido. Clique em 'Voltar ao Início' para iniciar um novo atendimento ou contate o administrador para configurar o próximo passo.",
+        )
       }
     },
-    [currentProductId],
+    [currentProductId, handleBackToStart],
   )
 
   const handleGoBack = useCallback(() => {
@@ -138,16 +175,6 @@ const OperatorContent = memo(function OperatorContent() {
       return prev
     })
   }, [currentProductId])
-
-  const handleBackToStart = useCallback(() => {
-    setIsSessionActive(false)
-    setCurrentStep(null)
-    setShowConfig(true)
-    setAttendanceConfig(null)
-    setSearchQuery("")
-    setStepHistory([])
-    setCurrentProductId(null)
-  }, [])
 
   const handleProductSelect = useCallback((productId: string) => {
     const product = getProductById(productId)
@@ -185,6 +212,7 @@ const OperatorContent = memo(function OperatorContent() {
         isSessionActive={isSessionActive}
         onBackToStart={handleBackToStart}
         onProductSelect={handleProductSelect}
+        onOpenChat={() => setShowChatModal(true)}
       />
 
       <div className="flex flex-1 overflow-hidden min-h-0">
@@ -221,6 +249,8 @@ const OperatorContent = memo(function OperatorContent() {
 
         {isSessionActive && <OperatorSidebar isOpen={isSidebarOpen} />}
       </div>
+
+      <OperatorChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />
     </div>
   )
 })
