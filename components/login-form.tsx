@@ -5,7 +5,7 @@ import { useState, useCallback, useMemo, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { authenticateUser } from "@/lib/supabase-store"
+import { authenticateUser } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -37,24 +37,21 @@ export const LoginForm = memo(function LoginForm() {
       setError("")
       setIsLoading(true)
 
-      try {
-        const user = await authenticateUser(username, password)
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
-        if (user) {
-          await refreshUser()
+      const user = authenticateUser(username, password)
+
+      if (user) {
+        refreshUser()
+      } else {
+        if (showPasswordField) {
+          setError("Senha incorreta")
         } else {
-          if (showPasswordField) {
-            setError("Senha incorreta")
-          } else {
-            setError("Usuário não encontrado")
-          }
+          setError("Usuário não encontrado")
         }
-      } catch (error) {
-        console.error("[v0] Login error:", error)
-        setError("Erro ao fazer login. Tente novamente.")
-      } finally {
-        setIsLoading(false)
       }
+
+      setIsLoading(false)
     },
     [username, password, showPasswordField, refreshUser],
   )
