@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +39,24 @@ export function AccessControlTab() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const { toast } = useToast()
 
+  const permissionLabels: Record<keyof AdminPermissions, string> = useMemo(
+    () => ({
+      dashboard: "Dashboard",
+      scripts: "Roteiros",
+      products: "Produtos",
+      attendanceConfig: "Configurar Atendimento",
+      tabulations: "Tabulações",
+      situations: "Situações",
+      channels: "Canais",
+      notes: "Bloco de Notas",
+      operators: "Operadores",
+      messagesQuiz: "Recados e Quiz",
+      chat: "Chat",
+      settings: "Configurações",
+    }),
+    [],
+  )
+
   useEffect(() => {
     loadAdminUsers()
   }, [])
@@ -48,54 +66,60 @@ export function AccessControlTab() {
     setAdminUsers(users)
   }
 
-  const handleEditName = (user: User) => {
+  const handleEditName = useCallback((user: User) => {
     setEditingUser(user.id)
     setEditedName(user.fullName)
-  }
+  }, [])
 
-  const handleSaveName = (user: User) => {
-    if (!editedName.trim()) {
+  const handleSaveName = useCallback(
+    (user: User) => {
+      if (!editedName.trim()) {
+        toast({
+          title: "Erro",
+          description: "O nome não pode estar vazio",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const updatedUser = { ...user, fullName: editedName.trim() }
+      updateUser(updatedUser)
+      setEditingUser(null)
+      loadAdminUsers()
+
       toast({
-        title: "Erro",
-        description: "O nome não pode estar vazio",
-        variant: "destructive",
+        title: "Nome atualizado",
+        description: `Nome do usuário ${user.username} foi atualizado com sucesso`,
       })
-      return
-    }
+    },
+    [editedName, toast],
+  )
 
-    const updatedUser = { ...user, fullName: editedName.trim() }
-    updateUser(updatedUser)
-    setEditingUser(null)
-    loadAdminUsers()
-
-    toast({
-      title: "Nome atualizado",
-      description: `Nome do usuário ${user.username} foi atualizado com sucesso`,
-    })
-  }
-
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingUser(null)
     setEditedName("")
-  }
+  }, [])
 
-  const handlePermissionToggle = (user: User, permission: keyof AdminPermissions) => {
-    const currentPermissions = user.permissions || {}
-    const updatedPermissions = {
-      ...currentPermissions,
-      [permission]: !currentPermissions[permission],
-    }
+  const handlePermissionToggle = useCallback(
+    (user: User, permission: keyof AdminPermissions) => {
+      const currentPermissions = user.permissions || {}
+      const updatedPermissions = {
+        ...currentPermissions,
+        [permission]: !currentPermissions[permission],
+      }
 
-    updateAdminPermissions(user.id, updatedPermissions)
-    loadAdminUsers()
+      updateAdminPermissions(user.id, updatedPermissions)
+      loadAdminUsers()
 
-    toast({
-      title: "Permissão atualizada",
-      description: `Permissão ${permissionLabels[permission]} foi ${updatedPermissions[permission] ? "habilitada" : "desabilitada"} para ${user.fullName}`,
-    })
-  }
+      toast({
+        title: "Permissão atualizada",
+        description: `Permissão ${permissionLabels[permission]} foi ${updatedPermissions[permission] ? "habilitada" : "desabilitada"} para ${user.fullName}`,
+      })
+    },
+    [toast, permissionLabels],
+  )
 
-  const handleCreateUser = () => {
+  const handleCreateUser = useCallback(() => {
     if (!newUsername.trim() || !newFullName.trim()) {
       toast({
         title: "Erro",
@@ -125,9 +149,9 @@ export function AccessControlTab() {
       title: "Usuário criado",
       description: `Usuário ${newUser.username} foi criado com sucesso`,
     })
-  }
+  }, [newUsername, newFullName, toast])
 
-  const handleDeleteUser = () => {
+  const handleDeleteUser = useCallback(() => {
     if (!userToDelete) return
 
     if (!canDeleteAdminUser(userToDelete.id)) {
@@ -148,21 +172,7 @@ export function AccessControlTab() {
       title: "Usuário excluído",
       description: `Usuário ${userToDelete.username} foi excluído com sucesso`,
     })
-  }
-
-  const permissionLabels: Record<keyof AdminPermissions, string> = {
-    dashboard: "Dashboard",
-    scripts: "Roteiros",
-    products: "Produtos",
-    attendanceConfig: "Configurar Atendimento",
-    tabulations: "Tabulações",
-    situations: "Situações",
-    channels: "Canais",
-    notes: "Bloco de Notas",
-    operators: "Operadores",
-    messagesQuiz: "Recados e Quiz",
-    settings: "Configurações",
-  }
+  }, [userToDelete, toast])
 
   return (
     <div className="space-y-6">

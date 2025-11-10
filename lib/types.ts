@@ -13,6 +13,7 @@ export interface AdminPermissions {
   notes?: boolean
   operators?: boolean
   messagesQuiz?: boolean
+  chat?: boolean
   settings?: boolean
 }
 

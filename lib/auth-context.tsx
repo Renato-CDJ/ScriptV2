@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode, useMemo, useCallback } from "react"
 import type { User } from "./types"
-import { getCurrentUser, logout as logoutUser, initializeMockData, cleanupOldSessions } from "./store"
+import { getCurrentUser, logout as logoutUser } from "./supabase-store"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  logout: () => void
-  refreshUser: () => void
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -18,24 +19,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Initialize mock data on first load
-    initializeMockData()
+    const checkSession = async () => {
+      try {
+        const currentUser = await getCurrentUser()
+        setUser(currentUser)
+      } catch (error) {
+        console.error("[v0] Error checking session:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    // Check for existing session
-    const currentUser = getCurrentUser()
-    setUser(currentUser)
-    setIsLoading(false)
+    checkSession()
 
-    cleanupOldSessions()
+    const supabase = createBrowserClient()
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        const currentUser = await getCurrentUser()
+        setUser(currentUser)
+      } else if (event === "SIGNED_OUT") {
+        setUser(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
-  const logout = useCallback(() => {
-    logoutUser()
+  const logout = useCallback(async () => {
+    await logoutUser()
     setUser(null)
   }, [])
 
-  const refreshUser = useCallback(() => {
-    const currentUser = getCurrentUser()
+  const refreshUser = useCallback(async () => {
+    const currentUser = await getCurrentUser()
     setUser(currentUser)
   }, [])
 
