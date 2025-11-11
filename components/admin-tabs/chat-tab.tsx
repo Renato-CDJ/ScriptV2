@@ -351,8 +351,8 @@ export const ChatTab = memo(function ChatTab() {
                     </div>
                   </div>
 
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-3">
+                  <ScrollArea className="flex-1 p-4 [&_[data-radix-scroll-area-viewport]]:max-h-none">
+                    <div className="space-y-3 pr-4">
                       {filteredMessages.length === 0 ? (
                         <div className="flex items-center justify-center h-full text-muted-foreground">
                           <p>Nenhuma mensagem ainda</p>
@@ -365,31 +365,33 @@ export const ChatTab = memo(function ChatTab() {
                               key={msg.id}
                               className={`flex ${isOwnMessage ? "justify-end" : "justify-start"} group`}
                             >
-                              <div className="max-w-[70%] space-y-1">
+                              <div className="max-w-[85%] sm:max-w-[70%] space-y-1">
                                 <div
-                                  className={`rounded-lg p-3 ${
+                                  className={`rounded-lg p-3 break-words hyphens-auto ${
                                     isOwnMessage ? "bg-orange-500 text-white" : "bg-accent text-foreground"
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-semibold text-sm">{msg.senderName}</span>
-                                    <Badge variant="outline" className="text-xs">
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <span className="font-semibold text-sm break-words">{msg.senderName}</span>
+                                    <Badge variant="outline" className="text-xs flex-shrink-0">
                                       {msg.senderRole === "admin" ? "ADM" : "OP"}
                                     </Badge>
                                   </div>
                                   {msg.replyTo && (
                                     <div
-                                      className={`mb-2 p-2 rounded border-l-2 ${
+                                      className={`mb-2 p-2 rounded border-l-2 break-words hyphens-auto ${
                                         isOwnMessage
                                           ? "bg-orange-600/50 border-white/50"
                                           : "bg-muted/50 border-muted-foreground/50"
                                       }`}
                                     >
-                                      <p className="text-xs font-semibold mb-1">{msg.replyTo.senderName}</p>
-                                      <p className="text-xs opacity-80 line-clamp-2">{msg.replyTo.content}</p>
+                                      <p className="text-xs font-semibold mb-1 break-words">{msg.replyTo.senderName}</p>
+                                      <p className="text-xs opacity-80 line-clamp-2 break-words">
+                                        {msg.replyTo.content}
+                                      </p>
                                     </div>
                                   )}
-                                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                  <p className="text-sm whitespace-pre-wrap break-words hyphens-auto">{msg.content}</p>
                                   {msg.attachment && msg.attachment.type === "image" && (
                                     <div className="mt-2">
                                       <img
@@ -403,25 +405,25 @@ export const ChatTab = memo(function ChatTab() {
                                     {new Date(msg.createdAt).toLocaleString("pt-BR")}
                                   </span>
                                 </div>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 flex-wrap">
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleReply(msg)}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs"
                                   >
                                     <Reply className="h-3 w-3 mr-1" />
-                                    Responder
+                                    <span className="hidden sm:inline">Responder</span>
                                   </Button>
                                   {isOwnMessage && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => handleDeleteMessage(msg.id)}
-                                      className="opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2"
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs"
                                     >
                                       <Trash2 className="h-3 w-3 mr-1" />
-                                      Excluir
+                                      <span className="hidden sm:inline">Excluir</span>
                                     </Button>
                                   )}
                                 </div>

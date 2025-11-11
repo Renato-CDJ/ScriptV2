@@ -1494,14 +1494,17 @@ export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRa
 
   const now = new Date()
   const targetYear = year ?? now.getFullYear()
-  const targetMonth = month ?? now.getMonth()
+  const targetMonth = month !== undefined ? month : now.getMonth()
 
   const attempts = getQuizAttempts()
 
-  // Filter attempts for the target month
   const monthlyAttempts = attempts.filter((attempt) => {
-    const attemptDate = new Date(attempt.attemptedAt)
-    return attemptDate.getFullYear() === targetYear && attemptDate.getMonth() === targetMonth
+    const attemptDate = attempt.attemptedAt instanceof Date ? attempt.attemptedAt : new Date(attempt.attemptedAt)
+
+    const yearMatch = attemptDate.getFullYear() === targetYear
+    const monthMatch = attemptDate.getMonth() === targetMonth
+
+    return yearMatch && monthMatch
   })
 
   // Group by operator

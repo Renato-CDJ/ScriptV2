@@ -323,7 +323,7 @@ export function MessagesQuizTab() {
       return
     }
 
-    const scheduledDate = quizScheduledDate ? new Date(quizScheduledDate) : undefined
+    const scheduledDate = quizScheduledDate ? new Date(quizScheduledDate) : new Date() // Default to today's date
 
     if (editingQuiz) {
       updateQuiz({
@@ -1331,11 +1331,13 @@ export function MessagesQuizTab() {
                             <TableHeader>
                               <TableRow className="bg-muted/50">
                                 <TableHead className="w-28 text-center font-bold">Posição</TableHead>
-                                <TableHead className="font-bold">Operador</TableHead>
-                                <TableHead className="text-center font-bold">Quiz Respondidos</TableHead>
-                                <TableHead className="text-center font-bold">Acertos</TableHead>
-                                <TableHead className="text-center font-bold">Precisão</TableHead>
-                                <TableHead className="text-right font-bold">Pontos</TableHead>
+                                <TableHead className="font-bold min-w-[150px]">Operador</TableHead>
+                                <TableHead className="text-center font-bold whitespace-nowrap min-w-[120px]">
+                                  Quiz Respondidos
+                                </TableHead>
+                                <TableHead className="text-center font-bold min-w-[80px]">Acertos</TableHead>
+                                <TableHead className="text-center font-bold min-w-[80px]">Precisão</TableHead>
+                                <TableHead className="text-right font-bold min-w-[60px]">Pontos</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1365,39 +1367,49 @@ export function MessagesQuizTab() {
                                             <Medal className="h-7 w-7" />
                                           </div>
                                         ) : (
-                                          <span className="text-2xl font-bold">{ranking.rank}º</span>
+                                          <span className="text-2xl font-bold break-words">{ranking.rank}º</span>
                                         )}
                                       </div>
                                     </TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <span className={`${isTopThree ? "font-bold text-2xl" : "text-xl"}`}>
+                                    <TableCell className="min-w-0">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span
+                                          className={`break-words hyphens-auto max-w-full ${isTopThree ? "font-bold text-2xl" : "text-xl"}`}
+                                        >
                                           {ranking.operatorName}
                                         </span>
-                                        {isTopThree && <Star className="h-6 w-6 text-chart-1 fill-chart-1" />}
+                                        {isTopThree && (
+                                          <Star className="h-6 w-6 text-chart-1 fill-chart-1 flex-shrink-0" />
+                                        )}
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                      <div className="flex items-center justify-center gap-2">
-                                        <Brain className="h-6 w-6 text-muted-foreground" />
-                                        <span className="font-semibold text-2xl">{ranking.totalAttempts}</span>
+                                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                                        <Brain className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                                        <span className="font-semibold text-2xl break-words">
+                                          {ranking.totalAttempts}
+                                        </span>
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                      <div className="flex items-center justify-center gap-2">
-                                        <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
-                                        <span className="font-semibold text-2xl">{ranking.correctAnswers}</span>
+                                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                                        <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                        <span className="font-semibold text-2xl break-words">
+                                          {ranking.correctAnswers}
+                                        </span>
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                      <div className="flex items-center justify-center gap-2">
-                                        <TrendingUp className="h-6 w-6 text-muted-foreground" />
-                                        <span className="font-semibold text-2xl">{ranking.accuracy.toFixed(1)}%</span>
+                                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                                        <TrendingUp className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                                        <span className="font-semibold text-2xl break-words">
+                                          {ranking.accuracy.toFixed(1)}%
+                                        </span>
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <span
-                                        className={`text-2xl font-bold ${
+                                        className={`text-2xl font-bold break-words ${
                                           isTopThree
                                             ? "bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent"
                                             : ""

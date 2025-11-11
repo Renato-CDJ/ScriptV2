@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -173,20 +173,28 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
       isCorrect: correct,
     })
 
+    window.dispatchEvent(new Event("store-updated"))
+
     toast({
       title: correct ? "Resposta Correta!" : "Resposta Incorreta",
       description: correct ? "Parabéns! Você acertou a resposta." : "Infelizmente você errou.",
       variant: correct ? "default" : "destructive",
     })
 
-    // Delayed update to allow user to see result
     setTimeout(() => {
       loadDataDebounced()
-    }, 1000)
+    }, 500)
   }, [selectedQuiz, selectedAnswer, user, loadDataDebounced, toast])
 
   const rankings = useMemo(() => {
-    return getMonthlyQuizRanking(selectedYear, selectedMonth)
+    const rankingData = getMonthlyQuizRanking(selectedYear, selectedMonth)
+    console.log("[v0] Rankings fetched:", {
+      year: selectedYear,
+      month: selectedMonth,
+      rankingCount: rankingData.length,
+      rankings: rankingData,
+    })
+    return rankingData
   }, [selectedYear, selectedMonth])
 
   const userRanking = useMemo(() => {
@@ -274,6 +282,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             <DialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
               Recados e Quiz
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Visualize mensagens, responda quizzes e confira o ranking mensal de operadores
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-1 min-h-0 gap-0 overflow-hidden">
@@ -828,7 +839,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                     }`}
                                     disabled={answered || showHistory}
                                   >
-                                    <Zap className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2 flex-shrink-0" />
                                     {answered ? "Já Respondido" : showHistory ? "Visualizar" : "Responder Quiz"}
                                     {!answered && !showHistory && (
                                       <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 ml-2 animate-pulse flex-shrink-0" />
@@ -867,7 +877,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             {selectedQuiz.options.map((option, index) => (
                               <div
                                 key={option.id}
-                                className={`flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-5 rounded-xl border-2 transition-all duration-300 transform animate-in slide-in-from-left ${
+                                className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-5 rounded-xl border-2 transition-all duration-300 transform animate-in slide-in-from-left ${
                                   !showResult ? "hover:bg-muted/50 cursor-pointer hover:shadow-md" : ""
                                 } ${
                                   selectedAnswer === option.id && !showResult
@@ -883,11 +893,11 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                 <RadioGroupItem
                                   value={option.id}
                                   id={option.id}
-                                  className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0"
+                                  className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 mt-1"
                                 />
                                 <Label
                                   htmlFor={option.id}
-                                  className={`flex-1 min-w-0 cursor-pointer text-sm sm:text-base md:text-lg transition-all duration-300 break-words hyphens-auto ${
+                                  className={`flex-1 min-w-0 cursor-pointer text-sm sm:text-base md:text-lg transition-all duration-300 break-words hyphens-auto max-w-full ${
                                     showResult && option.id === selectedQuiz.correctAnswer
                                       ? "text-green-600 dark:text-green-400 font-semibold"
                                       : showResult && option.id === selectedAnswer && !isCorrect
@@ -900,7 +910,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   <span className="font-bold mr-2 sm:mr-3 text-base sm:text-lg md:text-xl bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent inline-block flex-shrink-0">
                                     {option.label})
                                   </span>
-                                  <span className="inline">{option.text}</span>
+                                  <span className="inline-block max-w-full">{option.text}</span>
                                   {showResult && option.id === selectedQuiz.correctAnswer && (
                                     <CheckCircle2 className="inline h-5 w-5 sm:h-6 sm:w-6 ml-2 sm:ml-3 text-green-600 dark:text-green-400 animate-in zoom-in-50 spin-in-180 flex-shrink-0" />
                                   )}
@@ -1037,6 +1047,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                 </p>
               </div>
             </div>
+            <DialogDescription className="sr-only">
+              Visualização ampliada da mensagem {expandedMessage?.createdByName} enviada em{" "}
+              {expandedMessage && new Date(expandedMessage.createdAt).toLocaleDateString("pt-BR")}
+            </DialogDescription>
           </DialogHeader>
 
           <Separator className="my-4 sm:my-6" />
