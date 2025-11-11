@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { RichTextEditor } from "@/components/rich-text-editor"
+import { RichTextEditorWYSIWYG } from "@/components/rich-text-editor-wysiwyg"
 import {
   Plus,
   Edit,
@@ -18,12 +18,10 @@ import {
   Upload,
   ChevronDown,
   ChevronRight,
-  Palette,
   AlignLeft,
   AlignCenter,
   AlignRight,
   AlignJustify,
-  RotateCcw,
   AlertCircle,
 } from "lucide-react"
 import {
@@ -522,156 +520,16 @@ export function ScriptsTab() {
                   </CardContent>
                 </Card>
 
-                <RichTextEditor
+                <RichTextEditorWYSIWYG
                   value={editingStep.content}
-                  segments={editingStep.contentSegments}
-                  onChange={(content, segments) =>
+                  onChange={(content) =>
                     setEditingStep({
                       ...editingStep,
                       content,
-                      contentSegments: segments,
                     })
                   }
-                  placeholder="Digite o texto do roteiro. Selecione trechos para aplicar formatação específica."
+                  placeholder="Digite o texto do roteiro. Use as ferramentas acima para aplicar formatação (negrito, itálico, cores, tamanhos, etc.) diretamente no conteúdo"
                 />
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Palette className="h-4 w-4" />
-                      Formatação Global do Texto
-                    </CardTitle>
-                    <CardDescription>Configure a aparência padrão do texto no roteiro</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="textColor" className="flex items-center gap-2">
-                          <Palette className="h-4 w-4" />
-                          Cor do Texto
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="textColor"
-                            type="color"
-                            value={editingStep.formatting?.textColor || "#000000"}
-                            onChange={(e) =>
-                              setEditingStep({
-                                ...editingStep,
-                                formatting: {
-                                  ...editingStep.formatting,
-                                  textColor: e.target.value,
-                                },
-                              })
-                            }
-                            className="w-20 h-10 cursor-pointer"
-                          />
-                          <Input
-                            type="text"
-                            value={editingStep.formatting?.textColor || "#000000"}
-                            onChange={(e) =>
-                              setEditingStep({
-                                ...editingStep,
-                                formatting: {
-                                  ...editingStep.formatting,
-                                  textColor: e.target.value,
-                                },
-                              })
-                            }
-                            placeholder="#000000"
-                            className="flex-1 font-mono"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="textAlign">Alinhamento</Label>
-                        <div className="grid grid-cols-4 gap-2">
-                          {[
-                            { value: "left", icon: <AlignLeft className="h-4 w-4" /> },
-                            { value: "center", icon: <AlignCenter className="h-4 w-4" /> },
-                            { value: "right", icon: <AlignRight className="h-4 w-4" /> },
-                            { value: "justify", icon: <AlignJustify className="h-4 w-4" /> },
-                          ].map((align) => (
-                            <Button
-                              key={align.value}
-                              type="button"
-                              variant={
-                                (editingStep.formatting?.textAlign || "left") === align.value ? "default" : "outline"
-                              }
-                              size="icon"
-                              onClick={() =>
-                                setEditingStep({
-                                  ...editingStep,
-                                  formatting: {
-                                    ...editingStep.formatting,
-                                    textAlign: align.value as "left" | "center" | "right" | "justify",
-                                  },
-                                })
-                              }
-                            >
-                              {align.icon}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="bold"
-                          checked={editingStep.formatting?.bold || false}
-                          onCheckedChange={(checked) =>
-                            setEditingStep({
-                              ...editingStep,
-                              formatting: {
-                                ...editingStep.formatting,
-                                bold: checked as boolean,
-                              },
-                            })
-                          }
-                        />
-                        <label htmlFor="bold" className="text-sm font-bold cursor-pointer">
-                          Negrito
-                        </label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="italic"
-                          checked={editingStep.formatting?.italic || false}
-                          onCheckedChange={(checked) =>
-                            setEditingStep({
-                              ...editingStep,
-                              formatting: {
-                                ...editingStep.formatting,
-                                italic: checked as boolean,
-                              },
-                            })
-                          }
-                        />
-                        <label htmlFor="italic" className="text-sm italic cursor-pointer">
-                          Itálico
-                        </label>
-                      </div>
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setEditingStep({
-                          ...editingStep,
-                          formatting: undefined,
-                        })
-                      }
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Resetar Formatação
-                    </Button>
-                  </CardContent>
-                </Card>
               </TabsContent>
 
               <TabsContent value="buttons" className="space-y-4 mt-6">

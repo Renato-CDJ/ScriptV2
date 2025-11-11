@@ -1,17 +1,5 @@
 "use client"
-
-import { TableCell } from "@/components/ui/table"
-
-import { TableBody } from "@/components/ui/table"
-
-import { TableHead } from "@/components/ui/table"
-
-import { TableRow } from "@/components/ui/table"
-
-import { TableHeader } from "@/components/ui/table"
-
-import { Table } from "@/components/ui/table"
-
+import { Table, TableBody, TableHead, TableHeader, TableCell, TableRow } from "@/components/ui/table"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -45,7 +33,7 @@ import {
   getMonthlyQuizRanking,
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
-import type { Message, Quiz, QuizOption, Ranking } from "@/lib/types"
+import type { Message, Quiz, QuizOption, Ranking, ContentSegment } from "@/lib/types"
 import {
   MessageSquare,
   Brain,
@@ -72,6 +60,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { RichTextEditorWYSIWYG } from "@/components/rich-text-editor-wysiwyg"
 
 export function MessagesQuizTab() {
   const { user } = useAuth()
@@ -92,6 +81,7 @@ export function MessagesQuizTab() {
 
   // Message form state
   const [messageContent, setMessageContent] = useState("")
+  const [messageSegments, setMessageSegments] = useState<ContentSegment[]>([])
   const [messageActive, setMessageActive] = useState(true)
   const [messageRecipients, setMessageRecipients] = useState<string[]>([])
   const [sendToAll, setSendToAll] = useState(true)
@@ -141,13 +131,13 @@ export function MessagesQuizTab() {
     let timeoutId: NodeJS.Timeout
 
     const handleStoreUpdate = () => {
-      // Debounce updates to prevent excessive re-renders
+      // Reduced debounce time from 300ms to 200ms for faster updates
       clearTimeout(timeoutId)
       timeoutId = setTimeout(() => {
         loadData()
         loadOperators()
         loadRankings()
-      }, 300)
+      }, 200)
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
@@ -191,6 +181,7 @@ export function MessagesQuizTab() {
 
   const resetMessageForm = () => {
     setMessageContent("")
+    setMessageSegments([])
     setMessageActive(true)
     setMessageRecipients([])
     setSendToAll(true)
@@ -198,7 +189,9 @@ export function MessagesQuizTab() {
     setOperatorSearch("")
   }
 
-  const handleSaveMessage = () => {
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleSaveMessage = useCallback(async () => {
     if (!user || !messageContent.trim()) {
       toast({
         title: "Erro",
@@ -217,43 +210,62 @@ export function MessagesQuizTab() {
       return
     }
 
-    const recipients = sendToAll ? [] : messageRecipients
+    setIsSaving(true)
 
-    if (editingMessage) {
-      updateMessage({
-        ...editingMessage,
-        title: messageContent.substring(0, 50) + (messageContent.length > 50 ? "..." : ""),
-        content: messageContent,
-        isActive: messageActive,
-        recipients,
-      })
-      toast({
-        title: "Recado atualizado",
-        description: "O recado foi atualizado com sucesso.",
-      })
-    } else {
-      createMessage({
-        title: messageContent.substring(0, 50) + (messageContent.length > 50 ? "..." : ""),
-        content: messageContent,
-        createdBy: user.id,
-        createdByName: user.fullName,
-        isActive: messageActive,
-        recipients,
-      })
-      toast({
-        title: "Recado criado",
-        description: "O recado foi criado com sucesso.",
-      })
+    try {
+      const recipients = sendToAll ? [] : messageRecipients
+
+      if (editingMessage) {
+        updateMessage({
+          ...editingMessage,
+          title: messageContent.substring(0, 50) + (messageContent.length > 50 ? "..." : ""),
+          content: messageContent,
+          isActive: messageActive,
+          recipients,
+          segments: messageSegments,
+        })
+        toast({
+          title: "Recado atualizado",
+          description: "O recado foi atualizado com sucesso.",
+        })
+      } else {
+        createMessage({
+          title: messageContent.substring(0, 50) + (messageContent.length > 50 ? "..." : ""),
+          content: messageContent,
+          createdBy: user.id,
+          createdByName: user.fullName,
+          isActive: messageActive,
+          recipients,
+          segments: messageSegments,
+        })
+        toast({
+          title: "Recado criado",
+          description: "O recado foi criado com sucesso.",
+        })
+      }
+
+      setShowMessageDialog(false)
+      resetMessageForm()
+      loadData()
+    } finally {
+      setIsSaving(false)
     }
-
-    setShowMessageDialog(false)
-    resetMessageForm()
-    loadData()
-  }
+  }, [
+    user,
+    messageContent,
+    sendToAll,
+    messageRecipients,
+    messageActive,
+    messageSegments,
+    editingMessage,
+    toast,
+    loadData,
+  ])
 
   const handleEditMessage = (message: Message) => {
     setEditingMessage(message)
     setMessageContent(message.content)
+    setMessageSegments(message.segments || [])
     setMessageActive(message.isActive)
     setMessageRecipients(message.recipients || [])
     setSendToAll(!message.recipients || message.recipients.length === 0)
@@ -587,22 +599,19 @@ export function MessagesQuizTab() {
                       Novo Recado
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>{editingMessage ? "Editar Recado" : "Novo Recado"}</DialogTitle>
-                      <DialogDescription>Crie um recado para ser exibido aos operadores</DialogDescription>
+                      <DialogDescription>Crie um recado formatado para ser exibido aos operadores</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="message-content">Conteúdo</Label>
-                        <Textarea
-                          id="message-content"
-                          value={messageContent}
-                          onChange={(e) => setMessageContent(e.target.value)}
-                          placeholder="Digite o conteúdo do recado"
-                          rows={6}
-                        />
-                      </div>
+                      <RichTextEditorWYSIWYG
+                        value={messageContent}
+                        onChange={(content) => {
+                          setMessageContent(content)
+                        }}
+                        placeholder="Digite o conteúdo do recado e use as ferramentas de formatação"
+                      />
 
                       <Separator />
                       <div className="space-y-3">
@@ -662,10 +671,12 @@ export function MessagesQuizTab() {
                         <Label htmlFor="message-active">Ativo</Label>
                       </div>
                       <div className="flex gap-2 justify-end">
-                        <Button variant="outline" onClick={() => setShowMessageDialog(false)}>
+                        <Button variant="outline" onClick={() => setShowMessageDialog(false)} disabled={isSaving}>
                           Cancelar
                         </Button>
-                        <Button onClick={handleSaveMessage}>Salvar</Button>
+                        <Button onClick={handleSaveMessage} disabled={isSaving}>
+                          {isSaving ? "Salvando..." : "Salvar"}
+                        </Button>
                       </div>
                     </div>
                   </DialogContent>
@@ -741,9 +752,10 @@ export function MessagesQuizTab() {
                                   </CardHeader>
                                   {isExpanded && (
                                     <CardContent>
-                                      <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere mb-3">
-                                        {message.content}
-                                      </p>
+                                      <div
+                                        className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere mb-3 prose prose-sm max-w-none dark:prose-invert"
+                                        dangerouslySetInnerHTML={{ __html: message.content }}
+                                      />
                                       <div className="text-xs text-muted-foreground break-words overflow-wrap-anywhere">
                                         <Users className="inline h-3 w-3 mr-1" />
                                         Destinatários: {getRecipientNames(message.recipients)}
@@ -801,7 +813,10 @@ export function MessagesQuizTab() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm whitespace-pre-wrap mb-4">{message.content}</p>
+                        <div
+                          className="text-sm whitespace-pre-wrap mb-4 prose prose-sm max-w-none dark:prose-invert"
+                          dangerouslySetInnerHTML={{ __html: message.content }}
+                        />
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => handleEditMessage(message)}>
                             <Edit className="h-4 w-4 mr-2" />
@@ -1264,7 +1279,6 @@ export function MessagesQuizTab() {
                                   style={{ height: "160px" }}
                                 >
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-pulse" />
                                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                                     <p className="text-8xl font-black text-white/90">1</p>
                                   </div>

@@ -432,9 +432,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             </CardHeader>
                             <CardContent>
                               <div className="bg-gradient-to-br from-muted/30 to-muted/20 rounded-xl p-4 sm:p-5 md:p-6 border-2 border-orange-500/20 dark:border-primary/20 mb-4 sm:mb-6 shadow-sm">
-                                <p className="text-sm sm:text-base md:text-lg whitespace-pre-wrap leading-relaxed break-words hyphens-auto max-w-full">
-                                  {message.content}
-                                </p>
+                                <div
+                                  className="text-sm sm:text-base md:text-lg leading-relaxed break-words hyphens-auto max-w-full prose prose-sm sm:prose-base md:prose-lg max-w-none dark:prose-invert"
+                                  dangerouslySetInnerHTML={{ __html: message.content }}
+                                />
                               </div>
                               {!seen && !showHistory && (
                                 <Button
@@ -1043,9 +1044,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
           <ScrollArea className="flex-1 min-h-0">
             <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-6 sm:p-8 md:p-10 border-2 border-orange-500/20 dark:border-primary/20 shadow-inner">
               <div className="prose prose-lg sm:prose-xl md:prose-2xl max-w-none dark:prose-invert">
-                <div className="text-lg sm:text-xl md:text-2xl whitespace-pre-wrap leading-relaxed break-words hyphens-auto text-foreground/90 max-w-full font-normal">
-                  {expandedMessage?.content}
-                </div>
+                <div
+                  className="text-lg sm:text-xl md:text-2xl leading-relaxed break-words hyphens-auto text-foreground/90 max-w-full font-normal"
+                  dangerouslySetInnerHTML={{ __html: expandedMessage?.content || "" }}
+                />
               </div>
             </div>
           </ScrollArea>
