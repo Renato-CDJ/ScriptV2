@@ -14,14 +14,26 @@ import { useToast } from "@/hooks/use-toast"
 import { createChannel, updateChannel, deleteChannel } from "@/lib/supabase/database"
 
 export function ChannelsTab() {
-  const [channels, setChannels] = useState<Channel[]>(getChannels())
+  const [channels, setChannels] = useState<Channel[]>([])
   const [editingItem, setEditingItem] = useState<Channel | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
+    loadChannels()
+  }, [])
+
+  async function loadChannels() {
+    setIsLoading(true)
+    const data = await getChannels()
+    setChannels(data)
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
     const handleStoreUpdate = () => {
-      setChannels(getChannels())
+      loadChannels()
     }
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
@@ -50,9 +62,7 @@ export function ChannelsTab() {
     if (isCreating) {
       const newChannel = await createChannel(editingItem)
       if (newChannel) {
-        const newChannels = [...channels, newChannel]
-        setChannels(newChannels)
-        window.dispatchEvent(new CustomEvent("store-updated"))
+        await loadChannels()
         toast({
           title: "Canal criado",
           description: "O novo canal foi criado com sucesso.",
@@ -60,9 +70,7 @@ export function ChannelsTab() {
       }
     } else {
       await updateChannel(editingItem)
-      const updatedChannels = channels.map((c) => (c.id === editingItem.id ? editingItem : c))
-      setChannels(updatedChannels)
-      window.dispatchEvent(new CustomEvent("store-updated"))
+      await loadChannels()
       toast({
         title: "Canal atualizado",
         description: "As alterações foram salvas com sucesso.",
@@ -76,9 +84,7 @@ export function ChannelsTab() {
   const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este canal?")) {
       await deleteChannel(id)
-      const updatedChannels = channels.filter((c) => c.id !== id)
-      setChannels(updatedChannels)
-      window.dispatchEvent(new CustomEvent("store-updated"))
+      await loadChannels()
       toast({
         title: "Canal excluído",
         description: "O canal foi removido com sucesso.",
@@ -123,7 +129,9 @@ export function ChannelsTab() {
         </Button>
       </div>
 
-      {editingItem ? (
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground">Carregando canais...</div>
+      ) : editingItem ? (
         <Card>
           <CardHeader>
             <CardTitle>{isCreating ? "Criar Novo Canal" : "Editar Canal"}</CardTitle>

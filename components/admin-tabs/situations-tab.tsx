@@ -15,15 +15,27 @@ import { useToast } from "@/hooks/use-toast"
 import { createSituation, updateSituation, deleteSituation } from "@/lib/supabase/database"
 
 export function SituationsTab() {
-  const [situations, setSituations] = useState<ServiceSituation[]>(getSituations())
+  const [situations, setSituations] = useState<ServiceSituation[]>([])
   const [editingItem, setEditingItem] = useState<ServiceSituation | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
+    loadSituations()
+  }, [])
+
+  async function loadSituations() {
+    setIsLoading(true)
+    const data = await getSituations()
+    setSituations(data)
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
     const handleStoreUpdate = () => {
-      setSituations(getSituations())
+      loadSituations()
     }
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
@@ -52,9 +64,7 @@ export function SituationsTab() {
     if (isCreating) {
       const newSituation = await createSituation(editingItem)
       if (newSituation) {
-        const newSituations = [...situations, newSituation]
-        setSituations(newSituations)
-        window.dispatchEvent(new CustomEvent("store-updated"))
+        await loadSituations()
         toast({
           title: "Situação criada",
           description: "A nova situação foi criada com sucesso.",
@@ -62,9 +72,7 @@ export function SituationsTab() {
       }
     } else {
       await updateSituation(editingItem)
-      const updatedSituations = situations.map((s) => (s.id === editingItem.id ? editingItem : s))
-      setSituations(updatedSituations)
-      window.dispatchEvent(new CustomEvent("store-updated"))
+      await loadSituations()
       toast({
         title: "Situação atualizada",
         description: "As alterações foram salvas com sucesso.",
@@ -78,9 +86,7 @@ export function SituationsTab() {
   const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta situação?")) {
       await deleteSituation(id)
-      const updatedSituations = situations.filter((s) => s.id !== id)
-      setSituations(updatedSituations)
-      window.dispatchEvent(new CustomEvent("store-updated"))
+      await loadSituations()
       toast({
         title: "Situação excluída",
         description: "A situação foi removida com sucesso.",
@@ -110,7 +116,9 @@ export function SituationsTab() {
         </Button>
       </div>
 
-      {editingItem ? (
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground">Carregando situações...</div>
+      ) : editingItem ? (
         <Card>
           <CardHeader>
             <CardTitle>{isCreating ? "Criar Nova Situação" : "Editar Situação"}</CardTitle>

@@ -13,14 +13,26 @@ import { useToast } from "@/hooks/use-toast"
 import { createTabulation, updateTabulation, deleteTabulation } from "@/lib/supabase/database"
 
 export function TabulationsTab() {
-  const [tabulations, setTabulations] = useState<Tabulation[]>(getTabulations())
+  const [tabulations, setTabulations] = useState<Tabulation[]>([])
   const [editingItem, setEditingItem] = useState<Tabulation | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
+    loadTabulations()
+  }, [])
+
+  async function loadTabulations() {
+    setIsLoading(true)
+    const data = await getTabulations()
+    setTabulations(data)
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
     const handleStoreUpdate = () => {
-      setTabulations(getTabulations())
+      loadTabulations()
     }
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
@@ -49,9 +61,7 @@ export function TabulationsTab() {
     if (isCreating) {
       const newTabulation = await createTabulation(editingItem)
       if (newTabulation) {
-        const newTabulations = [...tabulations, newTabulation]
-        setTabulations(newTabulations)
-        window.dispatchEvent(new CustomEvent("store-updated"))
+        await loadTabulations()
         toast({
           title: "Tabulação criada",
           description: "A nova tabulação foi criada com sucesso.",
@@ -59,9 +69,7 @@ export function TabulationsTab() {
       }
     } else {
       await updateTabulation(editingItem)
-      const updatedTabulations = tabulations.map((t) => (t.id === editingItem.id ? editingItem : t))
-      setTabulations(updatedTabulations)
-      window.dispatchEvent(new CustomEvent("store-updated"))
+      await loadTabulations()
       toast({
         title: "Tabulação atualizada",
         description: "As alterações foram salvas com sucesso.",
@@ -75,9 +83,7 @@ export function TabulationsTab() {
   const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta tabulação?")) {
       await deleteTabulation(id)
-      const updatedTabulations = tabulations.filter((t) => t.id !== id)
-      setTabulations(updatedTabulations)
-      window.dispatchEvent(new CustomEvent("store-updated"))
+      await loadTabulations()
       toast({
         title: "Tabulação excluída",
         description: "A tabulação foi removida com sucesso.",
@@ -107,7 +113,9 @@ export function TabulationsTab() {
         </Button>
       </div>
 
-      {editingItem ? (
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground">Carregando tabulações...</div>
+      ) : editingItem ? (
         <Card>
           <CardHeader>
             <CardTitle>{isCreating ? "Criar Nova Tabulação" : "Editar Tabulação"}</CardTitle>
