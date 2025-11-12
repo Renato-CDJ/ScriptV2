@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, Save, X } from "lucide-react"
 import { getTabulations } from "@/lib/store"
 import type { Tabulation } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
+import { createTabulation, updateTabulation, deleteTabulation } from "@/lib/supabase/database"
 
 export function TabulationsTab() {
   const [tabulations, setTabulations] = useState<Tabulation[]>(getTabulations())
@@ -42,43 +43,41 @@ export function TabulationsTab() {
     setIsCreating(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingItem) return
 
     if (isCreating) {
-      const newTabulations = [...tabulations, editingItem]
-      localStorage.setItem("callcenter_tabulations", JSON.stringify(newTabulations))
-      setTabulations(newTabulations)
-      toast({
-        title: "Tabulação criada",
-        description: "A nova tabulação foi criada com sucesso.",
-      })
+      const newTabulation = await createTabulation(editingItem)
+      if (newTabulation) {
+        const newTabulations = [...tabulations, newTabulation]
+        setTabulations(newTabulations)
+        window.dispatchEvent(new CustomEvent("store-updated"))
+        toast({
+          title: "Tabulação criada",
+          description: "A nova tabulação foi criada com sucesso.",
+        })
+      }
     } else {
+      await updateTabulation(editingItem)
       const updatedTabulations = tabulations.map((t) => (t.id === editingItem.id ? editingItem : t))
-      localStorage.setItem("callcenter_tabulations", JSON.stringify(updatedTabulations))
       setTabulations(updatedTabulations)
+      window.dispatchEvent(new CustomEvent("store-updated"))
       toast({
         title: "Tabulação atualizada",
         description: "As alterações foram salvas com sucesso.",
       })
     }
 
-    localStorage.setItem("callcenter_last_update", Date.now().toString())
-    window.dispatchEvent(new CustomEvent("store-updated"))
-
     setEditingItem(null)
     setIsCreating(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta tabulação?")) {
+      await deleteTabulation(id)
       const updatedTabulations = tabulations.filter((t) => t.id !== id)
-      localStorage.setItem("callcenter_tabulations", JSON.stringify(updatedTabulations))
       setTabulations(updatedTabulations)
-
-      localStorage.setItem("callcenter_last_update", Date.now().toString())
       window.dispatchEvent(new CustomEvent("store-updated"))
-
       toast({
         title: "Tabulação excluída",
         description: "A tabulação foi removida com sucesso.",

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { getSituations } from "@/lib/store"
 import type { ServiceSituation } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
+import { createSituation, updateSituation, deleteSituation } from "@/lib/supabase/database"
 
 export function SituationsTab() {
   const [situations, setSituations] = useState<ServiceSituation[]>(getSituations())
@@ -45,43 +46,41 @@ export function SituationsTab() {
     setIsCreating(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingItem) return
 
     if (isCreating) {
-      const newSituations = [...situations, editingItem]
-      localStorage.setItem("callcenter_situations", JSON.stringify(newSituations))
-      setSituations(newSituations)
-      toast({
-        title: "Situação criada",
-        description: "A nova situação foi criada com sucesso.",
-      })
+      const newSituation = await createSituation(editingItem)
+      if (newSituation) {
+        const newSituations = [...situations, newSituation]
+        setSituations(newSituations)
+        window.dispatchEvent(new CustomEvent("store-updated"))
+        toast({
+          title: "Situação criada",
+          description: "A nova situação foi criada com sucesso.",
+        })
+      }
     } else {
+      await updateSituation(editingItem)
       const updatedSituations = situations.map((s) => (s.id === editingItem.id ? editingItem : s))
-      localStorage.setItem("callcenter_situations", JSON.stringify(updatedSituations))
       setSituations(updatedSituations)
+      window.dispatchEvent(new CustomEvent("store-updated"))
       toast({
         title: "Situação atualizada",
         description: "As alterações foram salvas com sucesso.",
       })
     }
 
-    localStorage.setItem("callcenter_last_update", Date.now().toString())
-    window.dispatchEvent(new CustomEvent("store-updated"))
-
     setEditingItem(null)
     setIsCreating(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta situação?")) {
+      await deleteSituation(id)
       const updatedSituations = situations.filter((s) => s.id !== id)
-      localStorage.setItem("callcenter_situations", JSON.stringify(updatedSituations))
       setSituations(updatedSituations)
-
-      localStorage.setItem("callcenter_last_update", Date.now().toString())
       window.dispatchEvent(new CustomEvent("store-updated"))
-
       toast({
         title: "Situação excluída",
         description: "A situação foi removida com sucesso.",

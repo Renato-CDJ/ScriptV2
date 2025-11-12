@@ -27,6 +27,7 @@ import {
   getTodayConnectedTime,
   getCurrentUser,
   isUserOnline,
+  createUser,
 } from "@/lib/store"
 import type { User } from "@/lib/types"
 import * as XLSX from "xlsx"
@@ -44,8 +45,8 @@ export function OperatorsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const loadOperators = () => {
-      const allUsers = getAllUsers()
+    const loadOperators = async () => {
+      const allUsers = await getAllUsers()
       setOperators(allUsers.filter((u) => u.role === "operator"))
     }
 
@@ -108,7 +109,7 @@ export function OperatorsTab() {
     })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.fullName.trim() || !formData.username.trim()) {
       toast({
         title: "Erro",
@@ -125,14 +126,15 @@ export function OperatorsTab() {
         fullName: formData.fullName,
         username: formData.username,
       }
-      updateUser(updatedOperator)
+      await updateUser(updatedOperator)
       toast({
         title: "Sucesso",
         description: "Operador atualizado com sucesso",
       })
     } else {
       // Check if username already exists
-      if (operators.some((op) => op.username === formData.username)) {
+      const allUsers = await getAllUsers()
+      if (allUsers.some((op) => op.username === formData.username)) {
         toast({
           title: "Erro",
           description: "Este usuário já existe",
@@ -141,31 +143,22 @@ export function OperatorsTab() {
         return
       }
 
-      const newOperator: User = {
-        id: `op-${Date.now()}`,
-        username: formData.username,
-        fullName: formData.fullName,
-        isOnline: false,
-        role: "operator",
-        createdAt: new Date(),
-        loginSessions: [],
+      const newOperator = await createUser(formData.username, formData.fullName, "operator")
+
+      if (!newOperator) {
+        toast({
+          title: "Erro",
+          description: "Erro ao criar operador",
+          variant: "destructive",
+        })
+        return
       }
 
-      const allUsers = getAllUsers()
-      allUsers.push(newOperator)
-      localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
-
-      // Trigger store update notification
-      window.dispatchEvent(new CustomEvent("store-updated"))
-
-      // Update local state immediately
-      setOperators([...operators, newOperator])
+      toast({
+        title: "Sucesso",
+        description: "Operador adicionado com sucesso",
+      })
     }
-
-    toast({
-      title: "Sucesso",
-      description: "Operador adicionado com sucesso",
-    })
 
     setIsDialogOpen(false)
   }
@@ -252,7 +245,7 @@ export function OperatorsTab() {
       }
 
       // Import operators
-      const allUsers = getAllUsers()
+      const allUsers = await getAllUsers()
       let importedCount = 0
       let skippedCount = 0
       const errors: string[] = []
@@ -274,42 +267,35 @@ export function OperatorsTab() {
           return
         }
 
-        // Create new operator
-        const newOperator: User = {
-          id: `op-${Date.now()}-${index}`,
-          username: username,
-          fullName: fullName,
-          isOnline: false,
-          role: "operator",
-          createdAt: new Date(),
-          loginSessions: [],
-        }
-
-        allUsers.push(newOperator)
-        importedCount++
+        createUser(username, fullName, "operator").then((newOperator) => {
+          if (newOperator) {
+            importedCount++
+          } else {
+            skippedCount++
+            errors.push(`Linha ${index + 2}: Erro ao criar "${username}"`)
+          }
+        })
       })
 
-      // Save to localStorage
-      localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
-      window.dispatchEvent(new CustomEvent("store-updated"))
-
-      // Show results
-      if (importedCount > 0) {
-        toast({
-          title: "Importação Concluída",
-          description: `${importedCount} operador(es) importado(s) com sucesso${skippedCount > 0 ? `. ${skippedCount} ignorado(s)` : ""}`,
-        })
-      }
-
-      if (errors.length > 0 && errors.length <= 5) {
-        setTimeout(() => {
+      setTimeout(() => {
+        // Show results
+        if (importedCount > 0) {
           toast({
-            title: "Avisos",
-            description: errors.join("\n"),
-            variant: "destructive",
+            title: "Importação Concluída",
+            description: `${importedCount} operador(es) importado(s) com sucesso${skippedCount > 0 ? `. ${skippedCount} ignorado(s)` : ""}`,
           })
-        }, 500)
-      }
+        }
+
+        if (errors.length > 0 && errors.length <= 5) {
+          setTimeout(() => {
+            toast({
+              title: "Avisos",
+              description: errors.join("\n"),
+              variant: "destructive",
+            })
+          }, 500)
+        }
+      }, 1000)
     } catch (error) {
       toast({
         title: "Erro",
