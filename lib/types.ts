@@ -128,6 +128,7 @@ export interface Message {
   isActive: boolean
   seenBy: string[] // array of operator user ids who have seen this message
   recipients: string[] // array of operator user ids, empty array means all operators
+  segments?: ContentSegment[] // Added segments field for formatted content
 }
 
 export interface Quiz {
@@ -212,4 +213,36 @@ export interface Product {
   attendanceTypes?: ("ativo" | "receptivo")[]
   personTypes?: ("fisica" | "juridica")[]
   description?: string // Added description field for hover tooltip
+}
+
+export interface PresentationSlide {
+  id: string
+  order: number
+  imageUrl: string
+  imageData?: string // base64 for pasted images
+  title?: string
+  description?: string
+}
+
+export interface Presentation {
+  id: string
+  title: string
+  description: string
+  slides: PresentationSlide[]
+  createdBy: string // admin user id
+  createdByName: string // admin user name
+  createdAt: Date
+  updatedAt: Date
+  isActive: boolean
+  recipients: string[] // array of operator user ids, empty array means all operators
+}
+
+export interface PresentationProgress {
+  id: string
+  presentationId: string
+  operatorId: string
+  operatorName: string
+  viewedAt: Date
+  marked_as_seen: boolean
+  completion_date?: Date
 }

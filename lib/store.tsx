@@ -19,6 +19,8 @@ import type {
   AdminPermissions,
   ChatMessage, // Imported for chat
   ChatSettings, // Imported for chat
+  Presentation, // Imported for presentations
+  PresentationProgress, // Imported for presentation progress
 } from "./types"
 
 const saveQueue: Map<string, any> = new Map()
@@ -537,6 +539,8 @@ const STORAGE_KEYS = {
   QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
   CHAT_MESSAGES: "callcenter_chat_messages",
   CHAT_SETTINGS: "callcenter_chat_settings",
+  PRESENTATIONS: "callcenter_presentations",
+  PRESENTATION_PROGRESS: "callcenter_presentation_progress",
 }
 
 // Initialize mock data
@@ -623,6 +627,14 @@ export function initializeMockData() {
 
   if (!localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES)) {
     localStorage.setItem(STORAGE_KEYS.CHAT_MESSAGES, JSON.stringify([]))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.PRESENTATIONS)) {
+    localStorage.setItem(STORAGE_KEYS.PRESENTATIONS, JSON.stringify([]))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.PRESENTATION_PROGRESS)) {
+    localStorage.setItem(STORAGE_KEYS.PRESENTATION_PROGRESS, JSON.stringify([]))
   }
 
   cleanupOldSessions()
@@ -1782,4 +1794,133 @@ export function deleteChatMessage(messageId: string) {
   const messages = getAllChatMessages().filter((m) => m.id !== messageId)
   debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
   notifyUpdate()
+}
+
+export function getPresentations(): Presentation[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRESENTATIONS) || "[]")
+}
+
+export function getActivePresentations(): Presentation[] {
+  return getPresentations().filter((p) => p.isActive)
+}
+
+export function getActivePresentationsForOperator(operatorId: string): Presentation[] {
+  return getActivePresentations().filter((p) => {
+    if (p.recipients && p.recipients.length > 0) {
+      return p.recipients.includes(operatorId)
+    }
+    return true // Empty recipients means for all operators
+  })
+}
+
+export function createPresentation(presentation: Omit<Presentation, "id" | "createdAt" | "updatedAt">): Presentation {
+  if (typeof window === "undefined") return { ...presentation, id: "", createdAt: new Date(), updatedAt: new Date() }
+
+  const newPresentation: Presentation = {
+    ...presentation,
+    id: `pres-${Date.now()}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  const presentations = getPresentations()
+  presentations.push(newPresentation)
+  debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+  notifyUpdate()
+
+  return newPresentation
+}
+
+export function updatePresentation(presentation: Presentation) {
+  if (typeof window === "undefined") return
+
+  const presentations = getPresentations()
+  const index = presentations.findIndex((p) => p.id === presentation.id)
+
+  if (index !== -1) {
+    presentations[index] = { ...presentation, updatedAt: new Date() }
+    debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+    notifyUpdate()
+  }
+}
+
+export function deletePresentation(id: string) {
+  if (typeof window === "undefined") return
+
+  const presentations = getPresentations().filter((p) => p.id !== id)
+  debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+  notifyUpdate()
+}
+
+// Presentation Progress tracking
+export function getPresentationProgress(): PresentationProgress[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRESENTATION_PROGRESS) || "[]")
+}
+
+export function getPresentationProgressByOperator(operatorId: string): PresentationProgress[] {
+  return getPresentationProgress().filter((p) => p.operatorId === operatorId)
+}
+
+export function getPresentationProgressByPresentation(presentationId: string): PresentationProgress[] {
+  return getPresentationProgress().filter((p) => p.presentationId === presentationId)
+}
+
+export function markPresentationAsSeen(presentationId: string, operatorId: string, operatorName: string) {
+  if (typeof window === "undefined") return
+
+  const progress = getPresentationProgress()
+  const existing = progress.find((p) => p.presentationId === presentationId && p.operatorId === operatorId)
+
+  if (existing) {
+    existing.marked_as_seen = true
+    existing.completion_date = new Date()
+  } else {
+    const newProgress: PresentationProgress = {
+      id: `prog-${Date.now()}`,
+      presentationId,
+      operatorId,
+      operatorName,
+      viewedAt: new Date(),
+      marked_as_seen: true,
+      completion_date: new Date(),
+    }
+    progress.push(newProgress)
+  }
+
+  debouncedSave(STORAGE_KEYS.PRESENTATION_PROGRESS, progress)
+  notifyUpdate()
+}
+
+export function exportPresentationReport(presentationId: string): string {
+  const presentation = getPresentations().find((p) => p.id === presentationId)
+  const progressList = getPresentationProgressByPresentation(presentationId)
+
+  if (!presentation) {
+    return ""
+  }
+
+  // Create CSV content
+  let csvContent = "data:text/csv;charset=utf-8,"
+
+  // Header
+  csvContent += "Relatório de Treinamento - Apresentação\n\n"
+  csvContent += `Título:,${presentation.title.replace(/,/g, ";")}\n`
+  csvContent += `Descrição:,${presentation.description.replace(/,/g, ";")}\n`
+  csvContent += `Total de Slides:,${presentation.slides.length}\n`
+  csvContent += `Criada por:,${presentation.createdByName}\n`
+  csvContent += `Data de criação:,${new Date(presentation.createdAt).toLocaleDateString("pt-BR")}\n`
+  csvContent += `Total de Operadores que Visualizaram:,${progressList.filter((p) => p.marked_as_seen).length}\n\n`
+
+  // Progress details
+  csvContent += "Detalhes de Visualização:\n"
+  csvContent += "Operador,Data de Visualização,Hora,Marcado como Visto\n"
+
+  progressList.forEach((progress) => {
+    const date = new Date(progress.viewedAt)
+    csvContent += `${progress.operatorName},${date.toLocaleDateString("pt-BR")},${date.toLocaleTimeString("pt-BR")},${progress.marked_as_seen ? "Sim" : "Não"}\n`
+  })
+
+  return csvContent
 }

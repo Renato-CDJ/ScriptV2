@@ -35,6 +35,9 @@ const SettingsPage = lazy(() => import("@/app/admin/settings/page"))
 const AccessControlTab = lazy(() =>
   import("@/components/admin-tabs/access-control-tab").then((m) => ({ default: m.AccessControlTab })),
 )
+const PresentationsTab = lazy(() =>
+  import("@/components/admin-tabs/presentations-tab").then((m) => ({ default: m.PresentationsTab })),
+)
 
 const LoadingFallback = memo(function LoadingFallback() {
   return (
@@ -135,6 +138,12 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <AccessControlTab />
+          </Suspense>
+        )
+      case "presentations":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <PresentationsTab />
           </Suspense>
         )
       default:

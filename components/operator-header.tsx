@@ -19,6 +19,7 @@ import {
   Filter,
   Bell,
   MessageCircle,
+  BookOpen,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
@@ -27,6 +28,7 @@ import {
   getActiveQuizzesForOperator,
   hasOperatorAnsweredQuiz,
   getChatMessagesForUser,
+  getActivePresentationsForOperator,
 } from "@/lib/store"
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -36,6 +38,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { OperatorMessagesModal } from "@/components/operator-messages-modal"
 import { OperatorChatModal } from "@/components/operator-chat-modal"
+import { OperatorPresentationsModal } from "@/components/operator-presentations-modal"
 
 interface OperatorHeaderProps {
   searchQuery?: string
@@ -71,11 +74,14 @@ export const OperatorHeader = memo(function OperatorHeader({
   const [unseenMessagesCount, setUnseenMessagesCount] = useState(0)
   const [showChatModal, setShowChatModal] = useState(false)
   const [unreadChatCount, setUnreadChatCount] = useState(0)
+  const [showPresentationsModal, setShowPresentationsModal] = useState(false)
+  const [availablePresentationsCount, setAvailablePresentationsCount] = useState(0)
 
   useEffect(() => {
     const handleStoreUpdate = () => {
       setProducts(getProducts().filter((p) => p.isActive))
       updateUnseenCount()
+      updateAvailablePresentationsCount()
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
@@ -85,9 +91,11 @@ export const OperatorHeader = memo(function OperatorHeader({
   useEffect(() => {
     updateUnseenCount()
     updateUnreadChatCount()
+    updateAvailablePresentationsCount()
     const interval = setInterval(() => {
       updateUnseenCount()
       updateUnreadChatCount()
+      updateAvailablePresentationsCount()
     }, 5000)
 
     return () => clearInterval(interval)
@@ -112,6 +120,13 @@ export const OperatorHeader = memo(function OperatorHeader({
     const unreadCount = messages.filter((m: any) => !m.isRead && m.senderId !== user.id).length
 
     setUnreadChatCount(unreadCount)
+  }, [user])
+
+  const updateAvailablePresentationsCount = useCallback(() => {
+    if (!user) return
+
+    const presentations = getActivePresentationsForOperator(user.id)
+    setAvailablePresentationsCount(presentations.length)
   }, [user])
 
   const handleLogout = useCallback(() => {
@@ -337,6 +352,24 @@ export const OperatorHeader = memo(function OperatorHeader({
               <Button
                 variant="outline"
                 size="icon"
+                onClick={() => setShowPresentationsModal(true)}
+                className="h-9 w-9 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 dark:from-yellow-600 dark:to-orange-600 dark:hover:from-yellow-700 dark:hover:to-orange-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
+                title="Treinamentos"
+              >
+                <BookOpen className="h-4 w-4" />
+                {availablePresentationsCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  >
+                    {availablePresentationsCount}
+                  </Badge>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => setShowMessagesModal(true)}
                 className="h-9 w-9 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-700 dark:hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
                 title="Recados e Quiz"
@@ -439,6 +472,7 @@ export const OperatorHeader = memo(function OperatorHeader({
 
       <OperatorMessagesModal open={showMessagesModal} onOpenChange={setShowMessagesModal} />
       <OperatorChatModal open={showChatModal} onOpenChange={setShowChatModal} />
+      <OperatorPresentationsModal isOpen={showPresentationsModal} onClose={() => setShowPresentationsModal(false)} />
     </>
   )
 })

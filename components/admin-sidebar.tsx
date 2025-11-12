@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Shield,
   MessageCircle,
+  Presentation,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -41,6 +42,7 @@ const menuItems = [
   { id: "notes", label: "Bloco de Notas", icon: StickyNote, permission: "notes" },
   { id: "operators", label: "Operadores", icon: Users, permission: "operators" },
   { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
+  { id: "presentations", label: "Apresentações", icon: Presentation, permission: "messagesQuiz" },
   { id: "chat", label: "Chat", icon: MessageCircle, permission: "chat" },
   { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]
