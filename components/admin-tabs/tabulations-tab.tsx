@@ -10,29 +10,16 @@ import { Plus, Edit, Trash2, Save, X } from "lucide-react"
 import { getTabulations } from "@/lib/store"
 import type { Tabulation } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { createTabulation, updateTabulation, deleteTabulation } from "@/lib/supabase/database"
 
 export function TabulationsTab() {
-  const [tabulations, setTabulations] = useState<Tabulation[]>([])
+  const [tabulations, setTabulations] = useState<Tabulation[]>(getTabulations())
   const [editingItem, setEditingItem] = useState<Tabulation | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    loadTabulations()
-  }, [])
-
-  async function loadTabulations() {
-    setIsLoading(true)
-    const data = await getTabulations()
-    setTabulations(data)
-    setIsLoading(false)
-  }
-
-  useEffect(() => {
     const handleStoreUpdate = () => {
-      loadTabulations()
+      setTabulations(getTabulations())
     }
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
@@ -55,35 +42,43 @@ export function TabulationsTab() {
     setIsCreating(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!editingItem) return
 
     if (isCreating) {
-      const newTabulation = await createTabulation(editingItem)
-      if (newTabulation) {
-        await loadTabulations()
-        toast({
-          title: "Tabulação criada",
-          description: "A nova tabulação foi criada com sucesso.",
-        })
-      }
+      const newTabulations = [...tabulations, editingItem]
+      localStorage.setItem("callcenter_tabulations", JSON.stringify(newTabulations))
+      setTabulations(newTabulations)
+      toast({
+        title: "Tabulação criada",
+        description: "A nova tabulação foi criada com sucesso.",
+      })
     } else {
-      await updateTabulation(editingItem)
-      await loadTabulations()
+      const updatedTabulations = tabulations.map((t) => (t.id === editingItem.id ? editingItem : t))
+      localStorage.setItem("callcenter_tabulations", JSON.stringify(updatedTabulations))
+      setTabulations(updatedTabulations)
       toast({
         title: "Tabulação atualizada",
         description: "As alterações foram salvas com sucesso.",
       })
     }
 
+    localStorage.setItem("callcenter_last_update", Date.now().toString())
+    window.dispatchEvent(new CustomEvent("store-updated"))
+
     setEditingItem(null)
     setIsCreating(false)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta tabulação?")) {
-      await deleteTabulation(id)
-      await loadTabulations()
+      const updatedTabulations = tabulations.filter((t) => t.id !== id)
+      localStorage.setItem("callcenter_tabulations", JSON.stringify(updatedTabulations))
+      setTabulations(updatedTabulations)
+
+      localStorage.setItem("callcenter_last_update", Date.now().toString())
+      window.dispatchEvent(new CustomEvent("store-updated"))
+
       toast({
         title: "Tabulação excluída",
         description: "A tabulação foi removida com sucesso.",
@@ -113,9 +108,7 @@ export function TabulationsTab() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">Carregando tabulações...</div>
-      ) : editingItem ? (
+      {editingItem ? (
         <Card>
           <CardHeader>
             <CardTitle>{isCreating ? "Criar Nova Tabulação" : "Editar Tabulação"}</CardTitle>
