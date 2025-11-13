@@ -12,17 +12,30 @@ import { Badge } from "@/components/ui/badge"
 import { getSituations } from "@/lib/store"
 import type { ServiceSituation } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
+import { createSituation, updateSituation, deleteSituation } from "@/lib/supabase/database"
 
 export function SituationsTab() {
-  const [situations, setSituations] = useState<ServiceSituation[]>(getSituations())
+  const [situations, setSituations] = useState<ServiceSituation[]>([])
   const [editingItem, setEditingItem] = useState<ServiceSituation | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
+    loadSituations()
+  }, [])
+
+  async function loadSituations() {
+    setIsLoading(true)
+    const data = await getSituations()
+    setSituations(data)
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
     const handleStoreUpdate = () => {
-      setSituations(getSituations())
+      loadSituations()
     }
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
@@ -45,43 +58,35 @@ export function SituationsTab() {
     setIsCreating(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingItem) return
 
     if (isCreating) {
-      const newSituations = [...situations, editingItem]
-      localStorage.setItem("callcenter_situations", JSON.stringify(newSituations))
-      setSituations(newSituations)
-      toast({
-        title: "Situação criada",
-        description: "A nova situação foi criada com sucesso.",
-      })
+      const newSituation = await createSituation(editingItem)
+      if (newSituation) {
+        await loadSituations()
+        toast({
+          title: "Situação criada",
+          description: "A nova situação foi criada com sucesso.",
+        })
+      }
     } else {
-      const updatedSituations = situations.map((s) => (s.id === editingItem.id ? editingItem : s))
-      localStorage.setItem("callcenter_situations", JSON.stringify(updatedSituations))
-      setSituations(updatedSituations)
+      await updateSituation(editingItem)
+      await loadSituations()
       toast({
         title: "Situação atualizada",
         description: "As alterações foram salvas com sucesso.",
       })
     }
 
-    localStorage.setItem("callcenter_last_update", Date.now().toString())
-    window.dispatchEvent(new CustomEvent("store-updated"))
-
     setEditingItem(null)
     setIsCreating(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta situação?")) {
-      const updatedSituations = situations.filter((s) => s.id !== id)
-      localStorage.setItem("callcenter_situations", JSON.stringify(updatedSituations))
-      setSituations(updatedSituations)
-
-      localStorage.setItem("callcenter_last_update", Date.now().toString())
-      window.dispatchEvent(new CustomEvent("store-updated"))
-
+      await deleteSituation(id)
+      await loadSituations()
       toast({
         title: "Situação excluída",
         description: "A situação foi removida com sucesso.",
@@ -111,7 +116,9 @@ export function SituationsTab() {
         </Button>
       </div>
 
-      {editingItem ? (
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground">Carregando situações...</div>
+      ) : editingItem ? (
         <Card>
           <CardHeader>
             <CardTitle>{isCreating ? "Criar Nova Situação" : "Editar Situação"}</CardTitle>
