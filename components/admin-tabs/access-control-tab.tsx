@@ -61,8 +61,8 @@ export function AccessControlTab() {
     loadAdminUsers()
   }, [])
 
-  const loadAdminUsers = () => {
-    const users = getAdminUsers()
+  const loadAdminUsers = async () => {
+    const users = await getAdminUsers()
     setAdminUsers(users)
   }
 
@@ -72,7 +72,7 @@ export function AccessControlTab() {
   }, [])
 
   const handleSaveName = useCallback(
-    (user: User) => {
+    async (user: User) => {
       if (!editedName.trim()) {
         toast({
           title: "Erro",
@@ -83,9 +83,9 @@ export function AccessControlTab() {
       }
 
       const updatedUser = { ...user, fullName: editedName.trim() }
-      updateUser(updatedUser)
+      await updateUser(updatedUser)
       setEditingUser(null)
-      loadAdminUsers()
+      await loadAdminUsers()
 
       toast({
         title: "Nome atualizado",
@@ -101,15 +101,15 @@ export function AccessControlTab() {
   }, [])
 
   const handlePermissionToggle = useCallback(
-    (user: User, permission: keyof AdminPermissions) => {
+    async (user: User, permission: keyof AdminPermissions) => {
       const currentPermissions = user.permissions || {}
       const updatedPermissions = {
         ...currentPermissions,
         [permission]: !currentPermissions[permission],
       }
 
-      updateAdminPermissions(user.id, updatedPermissions)
-      loadAdminUsers()
+      await updateAdminPermissions(user.id, updatedPermissions)
+      await loadAdminUsers()
 
       toast({
         title: "Permissão atualizada",
@@ -119,7 +119,7 @@ export function AccessControlTab() {
     [toast, permissionLabels],
   )
 
-  const handleCreateUser = useCallback(() => {
+  const handleCreateUser = useCallback(async () => {
     if (!newUsername.trim() || !newFullName.trim()) {
       toast({
         title: "Erro",
@@ -129,7 +129,7 @@ export function AccessControlTab() {
       return
     }
 
-    const newUser = createAdminUser(newUsername.trim(), newFullName.trim())
+    const newUser = await createAdminUser(newUsername.trim(), newFullName.trim())
 
     if (!newUser) {
       toast({
@@ -143,7 +143,7 @@ export function AccessControlTab() {
     setShowCreateForm(false)
     setNewUsername("")
     setNewFullName("")
-    loadAdminUsers()
+    await loadAdminUsers()
 
     toast({
       title: "Usuário criado",
@@ -151,10 +151,11 @@ export function AccessControlTab() {
     })
   }, [newUsername, newFullName, toast])
 
-  const handleDeleteUser = useCallback(() => {
+  const handleDeleteUser = useCallback(async () => {
     if (!userToDelete) return
 
-    if (!canDeleteAdminUser(userToDelete.id)) {
+    const canDelete = await canDeleteAdminUser(userToDelete.id)
+    if (!canDelete) {
       toast({
         title: "Erro",
         description: "Não é possível excluir este usuário",
@@ -164,9 +165,9 @@ export function AccessControlTab() {
       return
     }
 
-    deleteUser(userToDelete.id)
+    await deleteUser(userToDelete.id)
     setUserToDelete(null)
-    loadAdminUsers()
+    await loadAdminUsers()
 
     toast({
       title: "Usuário excluído",

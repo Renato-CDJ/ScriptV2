@@ -9,7 +9,7 @@ import { getActivePresentationsForOperator, getPresentationProgressByOperator } 
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
 import type { Presentation } from "@/lib/types"
-import { BookOpen, Play } from "lucide-react"
+import { BookOpen, Play } from 'lucide-react'
 
 interface OperatorPresentationsModalProps {
   isOpen: boolean
@@ -23,12 +23,12 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const [showViewer, setShowViewer] = useState(false)
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     if (user) {
-      const activePresentations = getActivePresentationsForOperator(user.id)
+      const activePresentations = await getActivePresentationsForOperator(user.id)
       setPresentations(activePresentations)
 
-      const progress = getPresentationProgressByOperator(user.id)
+      const progress = await getPresentationProgressByOperator(user.id)
       const completed = new Set(progress.filter((p) => p.marked_as_seen).map((p) => p.presentationId))
       setCompletedIds(completed)
     }

@@ -52,9 +52,10 @@ export function PresentationsTab() {
   const [sendToAll, setSendToAll] = useState(true)
   const [operatorSearch, setOperatorSearch] = useState("")
 
-  const loadData = useCallback(() => {
-    setPresentations(getPresentations())
-    const allUsers = getAllUsers()
+  const loadData = useCallback(async () => {
+    const allPresentations = await getPresentations()
+    setPresentations(allPresentations)
+    const allUsers = await getAllUsers()
     setOperators(allUsers.filter((u) => u.role === "operator").map((u) => ({ id: u.id, fullName: u.fullName })))
   }, [])
 
@@ -148,7 +149,7 @@ export function PresentationsTab() {
     }
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!user || !title.trim() || slides.length === 0) {
       toast({
         title: "Erro",
@@ -178,7 +179,7 @@ export function PresentationsTab() {
     }
 
     if (editingPresentation) {
-      updatePresentation({
+      await updatePresentation({
         ...editingPresentation,
         ...presentationData,
       })
@@ -187,7 +188,7 @@ export function PresentationsTab() {
         description: "A apresentação foi atualizada com sucesso.",
       })
     } else {
-      createPresentation(presentationData as any)
+      await createPresentation(presentationData as any)
       toast({
         title: "Apresentação criada",
         description: "A apresentação foi criada com sucesso.",
@@ -210,9 +211,9 @@ export function PresentationsTab() {
     setShowDialog(true)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta apresentação?")) {
-      deletePresentation(id)
+      await deletePresentation(id)
       toast({
         title: "Apresentação excluída",
         description: "A apresentação foi excluída com sucesso.",
@@ -221,8 +222,8 @@ export function PresentationsTab() {
     }
   }
 
-  const handleExportReport = (presentationId: string) => {
-    const csvContent = exportPresentationReport(presentationId)
+  const handleExportReport = async (presentationId: string) => {
+    const csvContent = await exportPresentationReport(presentationId)
     if (!csvContent) {
       toast({
         title: "Erro",

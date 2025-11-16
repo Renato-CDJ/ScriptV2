@@ -104,39 +104,42 @@ export function MessagesQuizTab() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  // CHANGE: Using useCallback to memoize expensive functions
-  const loadData = useCallback(() => {
-    setMessages(getMessages())
-    setQuizzes(getQuizzes())
+  // CHANGE: Making loadData async to properly await getMessages and getQuizzes
+  const loadData = useCallback(async () => {
+    const fetchedMessages = await getMessages()
+    const fetchedQuizzes = await getQuizzes()
+    setMessages(fetchedMessages)
+    setQuizzes(fetchedQuizzes)
   }, [])
 
-  const loadOperators = useCallback(() => {
-    const allUsers = getAllUsers()
+  // CHANGE: Making loadOperators async to properly await getAllUsers
+  const loadOperators = useCallback(async () => {
+    const allUsers = await getAllUsers()
     const operatorUsers = allUsers.filter((u) => u.role === "operator")
     setOperators(operatorUsers.map((u) => ({ id: u.id, fullName: u.fullName })))
   }, [])
 
-  const loadRankings = useCallback(() => {
-    setRankings(getMonthlyQuizRanking(selectedYear, selectedMonth))
+  // CHANGE: Making loadRankings async to properly await getMonthlyQuizRanking
+  const loadRankings = useCallback(async () => {
+    const rankingData = await getMonthlyQuizRanking(selectedYear, selectedMonth)
+    setRankings(rankingData)
   }, [selectedYear, selectedMonth])
 
-  // CHANGE: Debounced store update handler to reduce re-renders
+  // CHANGE: Using async effect to load data
   useEffect(() => {
-    loadData()
-    loadOperators()
-    loadRankings()
+    const loadAllData = async () => {
+      await Promise.all([loadData(), loadOperators(), loadRankings()])
+    }
+    loadAllData()
   }, [loadData, loadOperators, loadRankings])
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
 
-    const handleStoreUpdate = () => {
-      // Reduced debounce time from 300ms to 200ms for faster updates
+    const handleStoreUpdate = async () => {
       clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => {
-        loadData()
-        loadOperators()
-        loadRankings()
+      timeoutId = setTimeout(async () => {
+        await Promise.all([loadData(), loadOperators(), loadRankings()])
       }, 200)
     }
 
@@ -389,8 +392,9 @@ export function MessagesQuizTab() {
   }
 
   // CHANGE: Memoize quiz stats calculation
-  const getQuizStats = useCallback((quizId: string) => {
-    const attempts = getQuizAttemptsByQuiz(quizId)
+  // CHANGE: Making getQuizStats async to properly await getQuizAttemptsByQuiz
+  const getQuizStats = useCallback(async (quizId: string) => {
+    const attempts = await getQuizAttemptsByQuiz(quizId)
     const correct = attempts.filter((a) => a.isCorrect).length
     const total = attempts.length
     return { correct, total, percentage: total > 0 ? Math.round((correct / total) * 100) : 0 }
@@ -406,9 +410,9 @@ export function MessagesQuizTab() {
     [operators],
   )
 
-  const handleExportQuizReport = (quiz: Quiz) => {
-    const attempts = getQuizAttemptsByQuiz(quiz.id)
-    const stats = getQuizStats(quiz.id)
+  const handleExportQuizReport = async (quiz: Quiz) => {
+    const attempts = await getQuizAttemptsByQuiz(quiz.id)
+    const stats = await getQuizStats(quiz.id)
 
     // Create CSV content
     let csvContent = "data:text/csv;charset=utf-8,"

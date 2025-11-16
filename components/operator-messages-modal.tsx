@@ -21,26 +21,7 @@ import {
   getMonthlyQuizRanking,
 } from "@/lib/store"
 import type { Message, Quiz } from "@/lib/types"
-import {
-  MessageSquare,
-  Brain,
-  CheckCircle2,
-  XCircle,
-  Eye,
-  History,
-  Sparkles,
-  Trophy,
-  Maximize2,
-  Zap,
-  Star,
-  Mail,
-  Bell,
-  Medal,
-  Crown,
-  TrendingUp,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react"
+import { MessageSquare, Brain, CheckCircle2, XCircle, Eye, History, Sparkles, Trophy, Maximize2, Zap, Star, Mail, Bell, Medal, Crown, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -70,25 +51,23 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
 
-  const loadDataDebounced = useCallback(() => {
+  const loadDataDebounced = useCallback(async () => {
     if (!user) return
 
-    // Use requestIdleCallback for non-critical updates to avoid blocking main thread
-    if ("requestIdleCallback" in window) {
-      window.requestIdleCallback(() => {
-        setMessages(getActiveMessagesForOperator(user.id))
-        setHistoricalMessages(getHistoricalMessagesForOperator(user.id))
-        setQuizzes(getActiveQuizzesForOperator())
-        setHistoricalQuizzes(getHistoricalQuizzes())
-      })
-    } else {
-      // Fallback for browsers that don't support requestIdleCallback
-      setTimeout(() => {
-        setMessages(getActiveMessagesForOperator(user.id))
-        setHistoricalMessages(getHistoricalMessagesForOperator(user.id))
-        setQuizzes(getActiveQuizzesForOperator())
-        setHistoricalQuizzes(getHistoricalQuizzes())
-      }, 0)
+    try {
+      const [activeMessages, historicalMsgs, activeQuiz, historicalQuiz] = await Promise.all([
+        getActiveMessagesForOperator(user.id),
+        getHistoricalMessagesForOperator(user.id),
+        getActiveQuizzesForOperator(),
+        getHistoricalQuizzes(),
+      ])
+
+      setMessages(activeMessages)
+      setHistoricalMessages(historicalMsgs)
+      setQuizzes(activeQuiz)
+      setHistoricalQuizzes(historicalQuiz)
+    } catch (error) {
+      console.error("[v0] Error loading messages and quizzes:", error)
     }
   }, [user])
 

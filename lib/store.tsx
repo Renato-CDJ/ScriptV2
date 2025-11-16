@@ -11,7 +11,6 @@ import type {
   Note,
   CallSession,
   Product,
-  LoginSession,
   AttendanceTypeOption,
   PersonTypeOption,
   Message,
@@ -21,6 +20,7 @@ import type {
   ChatMessage,
   ChatSettings,
   Presentation,
+  OperatorRanking,
 } from "./types"
 
 const saveQueue: Map<string, any> = new Map()
@@ -171,15 +171,39 @@ export async function deleteProduct(id: string) {
 // ============ TABULATIONS & SITUATIONS ============
 
 export async function getTabulations(): Promise<Tabulation[]> {
-  return await db.getTabulations()
+  console.log("[v0] getTabulations called")
+  try {
+    const result = await db.getTabulations()
+    console.log("[v0] getTabulations result:", result)
+    return result
+  } catch (error) {
+    console.error("[v0] Error in getTabulations:", error)
+    return []
+  }
 }
 
 export async function getSituations(): Promise<ServiceSituation[]> {
-  return await db.getSituations()
+  console.log("[v0] getSituations called")
+  try {
+    const result = await db.getSituations()
+    console.log("[v0] getSituations result:", result)
+    return result
+  } catch (error) {
+    console.error("[v0] Error in getSituations:", error)
+    return []
+  }
 }
 
 export async function getChannels(): Promise<Channel[]> {
-  return await db.getChannels()
+  console.log("[v0] getChannels called")
+  try {
+    const result = await db.getChannels()
+    console.log("[v0] getChannels result:", result)
+    return result
+  } catch (error) {
+    console.error("[v0] Error in getChannels:", error)
+    return []
+  }
 }
 
 // ============ USERS ============
@@ -221,14 +245,17 @@ export async function forceLogoutUser(userId: string) {
   }
 }
 
-export function isUserOnline(userId: string): boolean {
+export async function isUserOnline(userId: string): Promise<boolean> {
   // This will need to be called async in components
-  return false
+  const users = await getAllUsers()
+  const user = users.find((u) => u.id === userId)
+  return user ? user.isOnline : false
 }
 
-export function getOnlineOperatorsCount(): number {
+export async function getOnlineOperatorsCount(): Promise<number> {
   // This will need to be called async in components
-  return 0
+  const users = await getAllUsers()
+  return users.filter((u) => u.role === "operator" && u.isOnline).length
 }
 
 // ============ MESSAGES ============
@@ -287,6 +314,28 @@ export async function getActiveMessagesForOperator(operatorId: string): Promise<
   })
 }
 
+export async function getHistoricalMessagesForOperator(operatorId: string): Promise<Message[]> {
+  const messages = await getMessages()
+  
+  return messages.filter((m) => {
+    // Include messages that have been marked as seen by this operator
+    if (m.seenBy && m.seenBy.includes(operatorId)) {
+      return true
+    }
+    
+    // Include inactive messages
+    if (!m.isActive) {
+      // Check if message was targeted to this operator or was a broadcast
+      if (m.recipients && m.recipients.length > 0) {
+        return m.recipients.includes(operatorId)
+      }
+      return true
+    }
+    
+    return false
+  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
+
 // ============ QUIZZES ============
 
 export async function getQuizzes(): Promise<Quiz[]> {
@@ -296,6 +345,25 @@ export async function getQuizzes(): Promise<Quiz[]> {
 export async function getActiveQuizzes(): Promise<Quiz[]> {
   const quizzes = await getQuizzes()
   return quizzes.filter((q) => q.isActive)
+}
+
+export async function getActiveQuizzesForOperator(operatorId: string): Promise<Quiz[]> {
+  const now = new Date()
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  const quizzes = await getQuizzes()
+
+  return quizzes.filter((q) => {
+    if (!q.isActive) return false
+
+    const quizDate = new Date(q.createdAt)
+    if (quizDate < twentyFourHoursAgo) return false
+
+    if (q.recipients && q.recipients.length > 0) {
+      return q.recipients.includes(operatorId)
+    }
+
+    return true
+  })
 }
 
 export async function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Promise<Quiz | null> {
@@ -323,6 +391,10 @@ export async function getQuizAttempts(): Promise<QuizAttempt[]> {
   return await db.getQuizAttempts()
 }
 
+export async function getQuizAttemptsByQuiz(quizId: string): Promise<QuizAttempt[]> {
+  return await db.getQuizAttemptsByQuiz(quizId)
+}
+
 export async function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt">): Promise<QuizAttempt | null> {
   const newAttempt = await db.createQuizAttempt(attempt)
   window.dispatchEvent(new CustomEvent("store-updated"))
@@ -332,6 +404,100 @@ export async function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attem
 export async function hasOperatorAnsweredQuiz(quizId: string, operatorId: string): Promise<boolean> {
   const attempts = await getQuizAttempts()
   return attempts.some((a) => a.quizId === quizId && a.operatorId === operatorId)
+}
+
+export async function getHistoricalQuizzes(operatorId: string): Promise<Quiz[]> {
+  const quizzes = await getQuizzes()
+  const attempts = await getQuizAttempts()
+  
+  return quizzes.filter((q) => {
+    // Include inactive quizzes
+    if (!q.isActive) {
+      // Check if quiz was targeted to this operator or was a broadcast
+      if (q.recipients && q.recipients.length > 0) {
+        return q.recipients.includes(operatorId)
+      }
+      return true
+    }
+    
+    // Include active quizzes that this operator has already answered
+    const hasAnswered = attempts.some((a) => a.quizId === q.id && a.operatorId === operatorId)
+    if (hasAnswered) {
+      // Check if quiz was targeted to this operator or was a broadcast
+      if (q.recipients && q.recipients.length > 0) {
+        return q.recipients.includes(operatorId)
+      }
+      return true
+    }
+    
+    return false
+  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
+
+export async function getMonthlyQuizRanking(year?: number, month?: number): Promise<OperatorRanking[]> {
+  const now = new Date()
+  const targetYear = year ?? now.getFullYear()
+  const targetMonth = month ?? now.getMonth()
+
+  const startDate = new Date(targetYear, targetMonth, 1)
+  const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59)
+
+  const attempts = await getQuizAttempts()
+  const users = await getAllUsers()
+
+  // Filter attempts for the target month
+  const monthlyAttempts = attempts.filter((attempt) => {
+    const attemptDate = new Date(attempt.attemptedAt)
+    return attemptDate >= startDate && attemptDate <= endDate
+  })
+
+  // Group attempts by operator
+  const operatorStats = new Map<string, { totalAttempts: number; correctAnswers: number }>()
+
+  monthlyAttempts.forEach((attempt) => {
+    const stats = operatorStats.get(attempt.operatorId) || { totalAttempts: 0, correctAnswers: 0 }
+    stats.totalAttempts++
+    if (attempt.isCorrect) {
+      stats.correctAnswers++
+    }
+    operatorStats.set(attempt.operatorId, stats)
+  })
+
+  // Create rankings
+  const rankings: OperatorRanking[] = []
+
+  operatorStats.forEach((stats, operatorId) => {
+    const user = users.find((u) => u.id === operatorId)
+    if (!user) return
+
+    const accuracy = stats.totalAttempts > 0 ? (stats.correctAnswers / stats.totalAttempts) * 100 : 0
+    const score = stats.correctAnswers
+
+    rankings.push({
+      operatorId,
+      operatorName: user.fullName,
+      totalAttempts: stats.totalAttempts,
+      correctAnswers: stats.correctAnswers,
+      score,
+      accuracy,
+      rank: 0, // Will be set after sorting
+    })
+  })
+
+  // Sort by score (correctAnswers) descending, then by accuracy
+  rankings.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score
+    }
+    return b.accuracy - a.accuracy
+  })
+
+  // Assign ranks
+  rankings.forEach((ranking, index) => {
+    ranking.rank = index + 1
+  })
+
+  return rankings
 }
 
 // ============ CHAT ============
@@ -344,8 +510,10 @@ export async function getChatSettings(): Promise<ChatSettings> {
   return await db.getChatSettings()
 }
 
-export async function updateChatSettings(settings: ChatSettings) {
-  // Would need db function for this
+export async function updateChatSettings(settings: Partial<ChatSettings>) {
+  const current = await getChatSettings()
+  const updated = { ...current, ...settings }
+  await db.updateChatSettings(updated)
   window.dispatchEvent(new CustomEvent("store-updated"))
 }
 
@@ -378,6 +546,23 @@ export async function getChatMessagesForUser(userId: string, userRole: "operator
   }
 }
 
+export async function deleteChatMessage(messageId: string) {
+  await db.deleteChatMessage(messageId)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+export async function markChatMessageAsRead(messageId: string) {
+  const messages = await getAllChatMessages()
+  const message = messages.find((m) => m.id === messageId)
+  
+  if (message) {
+    // Mark as read by updating the message
+    // This could be enhanced to track which operators have read which messages
+    await db.updateChatMessage({ ...message, isRead: true })
+    window.dispatchEvent(new CustomEvent("store-updated"))
+  }
+}
+
 // ============ PRESENTATIONS ============
 
 export async function getPresentations(): Promise<Presentation[]> {
@@ -397,16 +582,187 @@ export async function createPresentation(
   return newPresentation
 }
 
+export async function updatePresentation(presentation: Presentation) {
+  await db.updatePresentation(presentation)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+export async function deletePresentation(id: string) {
+  await db.deletePresentation(id)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+export async function getPresentationProgressByPresentation(presentationId: string) {
+  // This needs to be called async in components, return empty for now
+  if (typeof window === "undefined") return []
+
+  // For now, return from a synchronous cache or empty array
+  // Components should call this asynchronously
+  return await db.getPresentationProgressByPresentation(presentationId)
+}
+
+export async function updatePresentationProgress(
+  presentationId: string,
+  operatorId: string,
+  currentSlide: number,
+  markedAsSeen: boolean,
+) {
+  await db.updatePresentationProgress(presentationId, operatorId, currentSlide, markedAsSeen)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+export async function exportPresentationReport(presentationId: string): Promise<string | null> {
+  if (typeof window === "undefined") return null
+
+  try {
+    const presentation = await db.getPresentationById(presentationId)
+    if (!presentation) return null
+
+    // Get progress data - this would need to be fetched from db
+    const progressList = await db.getPresentationProgressByPresentation(presentationId)
+    const operators = await db.getOperators()
+
+    // CSV header
+    let csv = "data:text/csv;charset=utf-8,"
+    csv += "Operador,Slide Atual,Visto,Data de Visualização\n"
+
+    // CSV rows
+    progressList.forEach((progress) => {
+      const operator = operators.find((op) => op.id === progress.operatorId)
+      const operatorName = operator ? operator.fullName : "Desconhecido"
+      const markedAsSeen = progress.markedAsSeen ? "Sim" : "Não"
+      const viewedAt = new Date(progress.viewedAt).toLocaleString("pt-BR")
+
+      csv += `${operatorName},${progress.currentSlide},${markedAsSeen},${viewedAt}\n`
+    })
+
+    return csv
+  } catch (error) {
+    console.error("[v0] Error exporting presentation report:", error)
+    return null
+  }
+}
+
+export async function getActivePresentationsForOperator(operatorId: string): Promise<Presentation[]> {
+  const presentations = await getPresentations()
+  
+  return presentations.filter((p) => {
+    if (!p.isActive) return false
+    
+    // If presentation has specific recipients, check if operator is included
+    if (p.recipients && p.recipients.length > 0) {
+      return p.recipients.includes(operatorId)
+    }
+    
+    // If no specific recipients, it's a broadcast to all operators
+    return true
+  })
+}
+
+export async function getPresentationProgressByOperator(operatorId: string) {
+  const allProgress = await db.getPresentationProgress()
+  return allProgress.filter((p) => p.operatorId === operatorId)
+}
+
+export async function markPresentationAsSeen(presentationId: string, operatorId: string, operatorName: string) {
+  // Get current presentation to find total slides
+  const presentation = await db.getPresentationById(presentationId)
+  if (!presentation) return
+  
+  const totalSlides = presentation.slides.length
+  
+  // Mark as seen by updating progress to last slide
+  await db.updatePresentationProgress(presentationId, operatorId, totalSlides - 1, true)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+// ============ NOTES ============
+
+export async function getNotes(userId: string): Promise<Note[]> {
+  return await db.getNotes(userId)
+}
+
+export async function saveNote(userId: string, content: string) {
+  await db.saveNote(userId, content)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+// ============ ATTENDANCE TYPES ============
+
+export async function getAttendanceTypes(): Promise<AttendanceTypeOption[]> {
+  return await db.getAttendanceTypes()
+}
+
+export async function createAttendanceType(
+  option: Omit<AttendanceTypeOption, "id" | "createdAt">,
+): Promise<AttendanceTypeOption | null> {
+  const newOption = await db.createAttendanceType(option)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+  return newOption
+}
+
+export async function updateAttendanceType(option: AttendanceTypeOption) {
+  await db.updateAttendanceType(option)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+export async function deleteAttendanceType(id: string) {
+  await db.deleteAttendanceType(id)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+// ============ PERSON TYPES ============
+
+export async function getPersonTypes(): Promise<PersonTypeOption[]> {
+  return await db.getPersonTypes()
+}
+
+export async function createPersonType(
+  option: Omit<PersonTypeOption, "id" | "createdAt">,
+): Promise<PersonTypeOption | null> {
+  const newOption = await db.createPersonType(option)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+  return newOption
+}
+
+export async function updatePersonType(option: PersonTypeOption) {
+  await db.updatePersonType(option)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+export async function deletePersonType(id: string) {
+  await db.deletePersonType(id)
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+// ============ ADMIN USERS ============
+
+export async function getAdminUsers(): Promise<User[]> {
+  const users = await db.getAllUsers()
+  return users.filter((u) => u.role === "admin")
+}
+
+export async function createAdminUser(username: string, fullName: string): Promise<User | null> {
+  return await db.createUser(username, fullName, "admin", {})
+}
+
+export async function canDeleteAdminUser(userId: string): Promise<boolean> {
+  const adminUsers = await getAdminUsers()
+  return adminUsers.length > 1
+}
+
+export async function updateAdminPermissions(userId: string, permissions: AdminPermissions) {
+  const users = await getAllUsers()
+  const user = users.find((u) => u.id === userId)
+  if (user) {
+    user.permissions = permissions
+    await db.updateUser(user)
+    window.dispatchEvent(new CustomEvent("store-updated"))
+  }
+}
+
 // ============ LEGACY / COMPATIBILITY FUNCTIONS ============
 // These are kept for backward compatibility but may not be fully functional
-
-export function getNotes(userId: string): Note[] {
-  return []
-}
-
-export function saveNote(userId: string, content: string) {
-  // Would need database implementation
-}
 
 export function createCallSession(operatorId: string, startStepId: string): CallSession {
   return {
@@ -418,94 +774,76 @@ export function createCallSession(operatorId: string, startStepId: string): Call
   }
 }
 
-export function updateCallSession(session: CallSession) {
-  // Would need database implementation
-}
-
-export function getTodayLoginSessions(userId: string): LoginSession[] {
-  return []
-}
-
-export function getTodayConnectedTime(userId: string): number {
-  return 0
-}
-
 export function getLastUpdate(): number {
   return Date.now()
 }
 
-export function importScriptFromJson(jsonData: any): { productCount: number; stepCount: number } {
-  return { productCount: 0, stepCount: 0 }
-}
+export async function importScriptFromJson(jsonData: any): Promise<{ productCount: number; stepCount: number }> {
+  if (!jsonData || !jsonData.marcas) {
+    throw new Error("Formato inválido: propriedade 'marcas' não encontrada")
+  }
 
-export function clearCaches() {
-  // No longer needed with Supabase
-}
+  let productCount = 0
+  let stepCount = 0
 
-export function getAttendanceTypes(): AttendanceTypeOption[] {
-  return []
-}
+  const marcas = jsonData.marcas
 
-export function getPersonTypes(): PersonTypeOption[] {
-  return []
-}
+  for (const produtoNome of Object.keys(marcas)) {
+    const productId = `prod-${produtoNome.toLowerCase().replace(/\s+/g, "-")}`
+    
+    // Check if product exists, if not create it
+    const existingProduct = await getProductById(productId)
+    if (!existingProduct) {
+      await createProduct({
+        name: produtoNome,
+        description: `Produto ${produtoNome}`,
+      })
+      productCount++
+    }
 
-export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "createdAt">): AttendanceTypeOption {
-  return { ...option, id: "", createdAt: new Date() }
-}
+    const telas = marcas[produtoNome]
 
-export function updateAttendanceType(option: AttendanceTypeOption) {
-  // Would need database implementation
-}
+    for (const stepKey of Object.keys(telas)) {
+      const stepData = telas[stepKey]
 
-export function deleteAttendanceType(id: string) {
-  // Would need database implementation
-}
+      if (!stepData.id || !stepData.title) {
+        console.warn(`[v0] Skipping invalid step: ${stepKey}`)
+        continue
+      }
 
-export function createPersonType(option: Omit<PersonTypeOption, "id" | "createdAt">): PersonTypeOption {
-  return { ...option, id: "", createdAt: new Date() }
-}
+      // Check if step already exists
+      const existingStep = await getScriptStepById(stepData.id, productId)
+      
+      if (existingStep) {
+        // Update existing step
+        await updateScriptStep({
+          ...existingStep,
+          title: stepData.title,
+          content: stepData.content || "",
+          productId: productId,
+          buttons: stepData.buttons || [],
+          tabulations: stepData.tabulations,
+          alert: stepData.alert,
+        })
+      } else {
+        // Create new step
+        await createScriptStep({
+          id: stepData.id,
+          title: stepData.title,
+          content: stepData.content || "",
+          contentSegments: [],
+          order: stepCount + 1,
+          productId: productId,
+          buttons: stepData.buttons || [],
+          tabulations: stepData.tabulations,
+          alert: stepData.alert,
+        })
+        stepCount++
+      }
+    }
+  }
 
-export function updatePersonType(option: PersonTypeOption) {
-  // Would need database implementation
-}
-
-export function deletePersonType(id: string) {
-  // Would need database implementation
-}
-
-export function updateAdminPermissions(userId: string, permissions: AdminPermissions) {
-  // Would need database implementation
-}
-
-export function getAdminUsers(): User[] {
-  return []
-}
-
-export function createAdminUser(username: string, fullName: string): User | null {
-  return null
-}
-
-export function canDeleteAdminUser(userId: string): boolean {
-  return false
-}
-
-export function cleanupOldSessions() {
-  // No longer needed with Supabase
-}
-
-export interface OperatorRanking {
-  operatorId: string
-  operatorName: string
-  totalAttempts: number
-  correctAnswers: number
-  score: number
-  accuracy: number
-  rank: number
-}
-
-export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRanking[] {
-  return []
+  return { productCount, stepCount }
 }
 
 export function getCurrentMonthName(): string {
@@ -524,4 +862,61 @@ export function getCurrentMonthName(): string {
     "Dezembro",
   ]
   return months[new Date().getMonth()]
+}
+
+export async function cleanupOldSessions() {
+  // Clean up old sessions that are older than 24 hours
+  if (typeof window === "undefined") return
+
+  const sessions = await db.getSessions()
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+  for (const session of sessions) {
+    const sessionDate = new Date(session.startedAt)
+    if (sessionDate < twentyFourHoursAgo) {
+      // Old session cleanup logic can be added here if needed
+      console.log("[v0] Cleaned up old session:", session.id)
+    }
+  }
+}
+
+export function getTodayConnectedTime(operatorId: string): number {
+  // Returns the total time in minutes that an operator has been connected today
+  // This is a simplified implementation that returns 0 for now
+  // A full implementation would track connection/disconnection events
+  if (typeof window === "undefined") return 0
+
+  try {
+    const key = `operator_time_${operatorId}_${new Date().toISOString().split("T")[0]}`
+    const storedTime = localStorage.getItem(key)
+    return storedTime ? Number.parseInt(storedTime, 10) : 0
+  } catch (error) {
+    console.error("[v0] Error getting today connected time:", error)
+    return 0
+  }
+}
+
+export function getTodayLoginSessions(operatorId: string): Array<{ loginTime: Date; logoutTime?: Date }> {
+  // Returns the login sessions for an operator today
+  // This is a simplified implementation using localStorage
+  if (typeof window === "undefined") return []
+
+  try {
+    const today = new Date().toISOString().split("T")[0]
+    const key = `operator_sessions_${operatorId}_${today}`
+    const storedSessions = localStorage.getItem(key)
+
+    if (storedSessions) {
+      const sessions = JSON.parse(storedSessions)
+      return sessions.map((s: any) => ({
+        loginTime: new Date(s.loginTime),
+        logoutTime: s.logoutTime ? new Date(s.logoutTime) : undefined,
+      }))
+    }
+
+    return []
+  } catch (error) {
+    console.error("[v0] Error getting today login sessions:", error)
+    return []
+  }
 }

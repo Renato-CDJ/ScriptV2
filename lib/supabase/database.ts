@@ -12,6 +12,10 @@ import type {
   ChatMessage,
   ChatSettings,
   Presentation,
+  PresentationProgress,
+  AttendanceType,
+  PersonType,
+  Note,
 } from "../types"
 
 // ============ USERS ============
@@ -96,6 +100,15 @@ export async function createUser(
 export async function updateUser(user: User): Promise<void> {
   const supabase = createClient()
 
+  let lastLoginAtISO: string | undefined
+  if (user.lastLoginAt) {
+    if (user.lastLoginAt instanceof Date) {
+      lastLoginAtISO = user.lastLoginAt.toISOString()
+    } else if (typeof user.lastLoginAt === 'string') {
+      lastLoginAtISO = user.lastLoginAt
+    }
+  }
+
   const { error } = await supabase
     .from("users")
     .update({
@@ -103,7 +116,7 @@ export async function updateUser(user: User): Promise<void> {
       full_name: user.fullName,
       role: user.role,
       is_online: user.isOnline,
-      last_login_at: user.lastLoginAt?.toISOString(),
+      last_login_at: lastLoginAtISO,
       permissions: user.permissions || {},
     })
     .eq("id", user.id)
@@ -769,6 +782,30 @@ export async function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attem
   }
 }
 
+export async function getQuizAttemptsByQuiz(quizId: string): Promise<QuizAttempt[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("quiz_attempts")
+    .select("*")
+    .eq("quiz_id", quizId)
+    .order("attempted_at", { ascending: false })
+
+  if (error) {
+    console.error("[v0] Error fetching quiz attempts by quiz:", error)
+    return []
+  }
+
+  return data.map((attempt) => ({
+    id: attempt.id,
+    quizId: attempt.quiz_id,
+    operatorId: attempt.operator_id,
+    operatorName: attempt.operator_name,
+    selectedAnswer: attempt.selected_answer,
+    isCorrect: attempt.is_correct,
+    attemptedAt: new Date(attempt.attempted_at),
+  }))
+}
+
 // ============ CHAT ============
 
 export async function getChatMessages(): Promise<ChatMessage[]> {
@@ -851,6 +888,72 @@ export async function getChatSettings(): Promise<ChatSettings> {
   }
 }
 
+export async function updateChatSettings(settings: ChatSettings): Promise<void> {
+  const supabase = createClient()
+
+  const { data: existing, error: fetchError } = await supabase.from("chat_settings").select("*").limit(1).single()
+
+  if (fetchError && fetchError.code !== "PGRST116") {
+    // PGRST116 = no rows returned
+    console.error("[v0] Error fetching chat settings:", fetchError)
+    return
+  }
+
+  if (existing) {
+    // Update existing settings
+    const { error } = await supabase
+      .from("chat_settings")
+      .update({
+        is_enabled: settings.isEnabled,
+        updated_at: new Date().toISOString(),
+        updated_by: settings.updatedBy,
+      })
+      .eq("id", existing.id)
+
+    if (error) {
+      console.error("[v0] Error updating chat settings:", error)
+    }
+  } else {
+    // Create new settings without specifying ID (let UUID generate automatically)
+    const { error } = await supabase.from("chat_settings").insert({
+      is_enabled: settings.isEnabled,
+      updated_at: new Date().toISOString(),
+      updated_by: settings.updatedBy,
+    })
+
+    if (error) {
+      console.error("[v0] Error creating chat settings:", error)
+    }
+  }
+}
+
+export async function deleteChatMessage(messageId: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from("chat_messages").delete().eq("id", messageId)
+
+  if (error) {
+    console.error("[v0] Error deleting chat message:", error)
+  }
+}
+
+export async function updateChatMessage(message: ChatMessage): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from("chat_messages")
+    .update({
+      content: message.content,
+      is_read: message.isRead,
+      attachment: message.attachment,
+      reply_to: message.replyTo,
+    })
+    .eq("id", message.id)
+
+  if (error) {
+    console.error("[v0] Error updating chat message:", error)
+  }
+}
+
 // ============ PRESENTATIONS ============
 
 export async function getPresentations(): Promise<Presentation[]> {
@@ -912,4 +1015,334 @@ export async function createPresentation(
     isActive: data.is_active,
     recipients: data.recipients || [],
   }
+}
+
+export async function updatePresentation(presentation: Presentation): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from("presentations")
+    .update({
+      title: presentation.title,
+      description: presentation.description,
+      slides: presentation.slides || [],
+      is_active: presentation.isActive,
+      recipients: presentation.recipients || [],
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", presentation.id)
+
+  if (error) {
+    console.error("[v0] Error updating presentation:", error)
+  }
+}
+
+export async function deletePresentation(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from("presentations").delete().eq("id", id)
+
+  if (error) {
+    console.error("[v0] Error deleting presentation:", error)
+  }
+}
+
+export async function getPresentationById(presentationId: string): Promise<Presentation | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase.from("presentations").select("*").eq("id", presentationId).single()
+
+  if (error || !data) {
+    console.error("[v0] Error fetching presentation by ID:", error)
+    return null
+  }
+
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    slides: data.slides || [],
+    createdBy: data.created_by,
+    createdByName: data.created_by_name,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+    isActive: data.is_active,
+    recipients: data.recipients || [],
+  }
+}
+
+export async function getPresentationProgress(): Promise<PresentationProgress[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("presentation_progress")
+    .select("*")
+    .order("viewed_at", { ascending: false })
+
+  if (error) {
+    console.error("[v0] Error fetching presentation progress:", error)
+    return []
+  }
+
+  return data
+}
+
+export async function getPresentationProgressByPresentation(presentationId: string): Promise<PresentationProgress[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("presentation_progress")
+    .select("*")
+    .eq("presentation_id", presentationId)
+    .order("viewed_at", { ascending: false })
+
+  if (error) {
+    console.error("[v0] Error fetching presentation progress:", error)
+    return []
+  }
+
+  return data
+}
+
+export async function updatePresentationProgress(
+  presentationId: string,
+  operatorId: string,
+  currentSlide: number,
+  markedAsSeen: boolean,
+): Promise<void> {
+  const supabase = createClient()
+
+  // Check if progress already exists
+  const { data: existing } = await supabase
+    .from("presentation_progress")
+    .select("*")
+    .eq("presentation_id", presentationId)
+    .eq("operator_id", operatorId)
+    .single()
+
+  if (existing) {
+    // Update existing progress
+    const { error } = await supabase
+      .from("presentation_progress")
+      .update({
+        current_slide: currentSlide,
+        marked_as_seen: markedAsSeen,
+        viewed_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id)
+
+    if (error) {
+      console.error("[v0] Error updating presentation progress:", error)
+    }
+  } else {
+    // Create new progress
+    const { error } = await supabase.from("presentation_progress").insert({
+      presentation_id: presentationId,
+      operator_id: operatorId,
+      current_slide: currentSlide,
+      marked_as_seen: markedAsSeen,
+    })
+
+    if (error) {
+      console.error("[v0] Error creating presentation progress:", error)
+    }
+  }
+}
+
+// ============ ATTENDANCE TYPES ============
+
+export async function getAttendanceTypes(): Promise<AttendanceType[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase.from("attendance_types").select("*").order("created_at", { ascending: true })
+
+  if (error) {
+    console.error("[v0] Error fetching attendance types:", error)
+    return []
+  }
+
+  return data.map((type) => ({
+    id: type.id,
+    value: type.value,
+    label: type.label,
+    createdAt: new Date(type.created_at),
+  }))
+}
+
+export async function createAttendanceType(option: { value: string; label: string }): Promise<AttendanceType | null> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from("attendance_types")
+    .insert({
+      value: option.value,
+      label: option.label,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error("[v0] Error creating attendance type:", error)
+    return null
+  }
+
+  return {
+    id: data.id,
+    value: data.value,
+    label: data.label,
+    createdAt: new Date(data.created_at),
+  }
+}
+
+export async function updateAttendanceType(option: { id: string; value: string; label: string }): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from("attendance_types")
+    .update({
+      value: option.value,
+      label: option.label,
+    })
+    .eq("id", option.id)
+
+  if (error) {
+    console.error("[v0] Error updating attendance type:", error)
+  }
+}
+
+export async function deleteAttendanceType(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from("attendance_types").delete().eq("id", id)
+
+  if (error) {
+    console.error("[v0] Error deleting attendance type:", error)
+  }
+}
+
+// ============ PERSON TYPES ============
+
+export async function getPersonTypes(): Promise<PersonType[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase.from("person_types").select("*").order("created_at", { ascending: true })
+
+  if (error) {
+    console.error("[v0] Error fetching person types:", error)
+    return []
+  }
+
+  return data.map((type) => ({
+    id: type.id,
+    value: type.value,
+    label: type.label,
+    createdAt: new Date(type.created_at),
+  }))
+}
+
+export async function createPersonType(option: { value: string; label: string }): Promise<PersonType | null> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from("person_types")
+    .insert({
+      value: option.value,
+      label: option.label,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error("[v0] Error creating person type:", error)
+    return null
+  }
+
+  return {
+    id: data.id,
+    value: data.value,
+    label: data.label,
+    createdAt: new Date(data.created_at),
+  }
+}
+
+export async function updatePersonType(option: { id: string; value: string; label: string }): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from("person_types")
+    .update({
+      value: option.value,
+      label: option.label,
+    })
+    .eq("id", option.id)
+
+  if (error) {
+    console.error("[v0] Error updating person type:", error)
+  }
+}
+
+export async function deletePersonType(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from("person_types").delete().eq("id", id)
+
+  if (error) {
+    console.error("[v0] Error deleting person type:", error)
+  }
+}
+
+// ============ NOTES ============
+
+export async function getNotes(userId: string): Promise<Note[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("[v0] Error getting notes:", error)
+    return []
+  }
+
+  return data.map((note) => ({
+    id: note.id,
+    userId: note.user_id,
+    content: note.content,
+    createdAt: new Date(note.created_at),
+    updatedAt: new Date(note.updated_at),
+  }))
+}
+
+export async function saveNote(userId: string, content: string): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase.from("notes").insert({
+    user_id: userId,
+    content,
+  })
+
+  if (error) {
+    console.error("[v0] Error saving note:", error)
+  }
+}
+
+// ============ OPERATORS ============
+
+export async function getOperators(): Promise<User[]> {
+  const users = await getAllUsers()
+  return users.filter((u) => u.role === "operator")
+}
+
+// ============ SESSIONS ============
+
+export async function getSessions(): Promise<any[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase.from("call_sessions").select("*").order("started_at", { ascending: false })
+
+  if (error) {
+    console.error("[v0] Error fetching sessions:", error)
+    return []
+  }
+
+  return data.map((session) => ({
+    id: session.id,
+    operatorId: session.operator_id,
+    currentStepId: session.current_step_id,
+    startedAt: new Date(session.started_at),
+    notes: session.notes || "",
+  }))
 }

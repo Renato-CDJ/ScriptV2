@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Send, Reply, X } from "lucide-react"
+import { Send, Reply, X } from 'lucide-react'
 import { useAuth } from "@/lib/auth-context"
 import { getChatMessagesForUser, sendChatMessage, markChatMessageAsRead, getChatSettings } from "@/lib/store"
 import type { ChatMessage } from "@/lib/types"
@@ -49,9 +49,9 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  const loadMessages = () => {
+  const loadMessages = async () => {
     if (!user) return
-    const msgs = getChatMessagesForUser(user.id, user.role)
+    const msgs = await getChatMessagesForUser(user.id, user.role)
     setMessages(msgs)
 
     msgs.forEach((msg) => {
@@ -61,7 +61,7 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
     })
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!user || !newMessage.trim() || !chatEnabled) return
 
     const replyToData = replyingTo
@@ -72,10 +72,10 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
         }
       : undefined
 
-    sendChatMessage(user.id, user.fullName, user.role, newMessage.trim(), undefined, undefined, replyToData)
+    await sendChatMessage(user.id, user.fullName, user.role, newMessage.trim(), undefined, undefined, replyToData)
     setNewMessage("")
     setReplyingTo(null)
-    loadMessages()
+    await loadMessages()
   }
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
