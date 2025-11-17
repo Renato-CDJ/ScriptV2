@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,7 +23,6 @@ import { useToast } from "@/hooks/use-toast"
 
 export function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([])
-  const [abordagemSteps, setAbordagemSteps] = useState<any[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [dialogId, setDialogId] = useState<string>("")
@@ -38,26 +37,13 @@ export function ProductsTab() {
 
   useEffect(() => {
     loadProducts()
-    loadAbordagemSteps()
-    const handleStoreUpdate = () => {
-      loadProducts()
-      loadAbordagemSteps()
-    }
+    const handleStoreUpdate = () => loadProducts()
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
-  const loadProducts = async () => {
-    const productsData = await getProducts()
-    setProducts(productsData)
-  }
-
-  const loadAbordagemSteps = async () => {
-    const allSteps = await getScriptSteps()
-    const filtered = allSteps.filter(
-      (step) => step.title.toLowerCase().includes("abordagem") || step.id.toLowerCase().includes("abordagem"),
-    )
-    setAbordagemSteps(filtered)
+  const loadProducts = () => {
+    setProducts(getProducts())
   }
 
   const handleOpenDialog = (product?: Product) => {
@@ -86,7 +72,7 @@ export function ProductsTab() {
     setIsDialogOpen(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!formData.name.trim() || !formData.scriptId) {
       toast({
         title: "Erro",
@@ -106,7 +92,7 @@ export function ProductsTab() {
     }
 
     if (editingProduct) {
-      await updateProduct({
+      updateProduct({
         ...editingProduct,
         ...formData,
       })
@@ -115,7 +101,7 @@ export function ProductsTab() {
         description: "Produto atualizado com sucesso",
       })
     } else {
-      await createProduct({
+      createProduct({
         ...formData,
         isActive: true,
       })
@@ -137,9 +123,9 @@ export function ProductsTab() {
     loadProducts()
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este produto?")) {
-      await deleteProduct(id)
+      deleteProduct(id)
       toast({
         title: "Sucesso",
         description: "Produto excluído com sucesso",
@@ -165,6 +151,14 @@ export function ProductsTab() {
         : [...prev.personTypes, type],
     }))
   }
+
+  const abordagemSteps = useMemo(() => {
+    const allSteps = getScriptSteps()
+    // Filter steps that are "Abordagem" (approach/first screen of each product)
+    return allSteps.filter(
+      (step) => step.title.toLowerCase().includes("abordagem") || step.id.toLowerCase().includes("abordagem"),
+    )
+  }, [])
 
   return (
     <div className="space-y-6">

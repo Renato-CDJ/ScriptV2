@@ -1,7 +1,6 @@
-// Supabase-powered state management
-// All data is now stored in Supabase database
+// Client-side state management using localStorage for prototype
+// This will be replaced with real database integration later
 
-import * as db from "./supabase/database"
 import type {
   User,
   ScriptStep,
@@ -11,16 +10,17 @@ import type {
   Note,
   CallSession,
   Product,
+  LoginSession,
   AttendanceTypeOption,
   PersonTypeOption,
   Message,
   Quiz,
   QuizAttempt,
   AdminPermissions,
-  ChatMessage,
-  ChatSettings,
-  Presentation,
-  OperatorRanking,
+  ChatMessage, // Imported for chat
+  ChatSettings, // Imported for chat
+  Presentation, // Imported for presentations
+  PresentationProgress, // Imported for presentation progress
 } from "./types"
 
 const saveQueue: Map<string, any> = new Map()
@@ -49,35 +49,648 @@ export function loadScriptsFromDataFolder() {
   return
 }
 
-export async function initializeMockData() {
-  if (typeof window === "undefined") return
+// Mock data for demonstration
+const MOCK_USERS: User[] = [
+  {
+    id: "1",
+    username: "admin",
+    fullName: "Administrador Sistema",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "2",
+    username: "Monitoria1",
+    fullName: "Monitoria 1",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "3",
+    username: "Monitoria2",
+    fullName: "Monitoria 2",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "4",
+    username: "Monitoria3",
+    fullName: "Monitoria 3",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "5",
+    username: "Monitoria4",
+    fullName: "Monitoria 4",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+]
 
-  console.log("[v0] Using Supabase database - no mock data initialization needed")
+const MOCK_SCRIPT_STEPS: ScriptStep[] = []
+
+const MOCK_TABULATIONS: Tabulation[] = [
+  // Identification Issues
+  {
+    id: "tab-1",
+    name: "PESSOA NÃO CONFIRMA OS DADOS",
+    description:
+      "Pessoa informa os números do CPF, porém os dados não conferem com os números registrados no CRM ou a pessoa se recusa a informar os números do CPF para realização da identificação positiva ou pessoa não.",
+    color: "#f59e0b",
+    createdAt: new Date(),
+  },
+
+  // Third Party Contact
+  {
+    id: "tab-2",
+    name: "RECADO COM TERCEIRO",
+    description:
+      "Terceiro/cliente informa que a empresa entrou em falência/concordata ou terceiro informa que conhece o cliente, anota o recado ou não, ou terceiro pede para ligar outro dia/horário ou em outro telefone.",
+    color: "#3b82f6",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-3",
+    name: "FALECIDO",
+    description: "Terceiro informa que o titular faleceu.",
+    color: "#ef4444",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-4",
+    name: "FALÊNCIA OU CONCORDATA",
+    description: "Utilizamos quando o sócio ou responsável financeiro informar que a empresa entrou em falência.",
+    color: "#dc2626",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-5",
+    name: "DESCONHECIDO",
+    description: "Terceiro informa que não conhece ninguém com o nome do cliente no telefone do cadastro.",
+    color: "#6b7280",
+    createdAt: new Date(),
+  },
+
+  // Contact Without Negotiation
+  {
+    id: "tab-6",
+    name: "CONTATO SEM NEGOCIAÇÃO",
+    description:
+      "Cliente impossibilitado de falar no momento, faz promessa de pagamento para uma data que ultrapassa o período permitido (data definida para ações especiais, data fixa de boleto, etc). Ou informa que não se lembra se foi feito o pagamento ou débito.",
+    color: "#8b5cf6",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-7",
+    name: "CONTATO INTERROMPIDO APÓS IP, MAS SEM RESULTADO",
+    description: "Se após identificação positiva a ligação for interrompida.",
+    color: "#f97316",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-8",
+    name: "PESSOA SOLICITA RETORNO EM OUTRO MOMENTO",
+    description: "Cliente pede para o operador retornar a ligação em outro dia/horário.",
+    color: "#06b6d4",
+    createdAt: new Date(),
+  },
+
+  // Payment Related
+  {
+    id: "tab-9",
+    name: "PAGAMENTO JÁ EFETUADO",
+    description: "Cliente informa que já efetuou o pagamento.",
+    color: "#10b981",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-10",
+    name: "RECUSA AÇÃO/CAMPANHA",
+    description: "Cliente não aceita a ação/campanha ofertada.",
+    color: "#ef4444",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-11",
+    name: "TRANSBORDO PARA ATENDIMENTO ENTRE CANAIS",
+    description:
+      "Quando o atendimento é iniciado em um canal e precisa ser transbordado para resolução por outro canal.",
+    color: "#8b5cf6",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-12",
+    name: "SEM CAPACIDADE DE PAGAMENTO",
+    description:
+      "Cliente se recusa a efetuar o pagamento por qualquer motivo: não tem recurso disponível, desemprego, mudanças econômicas ou não pode fazer o pagamento naquele momento.",
+    color: "#f59e0b",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-13",
+    name: "NEGOCIAÇÃO EM OUTRO CANAL",
+    description: "Cliente informa que já está negociando em outro canal.",
+    color: "#3b82f6",
+    createdAt: new Date(),
+  },
+
+  // Contract and Debt Issues
+  {
+    id: "tab-14",
+    name: "SEM CONTRATO EM COBRANÇA",
+    description: "O cliente está na base da Telecobrança, mas não constam contratos ativos (em cobrança).",
+    color: "#6b7280",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-15",
+    name: "DÍVIDA NÃO RECONHECIDA",
+    description: "Cliente alega que desconhece a dívida.",
+    color: "#f59e0b",
+    createdAt: new Date(),
+  },
+
+  // Payment Promises
+  {
+    id: "tab-16",
+    name: "PROMESSA DE PAGAMENTO SEM EMISSÃO DE BOLETO",
+    description: "Cliente informa que irá depositar o valor para regularização do atraso dentro do prazo estabelecido.",
+    color: "#10b981",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-17",
+    name: "PROMESSA DE PAGAMENTO COM EMISSÃO DE BOLETO",
+    description: "Cliente solicita boleto e informa data de pagamento.",
+    color: "#22c55e",
+    createdAt: new Date(),
+  },
+
+  // Campaign Acceptance
+  {
+    id: "tab-18",
+    name: "ACEITA AÇÃO/CAMPANHA SEM EMISSÃO DE BOLETO",
+    description: "Cliente aceita ação/ campanha sem emissão de boleto.",
+    color: "#10b981",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-19",
+    name: "ACEITA AÇÃO/CAMPANHA COM EMISSÃO DE BOLETO",
+    description: "Cliente aceita ação/ campanha com emissão de boleto.",
+    color: "#22c55e",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-20",
+    name: "CLIENTE COM ACORDO ATIVO RETORNA NO RECEPTIVO",
+    description:
+      "Quando o cliente retorna no receptivo tendo acordo vigente para solicitar esclarecimentos ou solicitar o boleto.",
+    color: "#06b6d4",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-21",
+    name: "PROMESSA DE PAGAMENTO ACORDO DE PARCELAMENTO",
+    description: "Cliente confirma o pagamento parcelado do CARTÃO DE CRÉDITO.",
+    color: "#10b981",
+    createdAt: new Date(),
+  },
+
+  // Technical Issues
+  {
+    id: "tab-22",
+    name: "SINAL DE FAX",
+    description: "Ligação direcionada: sinal de FAX.",
+    color: "#6b7280",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-23",
+    name: "CAIXA POSTAL",
+    description: "Devemos utilizar quando a ligação é direcionada diretamente à caixa postal.",
+    color: "#6b7280",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-24",
+    name: "LIGAÇÃO CAIU",
+    description:
+      "São ligações que não conseguimos extrair uma informação para usar outra tabulação durante o atendimento.",
+    color: "#f97316",
+    createdAt: new Date(),
+  },
+  {
+    id: "tab-25",
+    name: "LIGAÇÃO MUDA",
+    description:
+      "Devemos utilizar quando a ligação se iniciar muda. Lembrando que se a pessoa atender e houver ruídos ou vozes que não se direcionar a você será considerada uma ligação muda.",
+    color: "#f97316",
+    createdAt: new Date(),
+  },
+]
+
+const MOCK_SITUATIONS: ServiceSituation[] = [
+  {
+    id: "sit-1",
+    name: "EM CASOS DE FALÊNCIA/CONCORDATA",
+    description:
+      "É necessário que o sócio ou responsável entre em contato com a CAIXA acessando www.caixa.gov.br/negociar e pelo WhatsApp 0800 104 0104.\n\nTabulação correta: Recado com terceiro",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-2",
+    name: "FALECIDO",
+    description:
+      "Pessoa informa que o titular faleceu. É necessário que compareça à agência levando a certidão de óbito para que as ligações de cobrança sejam interrompidas.\n\nTabulação correta: FALECIDO",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-3",
+    name: "SE O CLIENTE CITAR A LGPD OU PERGUNTAR POR QUE TEMOS OS SEUS DADOS",
+    description:
+      '"(NOME DO CLIENTE), seguindo a lei LGPD, n°13.709, possuímos alguns dados representando a CAIXAECONÔMICA FEDERAL, para garantir sua segurança. Caso você possua qualquer dúvida ou solicitação em relação a isso, pedimos que entre em contato conosco enviando um e-mail para: dpo@gruporoveri.com.br ."\n\nEXEMPLOS DE QUESTIONAMENTOS FEITOS PELOS CLIENTES:\n- Como você possui meus dados pessoais?\n- Vocês têm o direito de me ligar?\n- Isso está conforme a LGPD?\n- Quero que excluam meus dados!',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-4",
+    name: "O CLIENTE SOLICITA O PROTOCOLO DA LIGAÇÃO",
+    description:
+      "Informar que nós somos uma central de negócios, ou seja, nosso atendimento não possui caráter de SAC. Entretanto, como mencionamos no início do contato, todas as ligações são gravadas e para que você tenha acesso a elas é necessário que as solicite na sua agência de relacionamento.\n\nPORQUE NÃO PODEMOS REPASSAR ESSA INFORMAÇÃO PARA O CLIENTE?\nNossa assessoria não é SAC.",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-5",
+    name: 'Se o cliente informar que "Não reside no Imóvel"',
+    description:
+      "Orientação - Embora o senhor(a) não resida no local, a dívida está registrada em seu nome e CPF, o que o(a) mantém como responsável pela regularização. Para resolver essa situação de forma rápida e eficiente, sugerimos que entre em contato com a pessoa que realiza o pagamento dessa dívida. Isso pode ajudar a esclarecer se o pagamento já foi efetuado, se há uma data prevista para a quitação ou outras informações relevantes.",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-6",
+    name: "CLIENTE SOLICITOU A LIGAÇÃO DO ATENDIMENTO",
+    description:
+      'CASO O CONTRATO SEJA DOS ESTADOS:\nPARANÁ - DDD (41,42,43,44,45 e 46)\nRIO DE JANEIRO - DDD (21)\nSÃO PAULO - DDD (11)\nM ATO GROSSO - DDD (65)\n\nDevemos informar: "A solicitação será repassada à CAIXA para verificação e atendimento no prazo de até 7 (sete) dias úteis."\n\n(PARA OUTROS ESTADOS)\nNesses casos, o que deve ser repassado para o cliente é: "Você pode solicitar a escuta da ligação na sua agência de relacionamento."',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-7",
+    name: "QUANDO O CLIENTE DO FIES DISSER QUE QUER PAUSAR O PAGAMENTO DAS SUAS PARCELAS",
+    description:
+      'Caso o cliente do FIES questione a possibilidade de renegociar ou solicite o desconto para seu contrato, informar:\n\n1. "Você pode verificar se o seu contrato tem a possibilidade de realizar renegociação no site http://sifesweb.caixa.gov.br, APP FIES CAIXA ou na sua agência."\n\nATENÇÃO! Lembrando que essa orientação só deve ser repassada para aqueles clientes que já fizeram a confirmação positiva.',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-8",
+    name: "CONTRATOS DE EMPRÉSTIMO CONSIGNADO",
+    description:
+      'Devemos orientar o cliente pedindo para que ele verifique novamente se o valor foi de fato descontado da folha de pagamento. Caso ele fale que vai verificar, podemos aguardar em linha este retorno. Se o cliente disser que não pode fazer essa verificação durante o atendimento, podemos solicitar o melhor horário e telefone para realizar um contato futuro.\n\nQUESTIONAMENTO NORMALMENTE REALIZADO PELO CLIENTE:\n"Isso é descontado na minha folha de pagamento, não está aparecendo no sistema?"',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-9",
+    name: "NÃO RECONHECE A DÍVIDA",
+    description:
+      "Orientações: Orientar o cliente a procurar uma agência da CAIXA para mais informações ou ligar no 0800 101 0104. Para cartão de crédito, indicar a central de atendimento que está no verso do cartão para contestação das despesas.",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-10",
+    name: "O QUE FAZER QUANDO CAIR UM PRODUTO QUE NÃO ATENDO?",
+    description:
+      'PASSO A PASSO:\n1. ABORDAGEM PADRÃO;\n2. CONFIRMAÇÃO DE DADOS - IDENTIFICAÇÃO POSITIVA;\n3. INFORMAR AO CLIENTE: "PEÇO QUE AGUARDE UM INSTANTE QUE IREI TRANSFERIR AO SETOR RESPONSÁVEL";\n4. TRANSFERIR NA SEGUNDA ABA DO WEDOO EM "CAMPANHA RECEPTIVO";\n5. TABULAR: TRANSFERÊNCIA DE LIGAÇÃO.',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-11",
+    name: "O QUE FAZER QUANDO CAIR ATENDIMENTO CNPJ?",
+    description:
+      "ABORDAGEM PADRÃO: FALAR NOME DO SÓCIO QUE CONSTA EM DADOS DO CLIENTE;\n\n● SE CONSTAR NOME DA EMPRESA EM DADOS DO CLIENTE, SOLICITE PARA FALAR COM SÓCIO OU RESPONSÁVEL FINANCEIRO DA EMPRESA;\n\n● VERIFIQUE O NOME DO SÓCIO OU RESPONSÁVEL FINANCEIRO DA EMPRESA EM: DETALHES DO CLIENTE;\n\n● SE NÃO CONSTAR ESSA INFORMAÇÃO SOLICITE O NOME COMPLETO E REALIZE A INCLUSÃO.",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-12",
+    name: "EM CASOS DE SINEB 2.0",
+    description:
+      'A CAIXA está te oferecendo a proposta de renegociar o contrato para que você possa quitar seu(s) contrato(s) vencido(s).\n\n"Lembramos que o pagamento efetuado permite a exclusão do seu CPF dos cadastros restritivos dentro de até 10 dias úteis."\n\n- Alerto que as ligações terão continuidade e que os juros do(s) seu(s) contrato(s) são corrigidos diariamente.\n\n- "A CAIXA não garante que as condições dessa proposta serão mantidas para um acordo futuro."\n\n- "É importante regularizar a sua dívida para a exclusão do seu CPF dos cadastros restritivos."',
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "sit-13",
+    name: "A Lei 12395/2024 do Estado do Mato Grosso e a Lei 16276/2025 do Rio Grande Sul",
+    description:
+      "A Lei 12395/2024 do Estado do Mato Grosso e a Lei 16276/2025 do Rio Grande Sul também determinam que deve ser informado a composição dos valores cobrados quanto a o que efetivamente correspondem, destacando-se o valor originário e seus adicionais (juros, multas, taxas, custas, honorários e outros que, somados, correspondam ao valor total cobrado do consumidor) ao cliente desse estado que solicitar.",
+    isActive: true,
+    createdAt: new Date(),
+  },
+]
+
+const MOCK_CHANNELS: Channel[] = [
+  {
+    id: "ch-1",
+    name: "Alô CAIXA",
+    contact: "4004 0 104 (Capitais e Regiões Metropolitanas) | 0800 104 0 104 (Demais regiões)",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "ch-2",
+    name: "Atendimento CAIXA Cidadão",
+    contact: "0800 726 0207",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "ch-3",
+    name: "Agência Digital",
+    contact: "4004 0 104 (Capitais) | 0800 104 0 104 (Demais regiões)",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "ch-4",
+    name: "Atendimento para Pessoas Surdas",
+    contact: "https://icom.app/8AG8Z | www.caixa.gov.br/libras",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "ch-5",
+    name: "SAC CAIXA",
+    contact: "0800 726 0101",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "ch-6",
+    name: "Ouvidoria CAIXA",
+    contact: "0800 725 7474",
+    isActive: true,
+    createdAt: new Date(),
+  },
+  {
+    id: "ch-7",
+    name: "Canal de Denúncias",
+    contact: "0800 721 0738 | https://www.caixa.gov.br/denuncia",
+    isActive: true,
+    createdAt: new Date(),
+  },
+]
+
+// Storage keys
+const STORAGE_KEYS = {
+  USERS: "callcenter_users",
+  CURRENT_USER: "callcenter_current_user",
+  SCRIPT_STEPS: "callcenter_script_steps",
+  TABULATIONS: "callcenter_tabulations",
+  SITUATIONS: "callcenter_situations",
+  CHANNELS: "callcenter_channels",
+  NOTES: "callcenter_notes",
+  SESSIONS: "callcenter_sessions",
+  PRODUCTS: "callcenter_products",
+  LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
+  ATTENDANCE_TYPES: "callcenter_attendance_types",
+  PERSON_TYPES: "callcenter_person_types",
+  MESSAGES: "callcenter_messages",
+  QUIZZES: "callcenter_quizzes",
+  QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
+  CHAT_MESSAGES: "callcenter_chat_messages",
+  CHAT_SETTINGS: "callcenter_chat_settings",
+  PRESENTATIONS: "callcenter_presentations",
+  PRESENTATION_PROGRESS: "callcenter_presentation_progress",
 }
 
-// ============ USER AUTHENTICATION ============
+// Initialize mock data
+export function initializeMockData() {
+  if (typeof window === "undefined") return
 
-export async function authenticateUser(username: string, password: string): Promise<User | null> {
+  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(MOCK_USERS))
+  console.log(
+    "[v0] Users initialized:",
+    MOCK_USERS.map((u) => u.username),
+  )
+
+  if (!localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS)) {
+    localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify([]))
+  }
+
+  localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(MOCK_TABULATIONS))
+
+  localStorage.setItem(STORAGE_KEYS.SITUATIONS, JSON.stringify(MOCK_SITUATIONS))
+
+  if (!localStorage.getItem(STORAGE_KEYS.CHANNELS)) {
+    localStorage.setItem(STORAGE_KEYS.CHANNELS, JSON.stringify(MOCK_CHANNELS))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.NOTES)) {
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify([]))
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.SESSIONS)) {
+    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify([]))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.ATTENDANCE_TYPES)) {
+    const defaultAttendanceTypes: AttendanceTypeOption[] = [
+      {
+        id: "att-ativo",
+        value: "ativo",
+        label: "Ativo",
+        createdAt: new Date(),
+      },
+      {
+        id: "att-receptivo",
+        value: "receptivo",
+        label: "Receptivo",
+        createdAt: new Date(),
+      },
+    ]
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE_TYPES, JSON.stringify(defaultAttendanceTypes))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.PERSON_TYPES)) {
+    const defaultPersonTypes: PersonTypeOption[] = [
+      {
+        id: "per-fisica",
+        value: "fisica",
+        label: "Física",
+        createdAt: new Date(),
+      },
+      {
+        id: "per-juridica",
+        value: "juridica",
+        label: "Jurídica",
+        createdAt: new Date(),
+      },
+    ]
+    localStorage.setItem(STORAGE_KEYS.PERSON_TYPES, JSON.stringify(defaultPersonTypes))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.LAST_UPDATE)) {
+    localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.CHAT_SETTINGS)) {
+    const defaultChatSettings: ChatSettings = {
+      isEnabled: true,
+      updatedAt: new Date(),
+      updatedBy: "system",
+    }
+    localStorage.setItem(STORAGE_KEYS.CHAT_SETTINGS, JSON.stringify(defaultChatSettings))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES)) {
+    localStorage.setItem(STORAGE_KEYS.CHAT_MESSAGES, JSON.stringify([]))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.PRESENTATIONS)) {
+    localStorage.setItem(STORAGE_KEYS.PRESENTATIONS, JSON.stringify([]))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.PRESENTATION_PROGRESS)) {
+    localStorage.setItem(STORAGE_KEYS.PRESENTATION_PROGRESS, JSON.stringify([]))
+  }
+
+  cleanupOldSessions()
+
+  loadScriptsFromDataFolder()
+}
+
+// User authentication
+export function authenticateUser(username: string, password: string): User | null {
   if (typeof window === "undefined") return null
 
-  const users = await db.getAllUsers()
+  const users: User[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+
   const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
 
   if (user) {
     if (user.role === "admin") {
       const validPasswords = ["rcp@$", "#qualidade@$"]
+
       if (!validPasswords.includes(password)) {
         return null
       }
+
+      const session: LoginSession = {
+        id: `session-${Date.now()}`,
+        loginAt: new Date(),
+      }
+
+      user.lastLoginAt = new Date()
+      user.isOnline = true
+      user.loginSessions = user.loginSessions || []
+      user.loginSessions.push(session)
+
+      // Update user in storage
+      const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
+      debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
+      return user
     }
 
-    // Update user status
+    const session: LoginSession = {
+      id: `session-${Date.now()}`,
+      loginAt: new Date(),
+    }
+
     user.lastLoginAt = new Date()
     user.isOnline = true
-    await db.updateUser(user)
+    user.loginSessions = user.loginSessions || []
+    user.loginSessions.push(session)
 
-    // Store in localStorage for quick access
-    localStorage.setItem("callcenter_current_user", JSON.stringify(user))
+    // Update user in storage
+    const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
+    debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
     return user
   }
 
@@ -86,31 +699,47 @@ export async function authenticateUser(username: string, password: string): Prom
 
 export function getCurrentUser(): User | null {
   if (typeof window === "undefined") return null
-  const userStr = localStorage.getItem("callcenter_current_user")
+
+  const userStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER)
   return userStr ? JSON.parse(userStr) : null
 }
 
-export async function logout() {
+export function logout() {
   if (typeof window === "undefined") return
 
   const currentUser = getCurrentUser()
-  if (currentUser) {
-    currentUser.isOnline = false
-    await db.updateUser(currentUser)
+  if (currentUser && currentUser.loginSessions && currentUser.loginSessions.length > 0) {
+    const users: User[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+    const user = users.find((u) => u.id === currentUser.id)
+
+    if (user && user.loginSessions) {
+      const lastSession = user.loginSessions[user.loginSessions.length - 1]
+      if (!lastSession.logoutAt) {
+        lastSession.logoutAt = new Date()
+        lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
+        user.isOnline = false
+
+        // Update user in storage
+        const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
+        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+        notifyUpdate()
+      }
+    }
   }
 
-  localStorage.removeItem("callcenter_current_user")
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER)
 }
 
-// ============ SCRIPT STEPS ============
-
-export async function getScriptSteps(): Promise<ScriptStep[]> {
-  return await db.getScriptSteps()
+// Script steps
+export function getScriptSteps(): ScriptStep[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS) || "[]")
 }
 
-export async function getScriptStepById(id: string, productId?: string): Promise<ScriptStep | null> {
-  const steps = await getScriptSteps()
+export function getScriptStepById(id: string, productId?: string): ScriptStep | null {
+  const steps = getScriptSteps()
 
+  // If productId is provided, filter by product first
   if (productId) {
     const productSteps = steps.filter((s) => s.productId === productId)
     return productSteps.find((s) => s.id === id) || null
@@ -119,376 +748,809 @@ export async function getScriptStepById(id: string, productId?: string): Promise
   return steps.find((s) => s.id === id) || null
 }
 
-export async function getScriptStepsByProduct(productId: string): Promise<ScriptStep[]> {
-  return await db.getScriptStepsByProduct(productId)
+// Memoization for expensive operations
+const scriptStepsCache = new Map<string, ScriptStep[]>()
+const productCache = new Map<string, Product>()
+
+export function getScriptStepsByProduct(productId: string): ScriptStep[] {
+  if (typeof window === "undefined") return []
+
+  if (scriptStepsCache.has(productId)) {
+    return scriptStepsCache.get(productId)!
+  }
+
+  const allSteps = getScriptSteps()
+  const filtered = allSteps.filter((step) => step.productId === productId)
+
+  scriptStepsCache.set(productId, filtered)
+
+  return filtered
 }
 
-export async function updateScriptStep(step: ScriptStep) {
-  await db.updateScriptStep(step)
-  window.dispatchEvent(new CustomEvent("store-updated"))
+export function getProductById(id: string): Product | null {
+  if (productCache.has(id)) {
+    return productCache.get(id)!
+  }
+
+  const products = getProducts()
+  const product = products.find((p) => p.id === id) || null
+
+  if (product) {
+    productCache.set(id, product)
+  }
+
+  return product
 }
 
-export async function createScriptStep(
-  step: Omit<ScriptStep, "id" | "createdAt" | "updatedAt">,
-): Promise<ScriptStep | null> {
-  const newStep = await db.createScriptStep(step)
-  window.dispatchEvent(new CustomEvent("store-updated"))
+export function updateScriptStep(step: ScriptStep) {
+  if (typeof window === "undefined") return
+
+  const steps = getScriptSteps()
+  const index = steps.findIndex((s) => s.id === step.id)
+
+  if (index !== -1) {
+    steps[index] = { ...step, updatedAt: new Date() }
+    debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
+    clearCaches() // Clear cache
+    notifyUpdate()
+  }
+}
+
+export function createScriptStep(step: Omit<ScriptStep, "id" | "createdAt" | "updatedAt">): ScriptStep {
+  if (typeof window === "undefined") return { ...step, id: "", createdAt: new Date(), updatedAt: new Date() }
+
+  const newStep: ScriptStep = {
+    ...step,
+    id: `step-${Date.now()}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  const steps = getScriptSteps()
+  steps.push(newStep)
+  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
+  notifyUpdate() // Notify about update
+
   return newStep
 }
 
-export async function deleteScriptStep(id: string) {
-  await db.deleteScriptStep(id)
-  window.dispatchEvent(new CustomEvent("store-updated"))
+export function deleteScriptStep(id: string) {
+  if (typeof window === "undefined") return
+
+  const steps = getScriptSteps().filter((s) => s.id !== id)
+  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
+  notifyUpdate() // Notify about update
 }
 
-// ============ PRODUCTS ============
-
-export async function getProducts(): Promise<Product[]> {
-  return await db.getProducts()
+// Tabulations
+export function getTabulations(): Tabulation[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.TABULATIONS) || "[]")
 }
 
-export async function getProductById(id: string): Promise<Product | null> {
-  const products = await getProducts()
-  return products.find((p) => p.id === id) || null
+// Situations
+export function getSituations(): ServiceSituation[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.SITUATIONS) || "[]")
 }
 
-export async function createProduct(product: Omit<Product, "id" | "createdAt">): Promise<Product | null> {
-  const newProduct = await db.createProduct(product)
-  window.dispatchEvent(new CustomEvent("store-updated"))
+// Channels
+export function getChannels(): Channel[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.CHANNELS) || "[]")
+}
+
+// Notes
+export function getNotes(userId: string): Note[] {
+  if (typeof window === "undefined") return []
+  const notes: Note[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES) || "[]")
+  return notes.filter((n) => n.userId === userId)
+}
+
+export function saveNote(userId: string, content: string) {
+  if (typeof window === "undefined") return
+
+  const notes: Note[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES) || "[]")
+  const newNote: Note = {
+    id: `note-${Date.now()}`,
+    userId,
+    content,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  notes.push(newNote)
+  debouncedSave(STORAGE_KEYS.NOTES, notes)
+}
+
+// Call sessions
+export function createCallSession(operatorId: string, startStepId: string): CallSession {
+  if (typeof window === "undefined")
+    return {
+      id: "",
+      operatorId,
+      currentStepId: startStepId,
+      startedAt: new Date(),
+      notes: "",
+    }
+
+  const session: CallSession = {
+    id: `session-${Date.now()}`,
+    operatorId,
+    currentStepId: startStepId,
+    startedAt: new Date(),
+    notes: "",
+  }
+
+  const sessions: CallSession[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || "[]")
+  sessions.push(session)
+  debouncedSave(STORAGE_KEYS.SESSIONS, sessions)
+
+  return session
+}
+
+export function updateCallSession(session: CallSession) {
+  if (typeof window === "undefined") return
+
+  const sessions: CallSession[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || "[]")
+  const index = sessions.findIndex((s) => s.id === session.id)
+
+  if (index !== -1) {
+    sessions[index] = session
+    debouncedSave(STORAGE_KEYS.SESSIONS, sessions)
+  }
+}
+
+// Products
+export function getProducts(): Product[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || "[]")
+}
+
+export function createProduct(product: Omit<Product, "id" | "createdAt">): Product {
+  if (typeof window === "undefined") return { ...product, id: "", createdAt: new Date() }
+
+  const newProduct: Product = {
+    ...product,
+    id: `prod-${Date.now()}`,
+    createdAt: new Date(),
+  }
+
+  const products = getProducts()
+  products.push(newProduct)
+  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
+  notifyUpdate() // Notify about update
+
   return newProduct
 }
 
-export async function updateProduct(product: Product) {
-  await db.updateProduct(product)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
+export function updateProduct(product: Product) {
+  if (typeof window === "undefined") return
 
-export async function deleteProduct(id: string) {
-  await db.deleteProduct(id)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
+  const products = getProducts()
+  const index = products.findIndex((p) => p.id === product.id)
 
-// ============ TABULATIONS & SITUATIONS ============
-
-export async function getTabulations(): Promise<Tabulation[]> {
-  console.log("[v0] getTabulations called")
-  try {
-    const result = await db.getTabulations()
-    console.log("[v0] getTabulations result:", result)
-    return result
-  } catch (error) {
-    console.error("[v0] Error in getTabulations:", error)
-    return []
+  if (index !== -1) {
+    products[index] = product
+    debouncedSave(STORAGE_KEYS.PRODUCTS, products)
+    clearCaches() // Clear cache
+    notifyUpdate()
   }
 }
 
-export async function getSituations(): Promise<ServiceSituation[]> {
-  console.log("[v0] getSituations called")
+export function deleteProduct(id: string) {
+  if (typeof window === "undefined") return
+
+  const products = getProducts().filter((p) => p.id !== id)
+  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
+  notifyUpdate() // Notify about update
+}
+
+// Additional user management functions
+export function getAllUsers(): User[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+}
+
+export function updateUser(user: User) {
+  if (typeof window === "undefined") return
+
   try {
-    const result = await db.getSituations()
-    console.log("[v0] getSituations result:", result)
-    return result
+    const users = getAllUsers()
+    const index = users.findIndex((u) => u.id === user.id)
+
+    if (index !== -1) {
+      users[index] = user
+      debouncedSave(STORAGE_KEYS.USERS, users)
+      notifyUpdate()
+    }
   } catch (error) {
-    console.error("[v0] Error in getSituations:", error)
-    return []
+    console.error("[v0] Error updating user:", error)
   }
 }
 
-export async function getChannels(): Promise<Channel[]> {
-  console.log("[v0] getChannels called")
+export function deleteUser(userId: string) {
+  if (typeof window === "undefined") return
+
   try {
-    const result = await db.getChannels()
-    console.log("[v0] getChannels result:", result)
-    return result
+    const users = getAllUsers().filter((u) => u.id !== userId)
+    debouncedSave(STORAGE_KEYS.USERS, users)
+    notifyUpdate()
   } catch (error) {
-    console.error("[v0] Error in getChannels:", error)
-    return []
+    console.error("[v0] Error deleting user:", error)
   }
 }
 
-// ============ USERS ============
+export function forceLogoutUser(userId: string) {
+  if (typeof window === "undefined") return
 
-export async function getAllUsers(): Promise<User[]> {
-  return await db.getAllUsers()
+  try {
+    const users = getAllUsers()
+    const user = users.find((u) => u.id === userId)
+
+    if (user && user.loginSessions && user.loginSessions.length > 0) {
+      const lastSession = user.loginSessions[user.loginSessions.length - 1]
+      if (!lastSession.logoutAt) {
+        lastSession.logoutAt = new Date()
+        lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
+        user.isOnline = false
+
+        const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
+        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+        notifyUpdate()
+      }
+    }
+  } catch (error) {
+    console.error("[v0] Error forcing logout:", error)
+  }
 }
 
-export async function createUser(
-  username: string,
-  fullName: string,
-  role: "operator" | "admin" = "operator",
-  permissions: any = {},
-): Promise<User | null> {
-  const newUser = await db.createUser(username, fullName, role, permissions)
-  if (newUser) {
+export function getTodayLoginSessions(userId: string): LoginSession[] {
+  if (typeof window === "undefined") return []
+
+  const users = getAllUsers()
+  const user = users.find((u) => u.id === userId)
+
+  if (!user || !user.loginSessions) return []
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return user.loginSessions.filter((session) => {
+    const sessionDate = new Date(session.loginAt)
+    sessionDate.setHours(0, 0, 0, 0)
+    return sessionDate.getTime() === today.getTime()
+  })
+}
+
+export function getTodayConnectedTime(userId: string): number {
+  const sessions = getTodayLoginSessions(userId)
+
+  return sessions.reduce((total, session) => {
+    if (session.duration) {
+      return total + session.duration
+    } else if (!session.logoutAt) {
+      // Still logged in
+      return total + (Date.now() - new Date(session.loginAt).getTime())
+    }
+    return total
+  }, 0)
+}
+
+// Debouncing utility for localStorage operations
+let updateTimeout: NodeJS.Timeout | null = null
+
+function notifyUpdate() {
+  if (typeof window === "undefined") return
+
+  if (updateTimeout) {
+    clearTimeout(updateTimeout)
+  }
+
+  updateTimeout = setTimeout(() => {
+    localStorage.setItem(STORAGE_KEYS.LAST_UPDATE, Date.now().toString())
     window.dispatchEvent(new CustomEvent("store-updated"))
+  }, 300) // Increased from 100ms to reduce event frequency
+}
+
+export function getLastUpdate(): number {
+  if (typeof window === "undefined") return 0
+  return Number.parseInt(localStorage.getItem(STORAGE_KEYS.LAST_UPDATE) || "0")
+}
+
+interface JsonData {
+  marcas?: Record<string, Record<string, any>>
+}
+
+export function importScriptFromJson(jsonData: JsonData): { productCount: number; stepCount: number } {
+  if (typeof window === "undefined") return { productCount: 0, stepCount: 0 }
+
+  let productCount = 0
+  let stepCount = 0
+
+  try {
+    if (jsonData.marcas) {
+      Object.entries(jsonData.marcas).forEach(([productName, productSteps]: [string, any]) => {
+        if (!productSteps || typeof productSteps !== "object") {
+          console.warn(`[v0] Skipping invalid product: ${productName}`)
+          return
+        }
+
+        const steps: ScriptStep[] = []
+        const productId = `prod-${productName.toLowerCase().replace(/\s+/g, "-")}`
+
+        Object.entries(productSteps).forEach(([stepKey, stepData]: [string, any]) => {
+          if (!stepData || typeof stepData !== "object" || !stepData.id || !stepData.title) {
+            console.warn(`[v0] Skipping invalid step: ${stepKey} in product ${productName}`)
+            return
+          }
+
+          const content = stepData.body || stepData.content || ""
+          if (!content.trim()) {
+            console.warn(`[v0] Warning: Empty content for step ${stepData.id}`)
+          }
+
+          const step: ScriptStep = {
+            id: stepData.id,
+            productId: productId,
+            title: stepData.title || "",
+            content: content,
+            order: stepData.order || 0,
+            buttons: (stepData.buttons || []).map((btn: any, index: number) => ({
+              id: `btn-${stepData.id}-${index}`,
+              label: btn.label || "",
+              nextStepId: btn.next || btn.nextStepId || null,
+              primary: btn.primary || false,
+              variant: btn.variant || (btn.primary ? "primary" : "secondary"),
+              order: btn.order || index,
+            })),
+            contentSegments: stepData.contentSegments || [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }
+          steps.push(step)
+        })
+
+        if (steps.length > 0) {
+          const existingSteps = getScriptSteps()
+          const filteredSteps = existingSteps.filter((s) => s.productId !== productId)
+          const newSteps = [...filteredSteps, ...steps]
+          debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, newSteps)
+          stepCount += steps.length
+
+          const firstStep =
+            steps.find(
+              (s) =>
+                s.title.toLowerCase().includes("abordagem") ||
+                s.id.toLowerCase().includes("abordagem") ||
+                s.order === 1,
+            ) || steps[0]
+
+          if (!firstStep) {
+            console.error(`[v0] No valid first step found for product ${productName}`)
+            return
+          }
+
+          const product: Product = {
+            id: productId,
+            name: productName,
+            scriptId: firstStep.id,
+            category: productName.toLowerCase() as "habitacional" | "comercial" | "outros",
+            isActive: true,
+            createdAt: new Date(),
+          }
+
+          const existingProducts = getProducts()
+          const existingIndex = existingProducts.findIndex((p) => p.id === productId)
+          if (existingIndex !== -1) {
+            existingProducts[existingIndex] = product
+          } else {
+            existingProducts.push(product)
+            productCount++
+          }
+          debouncedSave(STORAGE_KEYS.PRODUCTS, existingProducts)
+        }
+      })
+
+      clearCaches()
+      notifyUpdate()
+    }
+  } catch (error) {
+    console.error("[v0] Error importing script from JSON:", error)
+    throw error // Re-throw to allow caller to handle the error
   }
-  return newUser
+
+  return { productCount, stepCount }
 }
 
-export async function updateUser(user: User) {
-  await db.updateUser(user)
-  window.dispatchEvent(new CustomEvent("store-updated"))
+export function clearCaches() {
+  scriptStepsCache.clear()
+  productCache.clear()
 }
 
-export async function deleteUser(userId: string) {
-  await db.deleteUser(userId)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
+// Helper function to check if user is currently online
+export function isUserOnline(userId: string): boolean {
+  if (typeof window === "undefined") return false
 
-export async function forceLogoutUser(userId: string) {
-  const users = await getAllUsers()
+  const users = getAllUsers()
   const user = users.find((u) => u.id === userId)
 
-  if (user) {
-    user.isOnline = false
-    await updateUser(user)
+  if (!user) return false
+
+  // Check if user has isOnline flag set to true
+  return user.isOnline === true
+}
+
+// Helper function to get count of online operators
+export function getOnlineOperatorsCount(): number {
+  if (typeof window === "undefined") return 0
+
+  const users = getAllUsers()
+  return users.filter((u) => u.role === "operator" && u.isOnline === true).length
+}
+
+// Attendance type options
+export function getAttendanceTypes(): AttendanceTypeOption[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE_TYPES) || "[]")
+}
+
+export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "createdAt">): AttendanceTypeOption {
+  if (typeof window === "undefined") return { ...option, id: "", createdAt: new Date() }
+
+  const newOption: AttendanceTypeOption = {
+    ...option,
+    id: `att-${Date.now()}`,
+    createdAt: new Date(),
+  }
+
+  const options = getAttendanceTypes()
+  options.push(newOption)
+  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+  notifyUpdate()
+
+  return newOption
+}
+
+export function updateAttendanceType(option: AttendanceTypeOption) {
+  if (typeof window === "undefined") return
+
+  const options = getAttendanceTypes()
+  const index = options.findIndex((o) => o.id === option.id)
+
+  if (index !== -1) {
+    options[index] = option
+    debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+    notifyUpdate()
   }
 }
 
-export async function isUserOnline(userId: string): Promise<boolean> {
-  // This will need to be called async in components
-  const users = await getAllUsers()
-  const user = users.find((u) => u.id === userId)
-  return user ? user.isOnline : false
+export function deleteAttendanceType(id: string) {
+  if (typeof window === "undefined") return
+
+  const options = getAttendanceTypes().filter((o) => o.id !== id)
+  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+  notifyUpdate()
 }
 
-export async function getOnlineOperatorsCount(): Promise<number> {
-  // This will need to be called async in components
-  const users = await getAllUsers()
-  return users.filter((u) => u.role === "operator" && u.isOnline).length
+// Person type options
+export function getPersonTypes(): PersonTypeOption[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PERSON_TYPES) || "[]")
 }
 
-// ============ MESSAGES ============
+export function createPersonType(option: Omit<PersonTypeOption, "id" | "createdAt">): PersonTypeOption {
+  if (typeof window === "undefined") return { ...option, id: "", createdAt: new Date() }
 
-export async function getMessages(): Promise<Message[]> {
-  return await db.getMessages()
+  const newOption: PersonTypeOption = {
+    ...option,
+    id: `per-${Date.now()}`,
+    createdAt: new Date(),
+  }
+
+  const options = getPersonTypes()
+  options.push(newOption)
+  debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
+  notifyUpdate()
+
+  return newOption
 }
 
-export async function getActiveMessages(): Promise<Message[]> {
-  const messages = await getMessages()
-  return messages.filter((m) => m.isActive)
+export function updatePersonType(option: PersonTypeOption) {
+  if (typeof window === "undefined") return
+
+  const options = getPersonTypes()
+  const index = options.findIndex((o) => o.id === option.id)
+
+  if (index !== -1) {
+    options[index] = option
+    debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
+    notifyUpdate()
+  }
 }
 
-export async function createMessage(message: Omit<Message, "id" | "createdAt" | "seenBy">): Promise<Message | null> {
-  const newMessage = await db.createMessage(message)
-  window.dispatchEvent(new CustomEvent("store-updated"))
+export function deletePersonType(id: string) {
+  if (typeof window === "undefined") return
+
+  const options = getPersonTypes().filter((o) => o.id !== id)
+  debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
+  notifyUpdate()
+}
+
+// Messages management functions
+export function getMessages(): Message[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || "[]")
+}
+
+export function getActiveMessages(): Message[] {
+  return getMessages().filter((m) => m.isActive)
+}
+
+export function createMessage(message: Omit<Message, "id" | "createdAt" | "seenBy">): Message {
+  if (typeof window === "undefined") return { ...message, id: "", createdAt: new Date(), seenBy: [] }
+
+  const newMessage: Message = {
+    ...message,
+    id: `msg-${Date.now()}`,
+    createdAt: new Date(),
+    seenBy: [],
+  }
+
+  const messages = getMessages()
+  messages.push(newMessage)
+  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+  notifyUpdate()
+
   return newMessage
 }
 
-export async function updateMessage(message: Message) {
-  await db.updateMessage(message)
-  window.dispatchEvent(new CustomEvent("store-updated"))
+export function updateMessage(message: Message) {
+  if (typeof window === "undefined") return
+
+  const messages = getMessages()
+  const index = messages.findIndex((m) => m.id === message.id)
+
+  if (index !== -1) {
+    messages[index] = message
+    debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+    notifyUpdate()
+  }
 }
 
-export async function deleteMessage(id: string) {
-  await db.deleteMessage(id)
-  window.dispatchEvent(new CustomEvent("store-updated"))
+export function deleteMessage(id: string) {
+  if (typeof window === "undefined") return
+
+  const messages = getMessages().filter((m) => m.id !== id)
+  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+  notifyUpdate()
 }
 
-export async function markMessageAsSeen(messageId: string, operatorId: string) {
-  const messages = await getMessages()
+export function markMessageAsSeen(messageId: string, operatorId: string) {
+  if (typeof window === "undefined") return
+
+  const messages = getMessages()
   const message = messages.find((m) => m.id === messageId)
 
   if (message && !message.seenBy.includes(operatorId)) {
     message.seenBy.push(operatorId)
-    await updateMessage(message)
+    updateMessage(message)
   }
 }
 
-export async function getActiveMessagesForOperator(operatorId: string): Promise<Message[]> {
+export function getActiveMessagesForOperator(operatorId: string): Message[] {
   const now = new Date()
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const messages = await getMessages()
 
-  return messages.filter((m) => {
+  return getMessages().filter((m) => {
     if (!m.isActive) return false
 
     const messageDate = new Date(m.createdAt)
     if (messageDate < twentyFourHoursAgo) return false
 
+    // Check if message is for this operator
     if (m.recipients && m.recipients.length > 0) {
       return m.recipients.includes(operatorId)
     }
 
+    // Empty recipients means all operators
     return true
   })
 }
 
-export async function getHistoricalMessagesForOperator(operatorId: string): Promise<Message[]> {
-  const messages = await getMessages()
-  
-  return messages.filter((m) => {
-    // Include messages that have been marked as seen by this operator
-    if (m.seenBy && m.seenBy.includes(operatorId)) {
-      return true
-    }
-    
-    // Include inactive messages
-    if (!m.isActive) {
-      // Check if message was targeted to this operator or was a broadcast
-      if (m.recipients && m.recipients.length > 0) {
-        return m.recipients.includes(operatorId)
-      }
-      return true
-    }
-    
-    return false
-  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-}
-
-// ============ QUIZZES ============
-
-export async function getQuizzes(): Promise<Quiz[]> {
-  return await db.getQuizzes()
-}
-
-export async function getActiveQuizzes(): Promise<Quiz[]> {
-  const quizzes = await getQuizzes()
-  return quizzes.filter((q) => q.isActive)
-}
-
-export async function getActiveQuizzesForOperator(operatorId: string): Promise<Quiz[]> {
+export function getHistoricalMessagesForOperator(operatorId: string): Message[] {
   const now = new Date()
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const quizzes = await getQuizzes()
 
-  return quizzes.filter((q) => {
+  return getMessages().filter((m) => {
+    const messageDate = new Date(m.createdAt)
+    if (messageDate >= twentyFourHoursAgo) return false
+
+    // Check if message is for this operator
+    if (m.recipients && m.recipients.length > 0) {
+      return m.recipients.includes(operatorId)
+    }
+
+    // Empty recipients means all operators
+    return true
+  })
+}
+
+// Quizzes management functions
+export function getQuizzes(): Quiz[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.QUIZZES) || "[]")
+}
+
+export function getActiveQuizzes(): Quiz[] {
+  return getQuizzes().filter((q) => q.isActive)
+}
+
+export function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Quiz {
+  if (typeof window === "undefined") return { ...quiz, id: "", createdAt: new Date() }
+
+  const newQuiz: Quiz = {
+    ...quiz,
+    id: `quiz-${Date.now()}`,
+    createdAt: new Date(),
+  }
+
+  const quizzes = getQuizzes()
+  quizzes.push(newQuiz)
+  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+  notifyUpdate()
+
+  return newQuiz
+}
+
+export function updateQuiz(quiz: Quiz) {
+  if (typeof window === "undefined") return
+
+  const quizzes = getQuizzes()
+  const index = quizzes.findIndex((q) => q.id === quiz.id)
+
+  if (index !== -1) {
+    quizzes[index] = quiz
+    debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+    notifyUpdate()
+  }
+}
+
+export function deleteQuiz(id: string) {
+  if (typeof window === "undefined") return
+
+  const quizzes = getQuizzes().filter((q) => q.id !== id)
+  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+  notifyUpdate()
+}
+
+export function getActiveQuizzesForOperator(): Quiz[] {
+  const now = new Date()
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  return getQuizzes().filter((q) => {
     if (!q.isActive) return false
+
+    // Check if quiz is scheduled for future
+    if (q.scheduledDate) {
+      const scheduledDate = new Date(q.scheduledDate)
+      if (scheduledDate > now) return false
+    }
 
     const quizDate = new Date(q.createdAt)
     if (quizDate < twentyFourHoursAgo) return false
 
-    if (q.recipients && q.recipients.length > 0) {
-      return q.recipients.includes(operatorId)
-    }
-
     return true
   })
 }
 
-export async function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Promise<Quiz | null> {
-  const newQuiz = await db.createQuiz(quiz)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-  return newQuiz
+export function getHistoricalQuizzes(): Quiz[] {
+  const now = new Date()
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  return getQuizzes().filter((q) => {
+    const quizDate = new Date(q.createdAt)
+    return quizDate < twentyFourHoursAgo
+  })
 }
 
-export async function updateQuiz(quiz: Quiz) {
-  const quizzes = await getQuizzes()
-  const existing = quizzes.find((q) => q.id === quiz.id)
-
-  if (existing) {
-    // Update logic would go here with db function
-    window.dispatchEvent(new CustomEvent("store-updated"))
-  }
-}
-
-export async function deleteQuiz(id: string) {
-  // Delete logic would go here with db function
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-export async function getQuizAttempts(): Promise<QuizAttempt[]> {
-  return await db.getQuizAttempts()
-}
-
-export async function getQuizAttemptsByQuiz(quizId: string): Promise<QuizAttempt[]> {
-  return await db.getQuizAttemptsByQuiz(quizId)
-}
-
-export async function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt">): Promise<QuizAttempt | null> {
-  const newAttempt = await db.createQuizAttempt(attempt)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-  return newAttempt
-}
-
-export async function hasOperatorAnsweredQuiz(quizId: string, operatorId: string): Promise<boolean> {
-  const attempts = await getQuizAttempts()
+export function hasOperatorAnsweredQuiz(quizId: string, operatorId: string): boolean {
+  const attempts = getQuizAttempts()
   return attempts.some((a) => a.quizId === quizId && a.operatorId === operatorId)
 }
 
-export async function getHistoricalQuizzes(operatorId: string): Promise<Quiz[]> {
-  const quizzes = await getQuizzes()
-  const attempts = await getQuizAttempts()
-  
-  return quizzes.filter((q) => {
-    // Include inactive quizzes
-    if (!q.isActive) {
-      // Check if quiz was targeted to this operator or was a broadcast
-      if (q.recipients && q.recipients.length > 0) {
-        return q.recipients.includes(operatorId)
-      }
-      return true
-    }
-    
-    // Include active quizzes that this operator has already answered
-    const hasAnswered = attempts.some((a) => a.quizId === q.id && a.operatorId === operatorId)
-    if (hasAnswered) {
-      // Check if quiz was targeted to this operator or was a broadcast
-      if (q.recipients && q.recipients.length > 0) {
-        return q.recipients.includes(operatorId)
-      }
-      return true
-    }
-    
-    return false
-  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+// Quiz Attempts management functions
+export function getQuizAttempts(): QuizAttempt[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.QUIZ_ATTEMPTS) || "[]")
 }
 
-export async function getMonthlyQuizRanking(year?: number, month?: number): Promise<OperatorRanking[]> {
+export function getQuizAttemptsByOperator(operatorId: string): QuizAttempt[] {
+  return getQuizAttempts().filter((a) => a.operatorId === operatorId)
+}
+
+export function getQuizAttemptsByQuiz(quizId: string): QuizAttempt[] {
+  return getQuizAttempts().filter((a) => a.quizId === quizId)
+}
+
+export function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt">): QuizAttempt {
+  if (typeof window === "undefined") return { ...attempt, id: "", attemptedAt: new Date() }
+
+  const newAttempt: QuizAttempt = {
+    ...attempt,
+    id: `attempt-${Date.now()}`,
+    attemptedAt: new Date(),
+  }
+
+  const attempts = getQuizAttempts()
+  attempts.push(newAttempt)
+  debouncedSave(STORAGE_KEYS.QUIZ_ATTEMPTS, attempts)
+  notifyUpdate()
+
+  return newAttempt
+}
+
+// Monthly ranking functions for quiz leaderboard
+export interface OperatorRanking {
+  operatorId: string
+  operatorName: string
+  totalAttempts: number
+  correctAnswers: number
+  score: number
+  accuracy: number
+  rank: number
+}
+
+export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRanking[] {
+  if (typeof window === "undefined") return []
+
   const now = new Date()
   const targetYear = year ?? now.getFullYear()
-  const targetMonth = month ?? now.getMonth()
+  const targetMonth = month !== undefined ? month : now.getMonth()
 
-  const startDate = new Date(targetYear, targetMonth, 1)
-  const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59)
+  const attempts = getQuizAttempts()
 
-  const attempts = await getQuizAttempts()
-  const users = await getAllUsers()
-
-  // Filter attempts for the target month
   const monthlyAttempts = attempts.filter((attempt) => {
-    const attemptDate = new Date(attempt.attemptedAt)
-    return attemptDate >= startDate && attemptDate <= endDate
+    const attemptDate = attempt.attemptedAt instanceof Date ? attempt.attemptedAt : new Date(attempt.attemptedAt)
+
+    const yearMatch = attemptDate.getFullYear() === targetYear
+    const monthMatch = attemptDate.getMonth() === targetMonth
+
+    return yearMatch && monthMatch
   })
 
-  // Group attempts by operator
-  const operatorStats = new Map<string, { totalAttempts: number; correctAnswers: number }>()
+  // Group by operator
+  const operatorStats = new Map<string, { name: string; total: number; correct: number }>()
 
   monthlyAttempts.forEach((attempt) => {
-    const stats = operatorStats.get(attempt.operatorId) || { totalAttempts: 0, correctAnswers: 0 }
-    stats.totalAttempts++
+    const existing = operatorStats.get(attempt.operatorId) || {
+      name: attempt.operatorName,
+      total: 0,
+      correct: 0,
+    }
+
+    existing.total++
     if (attempt.isCorrect) {
-      stats.correctAnswers++
+      existing.correct++
     }
-    operatorStats.set(attempt.operatorId, stats)
+
+    operatorStats.set(attempt.operatorId, existing)
   })
 
-  // Create rankings
-  const rankings: OperatorRanking[] = []
+  // Convert to ranking array
+  const rankings: OperatorRanking[] = Array.from(operatorStats.entries()).map(([operatorId, stats]) => ({
+    operatorId,
+    operatorName: stats.name,
+    totalAttempts: stats.total,
+    correctAnswers: stats.correct,
+    score: stats.correct * 10, // 10 points per correct answer
+    accuracy: stats.total > 0 ? (stats.correct / stats.total) * 100 : 0,
+    rank: 0, // Will be set after sorting
+  }))
 
-  operatorStats.forEach((stats, operatorId) => {
-    const user = users.find((u) => u.id === operatorId)
-    if (!user) return
-
-    const accuracy = stats.totalAttempts > 0 ? (stats.correctAnswers / stats.totalAttempts) * 100 : 0
-    const score = stats.correctAnswers
-
-    rankings.push({
-      operatorId,
-      operatorName: user.fullName,
-      totalAttempts: stats.totalAttempts,
-      correctAnswers: stats.correctAnswers,
-      score,
-      accuracy,
-      rank: 0, // Will be set after sorting
-    })
-  })
-
-  // Sort by score (correctAnswers) descending, then by accuracy
+  // Sort by score (descending), then by accuracy (descending)
   rankings.sort((a, b) => {
-    if (b.score !== a.score) {
-      return b.score - a.score
-    }
+    if (b.score !== a.score) return b.score - a.score
     return b.accuracy - a.accuracy
   })
 
@@ -498,352 +1560,6 @@ export async function getMonthlyQuizRanking(year?: number, month?: number): Prom
   })
 
   return rankings
-}
-
-// ============ CHAT ============
-
-export async function getAllChatMessages(): Promise<ChatMessage[]> {
-  return await db.getChatMessages()
-}
-
-export async function getChatSettings(): Promise<ChatSettings> {
-  return await db.getChatSettings()
-}
-
-export async function updateChatSettings(settings: Partial<ChatSettings>) {
-  const current = await getChatSettings()
-  const updated = { ...current, ...settings }
-  await db.updateChatSettings(updated)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-export async function sendChatMessage(
-  senderId: string,
-  senderName: string,
-  senderRole: "operator" | "admin",
-  content: string,
-  recipientId?: string,
-  attachment?: any,
-): Promise<ChatMessage | null> {
-  const newMessage = await db.sendChatMessage(senderId, senderName, senderRole, content, recipientId, attachment)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-  return newMessage
-}
-
-export async function getChatMessagesForUser(userId: string, userRole: "operator" | "admin"): Promise<ChatMessage[]> {
-  const messages = await getAllChatMessages()
-
-  if (userRole === "operator") {
-    return messages
-      .filter(
-        (m) => m.senderId === userId || (m.senderRole === "admin" && (!m.recipientId || m.recipientId === userId)),
-      )
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  } else {
-    return messages
-      .filter((m) => m.senderRole === "operator" || m.senderId === userId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  }
-}
-
-export async function deleteChatMessage(messageId: string) {
-  await db.deleteChatMessage(messageId)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-export async function markChatMessageAsRead(messageId: string) {
-  const messages = await getAllChatMessages()
-  const message = messages.find((m) => m.id === messageId)
-  
-  if (message) {
-    // Mark as read by updating the message
-    // This could be enhanced to track which operators have read which messages
-    await db.updateChatMessage({ ...message, isRead: true })
-    window.dispatchEvent(new CustomEvent("store-updated"))
-  }
-}
-
-// ============ PRESENTATIONS ============
-
-export async function getPresentations(): Promise<Presentation[]> {
-  return await db.getPresentations()
-}
-
-export async function getActivePresentations(): Promise<Presentation[]> {
-  const presentations = await getPresentations()
-  return presentations.filter((p) => p.isActive)
-}
-
-export async function createPresentation(
-  presentation: Omit<Presentation, "id" | "createdAt" | "updatedAt">,
-): Promise<Presentation | null> {
-  const newPresentation = await db.createPresentation(presentation)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-  return newPresentation
-}
-
-export async function updatePresentation(presentation: Presentation) {
-  await db.updatePresentation(presentation)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-export async function deletePresentation(id: string) {
-  await db.deletePresentation(id)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-export async function getPresentationProgressByPresentation(presentationId: string) {
-  // This needs to be called async in components, return empty for now
-  if (typeof window === "undefined") return []
-
-  // For now, return from a synchronous cache or empty array
-  // Components should call this asynchronously
-  return await db.getPresentationProgressByPresentation(presentationId)
-}
-
-export async function updatePresentationProgress(
-  presentationId: string,
-  operatorId: string,
-  currentSlide: number,
-  markedAsSeen: boolean,
-) {
-  await db.updatePresentationProgress(presentationId, operatorId, currentSlide, markedAsSeen)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-export async function exportPresentationReport(presentationId: string): Promise<string | null> {
-  if (typeof window === "undefined") return null
-
-  try {
-    const presentation = await db.getPresentationById(presentationId)
-    if (!presentation) return null
-
-    // Get progress data - this would need to be fetched from db
-    const progressList = await db.getPresentationProgressByPresentation(presentationId)
-    const operators = await db.getOperators()
-
-    // CSV header
-    let csv = "data:text/csv;charset=utf-8,"
-    csv += "Operador,Slide Atual,Visto,Data de Visualização\n"
-
-    // CSV rows
-    progressList.forEach((progress) => {
-      const operator = operators.find((op) => op.id === progress.operatorId)
-      const operatorName = operator ? operator.fullName : "Desconhecido"
-      const markedAsSeen = progress.markedAsSeen ? "Sim" : "Não"
-      const viewedAt = new Date(progress.viewedAt).toLocaleString("pt-BR")
-
-      csv += `${operatorName},${progress.currentSlide},${markedAsSeen},${viewedAt}\n`
-    })
-
-    return csv
-  } catch (error) {
-    console.error("[v0] Error exporting presentation report:", error)
-    return null
-  }
-}
-
-export async function getActivePresentationsForOperator(operatorId: string): Promise<Presentation[]> {
-  const presentations = await getPresentations()
-  
-  return presentations.filter((p) => {
-    if (!p.isActive) return false
-    
-    // If presentation has specific recipients, check if operator is included
-    if (p.recipients && p.recipients.length > 0) {
-      return p.recipients.includes(operatorId)
-    }
-    
-    // If no specific recipients, it's a broadcast to all operators
-    return true
-  })
-}
-
-export async function getPresentationProgressByOperator(operatorId: string) {
-  const allProgress = await db.getPresentationProgress()
-  return allProgress.filter((p) => p.operatorId === operatorId)
-}
-
-export async function markPresentationAsSeen(presentationId: string, operatorId: string, operatorName: string) {
-  // Get current presentation to find total slides
-  const presentation = await db.getPresentationById(presentationId)
-  if (!presentation) return
-  
-  const totalSlides = presentation.slides.length
-  
-  // Mark as seen by updating progress to last slide
-  await db.updatePresentationProgress(presentationId, operatorId, totalSlides - 1, true)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-// ============ NOTES ============
-
-export async function getNotes(userId: string): Promise<Note[]> {
-  return await db.getNotes(userId)
-}
-
-export async function saveNote(userId: string, content: string) {
-  await db.saveNote(userId, content)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-// ============ ATTENDANCE TYPES ============
-
-export async function getAttendanceTypes(): Promise<AttendanceTypeOption[]> {
-  return await db.getAttendanceTypes()
-}
-
-export async function createAttendanceType(
-  option: Omit<AttendanceTypeOption, "id" | "createdAt">,
-): Promise<AttendanceTypeOption | null> {
-  const newOption = await db.createAttendanceType(option)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-  return newOption
-}
-
-export async function updateAttendanceType(option: AttendanceTypeOption) {
-  await db.updateAttendanceType(option)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-export async function deleteAttendanceType(id: string) {
-  await db.deleteAttendanceType(id)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-// ============ PERSON TYPES ============
-
-export async function getPersonTypes(): Promise<PersonTypeOption[]> {
-  return await db.getPersonTypes()
-}
-
-export async function createPersonType(
-  option: Omit<PersonTypeOption, "id" | "createdAt">,
-): Promise<PersonTypeOption | null> {
-  const newOption = await db.createPersonType(option)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-  return newOption
-}
-
-export async function updatePersonType(option: PersonTypeOption) {
-  await db.updatePersonType(option)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-export async function deletePersonType(id: string) {
-  await db.deletePersonType(id)
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-// ============ ADMIN USERS ============
-
-export async function getAdminUsers(): Promise<User[]> {
-  const users = await db.getAllUsers()
-  return users.filter((u) => u.role === "admin")
-}
-
-export async function createAdminUser(username: string, fullName: string): Promise<User | null> {
-  return await db.createUser(username, fullName, "admin", {})
-}
-
-export async function canDeleteAdminUser(userId: string): Promise<boolean> {
-  const adminUsers = await getAdminUsers()
-  return adminUsers.length > 1
-}
-
-export async function updateAdminPermissions(userId: string, permissions: AdminPermissions) {
-  const users = await getAllUsers()
-  const user = users.find((u) => u.id === userId)
-  if (user) {
-    user.permissions = permissions
-    await db.updateUser(user)
-    window.dispatchEvent(new CustomEvent("store-updated"))
-  }
-}
-
-// ============ LEGACY / COMPATIBILITY FUNCTIONS ============
-// These are kept for backward compatibility but may not be fully functional
-
-export function createCallSession(operatorId: string, startStepId: string): CallSession {
-  return {
-    id: `session-${Date.now()}`,
-    operatorId,
-    currentStepId: startStepId,
-    startedAt: new Date(),
-    notes: "",
-  }
-}
-
-export function getLastUpdate(): number {
-  return Date.now()
-}
-
-export async function importScriptFromJson(jsonData: any): Promise<{ productCount: number; stepCount: number }> {
-  if (!jsonData || !jsonData.marcas) {
-    throw new Error("Formato inválido: propriedade 'marcas' não encontrada")
-  }
-
-  let productCount = 0
-  let stepCount = 0
-
-  const marcas = jsonData.marcas
-
-  for (const produtoNome of Object.keys(marcas)) {
-    const productId = `prod-${produtoNome.toLowerCase().replace(/\s+/g, "-")}`
-    
-    // Check if product exists, if not create it
-    const existingProduct = await getProductById(productId)
-    if (!existingProduct) {
-      await createProduct({
-        name: produtoNome,
-        description: `Produto ${produtoNome}`,
-      })
-      productCount++
-    }
-
-    const telas = marcas[produtoNome]
-
-    for (const stepKey of Object.keys(telas)) {
-      const stepData = telas[stepKey]
-
-      if (!stepData.id || !stepData.title) {
-        console.warn(`[v0] Skipping invalid step: ${stepKey}`)
-        continue
-      }
-
-      // Check if step already exists
-      const existingStep = await getScriptStepById(stepData.id, productId)
-      
-      if (existingStep) {
-        // Update existing step
-        await updateScriptStep({
-          ...existingStep,
-          title: stepData.title,
-          content: stepData.content || "",
-          productId: productId,
-          buttons: stepData.buttons || [],
-          tabulations: stepData.tabulations,
-          alert: stepData.alert,
-        })
-      } else {
-        // Create new step
-        await createScriptStep({
-          id: stepData.id,
-          title: stepData.title,
-          content: stepData.content || "",
-          contentSegments: [],
-          order: stepCount + 1,
-          productId: productId,
-          buttons: stepData.buttons || [],
-          tabulations: stepData.tabulations,
-          alert: stepData.alert,
-        })
-        stepCount++
-      }
-    }
-  }
-
-  return { productCount, stepCount }
 }
 
 export function getCurrentMonthName(): string {
@@ -864,59 +1580,347 @@ export function getCurrentMonthName(): string {
   return months[new Date().getMonth()]
 }
 
-export async function cleanupOldSessions() {
-  // Clean up old sessions that are older than 24 hours
+export function updateAdminPermissions(userId: string, permissions: AdminPermissions) {
   if (typeof window === "undefined") return
 
-  const sessions = await db.getSessions()
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-
-  for (const session of sessions) {
-    const sessionDate = new Date(session.startedAt)
-    if (sessionDate < twentyFourHoursAgo) {
-      // Old session cleanup logic can be added here if needed
-      console.log("[v0] Cleaned up old session:", session.id)
-    }
-  }
-}
-
-export function getTodayConnectedTime(operatorId: string): number {
-  // Returns the total time in minutes that an operator has been connected today
-  // This is a simplified implementation that returns 0 for now
-  // A full implementation would track connection/disconnection events
-  if (typeof window === "undefined") return 0
-
   try {
-    const key = `operator_time_${operatorId}_${new Date().toISOString().split("T")[0]}`
-    const storedTime = localStorage.getItem(key)
-    return storedTime ? Number.parseInt(storedTime, 10) : 0
+    const users = getAllUsers()
+    const user = users.find((u) => u.id === userId)
+
+    if (user && user.role === "admin") {
+      user.permissions = permissions
+      updateUser(user)
+    }
   } catch (error) {
-    console.error("[v0] Error getting today connected time:", error)
-    return 0
+    console.error("[v0] Error updating admin permissions:", error)
   }
 }
 
-export function getTodayLoginSessions(operatorId: string): Array<{ loginTime: Date; logoutTime?: Date }> {
-  // Returns the login sessions for an operator today
-  // This is a simplified implementation using localStorage
+export function getAdminUsers(): User[] {
   if (typeof window === "undefined") return []
 
-  try {
-    const today = new Date().toISOString().split("T")[0]
-    const key = `operator_sessions_${operatorId}_${today}`
-    const storedSessions = localStorage.getItem(key)
+  const users = getAllUsers()
+  return users.filter((u) => u.role === "admin" && u.username !== "admin")
+}
 
-    if (storedSessions) {
-      const sessions = JSON.parse(storedSessions)
-      return sessions.map((s: any) => ({
-        loginTime: new Date(s.loginTime),
-        logoutTime: s.logoutTime ? new Date(s.logoutTime) : undefined,
-      }))
+export function createAdminUser(username: string, fullName: string): User | null {
+  if (typeof window === "undefined") return null
+
+  try {
+    const users = getAllUsers()
+
+    // Check if username already exists
+    if (users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+      return null
     }
 
-    return []
+    const newUser: User = {
+      id: `user-${Date.now()}`,
+      username,
+      fullName,
+      role: "admin",
+      isOnline: false,
+      createdAt: new Date(),
+      permissions: {
+        dashboard: true,
+        scripts: true,
+        products: true,
+        attendanceConfig: true,
+        tabulations: true,
+        situations: true,
+        channels: true,
+        notes: true,
+        operators: true,
+        messagesQuiz: true,
+        settings: true,
+      },
+    }
+
+    users.push(newUser)
+    debouncedSave(STORAGE_KEYS.USERS, users)
+    notifyUpdate()
+
+    return newUser
   } catch (error) {
-    console.error("[v0] Error getting today login sessions:", error)
-    return []
+    console.error("[v0] Error creating admin user:", error)
+    return null
   }
+}
+
+export function canDeleteAdminUser(userId: string): boolean {
+  if (typeof window === "undefined") return false
+
+  const users = getAllUsers()
+  const user = users.find((u) => u.id === userId)
+
+  // Cannot delete the main admin user
+  return user !== undefined && user.username !== "admin"
+}
+
+export function cleanupOldSessions() {
+  if (typeof window === "undefined") return
+
+  try {
+    const users = getAllUsers()
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    let cleanedCount = 0
+
+    users.forEach((user) => {
+      if (user.loginSessions && user.loginSessions.length > 50) {
+        const originalLength = user.loginSessions.length
+        // Keep only last 50 sessions and those within 30 days
+        user.loginSessions = user.loginSessions
+          .filter((session) => new Date(session.loginAt) > thirtyDaysAgo)
+          .slice(-50)
+
+        cleanedCount += originalLength - user.loginSessions.length
+      }
+    })
+
+    if (cleanedCount > 0) {
+      console.log(`[v0] Cleaned up ${cleanedCount} old sessions`)
+      debouncedSave(STORAGE_KEYS.USERS, users)
+    }
+  } catch (error) {
+    console.error("[v0] Error cleaning up sessions:", error)
+  }
+}
+
+export function getAllChatMessages(): ChatMessage[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES) || "[]")
+}
+
+export function getChatSettings(): ChatSettings {
+  if (typeof window === "undefined") return { isEnabled: true, updatedAt: new Date(), updatedBy: "system" }
+  return JSON.parse(
+    localStorage.getItem(STORAGE_KEYS.CHAT_SETTINGS) ||
+      JSON.stringify({ isEnabled: true, updatedAt: new Date(), updatedBy: "system" }),
+  )
+}
+
+export function updateChatSettings(settings: ChatSettings) {
+  if (typeof window === "undefined") return
+  debouncedSave(STORAGE_KEYS.CHAT_SETTINGS, settings)
+  notifyUpdate()
+}
+
+export function sendChatMessage(
+  senderId: string,
+  senderName: string,
+  senderRole: "operator" | "admin",
+  content: string,
+  recipientId?: string,
+  attachment?: {
+    type: "image"
+    url: string
+    name: string
+  },
+): ChatMessage {
+  if (typeof window === "undefined")
+    return {
+      id: "",
+      senderId,
+      senderName,
+      senderRole,
+      recipientId,
+      content,
+      attachment,
+      createdAt: new Date(),
+      isRead: false,
+    }
+
+  const newMessage: ChatMessage = {
+    id: `chat-${Date.now()}`,
+    senderId,
+    senderName,
+    senderRole,
+    recipientId,
+    content,
+    attachment,
+    createdAt: new Date(),
+    isRead: false,
+  }
+
+  const messages = getAllChatMessages()
+  messages.push(newMessage)
+  debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
+  notifyUpdate()
+
+  return newMessage
+}
+
+export function markChatMessageAsRead(messageId: string) {
+  if (typeof window === "undefined") return
+
+  const messages = getAllChatMessages()
+  const message = messages.find((m) => m.id === messageId)
+
+  if (message && !message.isRead) {
+    message.isRead = true
+    debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
+    notifyUpdate()
+  }
+}
+
+export function getChatMessagesForUser(userId: string, userRole: "operator" | "admin"): ChatMessage[] {
+  const messages = getAllChatMessages()
+
+  if (userRole === "operator") {
+    // Operator sees: messages they sent + messages from admins to them or all operators
+    return messages
+      .filter(
+        (m) => m.senderId === userId || (m.senderRole === "admin" && (!m.recipientId || m.recipientId === userId)),
+      )
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  } else {
+    // Admin sees: all messages from operators + messages they sent
+    return messages
+      .filter((m) => m.senderRole === "operator" || m.senderId === userId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  }
+}
+
+export function getUnreadChatCount(userId: string, userRole: "operator" | "admin"): number {
+  const messages = getChatMessagesForUser(userId, userRole)
+  return messages.filter((m) => !m.isRead && m.senderId !== userId).length
+}
+
+export function deleteChatMessage(messageId: string) {
+  if (typeof window === "undefined") return
+
+  const messages = getAllChatMessages().filter((m) => m.id !== messageId)
+  debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
+  notifyUpdate()
+}
+
+export function getPresentations(): Presentation[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRESENTATIONS) || "[]")
+}
+
+export function getActivePresentations(): Presentation[] {
+  return getPresentations().filter((p) => p.isActive)
+}
+
+export function getActivePresentationsForOperator(operatorId: string): Presentation[] {
+  return getActivePresentations().filter((p) => {
+    if (p.recipients && p.recipients.length > 0) {
+      return p.recipients.includes(operatorId)
+    }
+    return true // Empty recipients means for all operators
+  })
+}
+
+export function createPresentation(presentation: Omit<Presentation, "id" | "createdAt" | "updatedAt">): Presentation {
+  if (typeof window === "undefined") return { ...presentation, id: "", createdAt: new Date(), updatedAt: new Date() }
+
+  const newPresentation: Presentation = {
+    ...presentation,
+    id: `pres-${Date.now()}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  const presentations = getPresentations()
+  presentations.push(newPresentation)
+  debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+  notifyUpdate()
+
+  return newPresentation
+}
+
+export function updatePresentation(presentation: Presentation) {
+  if (typeof window === "undefined") return
+
+  const presentations = getPresentations()
+  const index = presentations.findIndex((p) => p.id === presentation.id)
+
+  if (index !== -1) {
+    presentations[index] = { ...presentation, updatedAt: new Date() }
+    debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+    notifyUpdate()
+  }
+}
+
+export function deletePresentation(id: string) {
+  if (typeof window === "undefined") return
+
+  const presentations = getPresentations().filter((p) => p.id !== id)
+  debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+  notifyUpdate()
+}
+
+// Presentation Progress tracking
+export function getPresentationProgress(): PresentationProgress[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRESENTATION_PROGRESS) || "[]")
+}
+
+export function getPresentationProgressByOperator(operatorId: string): PresentationProgress[] {
+  return getPresentationProgress().filter((p) => p.operatorId === operatorId)
+}
+
+export function getPresentationProgressByPresentation(presentationId: string): PresentationProgress[] {
+  return getPresentationProgress().filter((p) => p.presentationId === presentationId)
+}
+
+export function markPresentationAsSeen(presentationId: string, operatorId: string, operatorName: string) {
+  if (typeof window === "undefined") return
+
+  const progress = getPresentationProgress()
+  const existing = progress.find((p) => p.presentationId === presentationId && p.operatorId === operatorId)
+
+  if (existing) {
+    existing.marked_as_seen = true
+    existing.completion_date = new Date()
+  } else {
+    const newProgress: PresentationProgress = {
+      id: `prog-${Date.now()}`,
+      presentationId,
+      operatorId,
+      operatorName,
+      viewedAt: new Date(),
+      marked_as_seen: true,
+      completion_date: new Date(),
+    }
+    progress.push(newProgress)
+  }
+
+  debouncedSave(STORAGE_KEYS.PRESENTATION_PROGRESS, progress)
+  notifyUpdate()
+}
+
+export function exportPresentationReport(presentationId: string): string {
+  const presentation = getPresentations().find((p) => p.id === presentationId)
+  const progressList = getPresentationProgressByPresentation(presentationId)
+
+  if (!presentation) {
+    return ""
+  }
+
+  // Create CSV content
+  let csvContent = "data:text/csv;charset=utf-8,"
+
+  // Header
+  csvContent += "Relatório de Treinamento - Apresentação\n\n"
+  csvContent += `Título:,${presentation.title.replace(/,/g, ";")}\n`
+  csvContent += `Descrição:,${presentation.description.replace(/,/g, ";")}\n`
+  csvContent += `Total de Slides:,${presentation.slides.length}\n`
+  csvContent += `Criada por:,${presentation.createdByName}\n`
+  csvContent += `Data de criação:,${new Date(presentation.createdAt).toLocaleDateString("pt-BR")}\n`
+  csvContent += `Total de Operadores que Visualizaram:,${progressList.filter((p) => p.marked_as_seen).length}\n\n`
+
+  // Progress details
+  csvContent += "Detalhes de Visualização:\n"
+  csvContent += "Operador,Data de Visualização,Hora,Marcado como Visto\n"
+
+  progressList.forEach((progress) => {
+    const date = new Date(progress.viewedAt)
+    csvContent += `${progress.operatorName},${date.toLocaleDateString("pt-BR")},${date.toLocaleTimeString("pt-BR")},${progress.marked_as_seen ? "Sim" : "Não"}\n`
+  })
+
+  return csvContent
 }

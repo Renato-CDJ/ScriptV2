@@ -8,7 +8,22 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RichTextEditorWYSIWYG } from "@/components/rich-text-editor-wysiwyg"
-import { Plus, Edit, Trash2, Save, X, Eye, Upload, ChevronDown, ChevronRight, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlertCircle } from 'lucide-react'
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X,
+  Eye,
+  Upload,
+  ChevronDown,
+  ChevronRight,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  AlertCircle,
+} from "lucide-react"
 import {
   getScriptSteps,
   updateScriptStep,
@@ -25,8 +40,8 @@ import { validateScriptJson } from "@/lib/scripts-loader"
 import { getAutoLoadScripts } from "@/lib/auto-load-scripts"
 
 export function ScriptsTab() {
-  const [steps, setSteps] = useState<ScriptStep[]>([])
-  const [products, setProducts] = useState<Product[]>([])
+  const [steps, setSteps] = useState<ScriptStep[]>(getScriptSteps())
+  const [products, setProducts] = useState<Product[]>(getProducts())
   const [editingStep, setEditingStep] = useState<ScriptStep | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [previewStep, setPreviewStep] = useState<ScriptStep | null>(null)
@@ -35,8 +50,6 @@ export function ScriptsTab() {
   const { toast } = useToast()
 
   useEffect(() => {
-    refreshSteps()
-
     const handleStoreUpdate = () => {
       refreshSteps()
     }
@@ -55,10 +68,9 @@ export function ScriptsTab() {
     }
   }
 
-  const refreshSteps = async () => {
-    const [loadedSteps, loadedProducts] = await Promise.all([getScriptSteps(), getProducts()])
-    setSteps(loadedSteps)
-    setProducts(loadedProducts)
+  const refreshSteps = () => {
+    setSteps(getScriptSteps())
+    setProducts(getProducts())
   }
 
   const isScriptImported = (scriptName: string): boolean => {
@@ -66,12 +78,12 @@ export function ScriptsTab() {
     return products.some((p) => p.id === productId)
   }
 
-  const handleImportAvailableScript = async (scriptData: any, scriptName: string) => {
+  const handleImportAvailableScript = (scriptData: any, scriptName: string) => {
     try {
       const result = importScriptFromJson(scriptData)
 
       if (result.stepCount > 0) {
-        await refreshSteps()
+        refreshSteps()
         toast({
           title: "Script importado com sucesso!",
           description: `${result.productCount} produto(s) e ${result.stepCount} tela(s) foram importados de ${scriptName}.`,
@@ -139,7 +151,7 @@ export function ScriptsTab() {
         if (!validation.valid) {
           toast({
             title: "Erro de validação",
-            description: validation.errors.join("; "),
+            description: validation.errors.join(", "),
             variant: "destructive",
           })
           return
@@ -148,7 +160,7 @@ export function ScriptsTab() {
         const result = importScriptFromJson(data)
 
         if (result.stepCount > 0) {
-          await refreshSteps()
+          refreshSteps()
           setEditingStep(null)
           setIsCreating(false)
           setPreviewStep(null)
@@ -161,10 +173,9 @@ export function ScriptsTab() {
           throw new Error("Nenhuma tela foi importada")
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Erro desconhecido"
         toast({
           title: "Erro ao importar",
-          description: `${errorMessage}. Formato esperado: { "marcas": { "PRODUTO": { "step_key": { "id": "...", "title": "...", "content": "..." } } } }`,
+          description: "O arquivo não está no formato correto. Esperado: { marcas: { PRODUTO: { step_key: {...} } } }",
           variant: "destructive",
         })
       }
@@ -198,7 +209,7 @@ export function ScriptsTab() {
         }
       })
 
-      await refreshSteps()
+      refreshSteps()
       toast({
         title: "Scripts carregados com sucesso!",
         description: `${totalProducts} produto(s) e ${totalSteps} tela(s) foram importados da pasta data/scripts.`,
@@ -243,7 +254,7 @@ export function ScriptsTab() {
     setPreviewStep(null)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!editingStep) return
 
     if (isCreating) {
@@ -260,15 +271,15 @@ export function ScriptsTab() {
       })
     }
 
-    await refreshSteps()
+    refreshSteps()
     setEditingStep(null)
     setIsCreating(false)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este roteiro?")) {
       deleteScriptStep(id)
-      await refreshSteps()
+      refreshSteps()
       toast({
         title: "Roteiro excluído",
         description: "O roteiro foi removido com sucesso.",

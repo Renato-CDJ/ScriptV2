@@ -30,7 +30,7 @@ import {
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Presentation, PresentationSlide } from "@/lib/types"
-import { Plus, Trash2, Edit, Download, EyeIcon, ImageIcon, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, Trash2, Edit, Download, EyeIcon, ImageIcon, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -42,6 +42,7 @@ export function PresentationsTab() {
   const [showDialog, setShowDialog] = useState(false)
   const [editingPresentation, setEditingPresentation] = useState<Presentation | null>(null)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [showImagePreview, setShowImagePreview] = useState(false)
 
   // Form state
   const [title, setTitle] = useState("")
@@ -52,10 +53,9 @@ export function PresentationsTab() {
   const [sendToAll, setSendToAll] = useState(true)
   const [operatorSearch, setOperatorSearch] = useState("")
 
-  const loadData = useCallback(async () => {
-    const allPresentations = await getPresentations()
-    setPresentations(allPresentations)
-    const allUsers = await getAllUsers()
+  const loadData = useCallback(() => {
+    setPresentations(getPresentations())
+    const allUsers = getAllUsers()
     setOperators(allUsers.filter((u) => u.role === "operator").map((u) => ({ id: u.id, fullName: u.fullName })))
   }, [])
 
@@ -96,6 +96,7 @@ export function PresentationsTab() {
     setSendToAll(true)
     setOperatorSearch("")
     setEditingPresentation(null)
+    setShowImagePreview(false)
   }
 
   const handleAddSlide = () => {
@@ -149,7 +150,7 @@ export function PresentationsTab() {
     }
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!user || !title.trim() || slides.length === 0) {
       toast({
         title: "Erro",
@@ -179,7 +180,7 @@ export function PresentationsTab() {
     }
 
     if (editingPresentation) {
-      await updatePresentation({
+      updatePresentation({
         ...editingPresentation,
         ...presentationData,
       })
@@ -188,7 +189,7 @@ export function PresentationsTab() {
         description: "A apresentação foi atualizada com sucesso.",
       })
     } else {
-      await createPresentation(presentationData as any)
+      createPresentation(presentationData as any)
       toast({
         title: "Apresentação criada",
         description: "A apresentação foi criada com sucesso.",
@@ -211,9 +212,9 @@ export function PresentationsTab() {
     setShowDialog(true)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta apresentação?")) {
-      await deletePresentation(id)
+      deletePresentation(id)
       toast({
         title: "Apresentação excluída",
         description: "A apresentação foi excluída com sucesso.",
@@ -222,8 +223,8 @@ export function PresentationsTab() {
     }
   }
 
-  const handleExportReport = async (presentationId: string) => {
-    const csvContent = await exportPresentationReport(presentationId)
+  const handleExportReport = (presentationId: string) => {
+    const csvContent = exportPresentationReport(presentationId)
     if (!csvContent) {
       toast({
         title: "Erro",
@@ -291,7 +292,7 @@ export function PresentationsTab() {
               Nova Apresentação
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] max-w-[95vw] max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingPresentation ? "Editar Apresentação" : "Nova Apresentação"}</DialogTitle>
               <DialogDescription>Crie uma apresentação de treinamento com múltiplos slides</DialogDescription>
@@ -320,84 +321,135 @@ export function PresentationsTab() {
 
               <Separator />
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-lg font-semibold">Slides ({slides.length})</Label>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Slides ({slides.length})</h3>
+                <div className="flex gap-2">
+                  {slides.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowImagePreview(!showImagePreview)}
+                      className="gap-2"
+                    >
+                      {showImagePreview ? (
+                        <>
+                          <EyeOff className="h-4 w-4" />
+                          Ocultar Pré-visualização
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-4 w-4" />
+                          Ver Pré-visualização
+                        </>
+                      )}
+                    </Button>
+                  )}
                   <Button size="sm" onClick={handleAddSlide} variant="outline">
                     <Plus className="h-4 w-4 mr-2" />
                     Adicionar Slide
                   </Button>
                 </div>
+              </div>
 
-                <ScrollArea className="h-[400px] border rounded-lg p-4">
-                  <div className="space-y-4">
-                    {slides.map((slide, index) => (
-                      <Card key={slide.id} className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Label className="font-semibold">Slide {slide.order}</Label>
-                            <Button size="sm" variant="destructive" onClick={() => handleRemoveSlide(slide.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor={`slide-title-${slide.id}`}>Título do Slide</Label>
-                            <Input
-                              id={`slide-title-${slide.id}`}
-                              value={slide.title || ""}
-                              onChange={(e) => handleUpdateSlide(slide.id, { title: e.target.value })}
-                              placeholder="Título do slide (opcional)"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor={`slide-desc-${slide.id}`}>Descrição</Label>
-                            <Textarea
-                              id={`slide-desc-${slide.id}`}
-                              value={slide.description || ""}
-                              onChange={(e) => handleUpdateSlide(slide.id, { description: e.target.value })}
-                              placeholder="Descrição do slide (opcional)"
-                              rows={2}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Imagem</Label>
-                            <div className="flex gap-2">
-                              <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(slide.id, e)}
-                                className="cursor-pointer"
-                              />
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Você também pode colar uma imagem (Ctrl+V ou Cmd+V)
-                            </p>
-                            <div
-                              className="border-2 border-dashed rounded-lg p-4 text-center cursor-text bg-muted/50"
-                              onPaste={(e) => handlePasteImage(slide.id, e)}
-                              onDragOver={(e) => e.preventDefault()}
-                            >
-                              {slide.imageUrl ? (
-                                <div className="space-y-2">
-                                  <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
-                                  <p className="text-sm text-green-600 dark:text-green-400">Imagem carregada</p>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {showImagePreview && slides.length > 0 && (
+                  <div className="lg:col-span-1 order-last lg:order-first">
+                    <Card className="h-full bg-muted/30">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Pré-visualização das Imagens</CardTitle>
+                        <CardDescription className="text-xs">
+                          Visualize todas as imagens dos slides
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ScrollArea className="h-[600px]">
+                          <div className="space-y-3 pr-4">
+                            {slides.map((slide, index) => (
+                              <div key={slide.id} className="space-y-2">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs font-semibold text-muted-foreground">
+                                    Slide {slide.order}
+                                  </span>
+                                  {slide.imageUrl && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Carregado
+                                    </Badge>
+                                  )}
                                 </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
-                                  <p className="text-sm text-muted-foreground">Cole uma imagem aqui</p>
-                                </div>
-                              )}
-                            </div>
+                                {slide.imageUrl ? (
+                                  <div className="border rounded-lg p-2 bg-background overflow-hidden">
+                                    <img
+                                      src={slide.imageUrl || "/placeholder.svg"}
+                                      alt={`Slide ${slide.order} preview`}
+                                      className="w-full h-auto rounded object-contain max-h-32"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border rounded-lg p-4 text-center bg-background border-dashed">
+                                    <ImageIcon className="h-6 w-6 text-muted-foreground/50 mx-auto mb-1" />
+                                    <p className="text-xs text-muted-foreground">Sem imagem</p>
+                                  </div>
+                                )}
+                                <Separator className="my-2" />
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                      </Card>
-                    ))}
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
                   </div>
-                </ScrollArea>
+                )}
+
+                <div className={showImagePreview ? "lg:col-span-2" : "lg:col-span-3"}>
+                  <ScrollArea className="h-[600px] border rounded-lg p-4">
+                    <div className="space-y-4">
+                      {slides.map((slide, index) => (
+                        <Card key={slide.id} className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="font-semibold">Slide {slide.order}</Label>
+                              <Button size="sm" variant="destructive" onClick={() => handleRemoveSlide(slide.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Imagem</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleImageUpload(slide.id, e)}
+                                  className="cursor-pointer"
+                                />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Você também pode colar uma imagem (Ctrl+V ou Cmd+V)
+                              </p>
+                              <div
+                                className="border-2 border-dashed rounded-lg p-4 text-center cursor-text bg-muted/50"
+                                onPaste={(e) => handlePasteImage(slide.id, e)}
+                                onDragOver={(e) => e.preventDefault()}
+                              >
+                                {slide.imageUrl ? (
+                                  <div className="space-y-2">
+                                    <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+                                    <p className="text-sm text-green-600 dark:text-green-400">Imagem carregada</p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+                                    <p className="text-sm text-muted-foreground">Cole uma imagem aqui</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
 
               <Separator />

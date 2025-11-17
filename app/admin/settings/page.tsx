@@ -40,9 +40,8 @@ export default function SettingsPage() {
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
-  const loadProducts = async () => {
-    const data = await getProducts()
-    setProducts(data)
+  const loadProducts = () => {
+    setProducts(getProducts())
   }
 
   const handleEdit = (product: Product) => {
@@ -73,7 +72,7 @@ export default function SettingsPage() {
     })
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!formData.name.trim()) {
       alert("Por favor, insira o nome do produto")
       return
@@ -91,10 +90,10 @@ export default function SettingsPage() {
         attendanceTypes: formData.attendanceTypes,
         personTypes: formData.personTypes,
       }
-      await updateProduct(updatedProduct)
+      updateProduct(updatedProduct)
     } else if (isCreating) {
       // Create new product
-      await createProduct({
+      createProduct({
         name: formData.name,
         description: formData.description,
         category: formData.category,
@@ -107,13 +106,13 @@ export default function SettingsPage() {
 
     setEditingProduct(null)
     setIsCreating(false)
-    await loadProducts()
+    loadProducts()
   }
 
-  const handleDelete = async (productId: string) => {
+  const handleDelete = (productId: string) => {
     if (confirm("Tem certeza que deseja excluir este produto?")) {
-      await deleteProduct(productId)
-      await loadProducts()
+      deleteProduct(productId)
+      loadProducts()
     }
   }
 

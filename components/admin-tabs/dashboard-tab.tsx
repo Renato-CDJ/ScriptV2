@@ -3,27 +3,16 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, FileText, CheckCircle, Clock } from "lucide-react"
-import { getAllUsers, getProducts } from "@/lib/store"
+import { getOnlineOperatorsCount, getProducts } from "@/lib/store"
 
 export function DashboardTab() {
   const [onlineCount, setOnlineCount] = useState(0)
   const [productsCount, setProductsCount] = useState(0)
 
   useEffect(() => {
-    const updateCounts = async () => {
-      try {
-        // Get online operators count
-        const users = await getAllUsers()
-        const online = users.filter((u) => u.isOnline && u.role === "operator").length
-        setOnlineCount(online)
-
-        // Get active products count
-        const products = await getProducts()
-        const activeProducts = products.filter((p) => p.isActive).length
-        setProductsCount(activeProducts)
-      } catch (error) {
-        console.error("[v0] Error updating dashboard counts:", error)
-      }
+    const updateCounts = () => {
+      setOnlineCount(getOnlineOperatorsCount())
+      setProductsCount(getProducts().filter((p) => p.isActive).length)
     }
 
     updateCounts()

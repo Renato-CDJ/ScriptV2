@@ -34,7 +34,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 export function AttendanceTypesTab() {
   const [attendanceTypes, setAttendanceTypes] = useState<AttendanceTypeOption[]>([])
   const [personTypes, setPersonTypes] = useState<PersonTypeOption[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false)
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false)
   const [editingAttendance, setEditingAttendance] = useState<AttendanceTypeOption | null>(null)
@@ -56,24 +55,12 @@ export function AttendanceTypesTab() {
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
-  const loadData = async () => {
-    setIsLoading(true)
-    try {
-      const [attendance, person] = await Promise.all([getAttendanceTypes(), getPersonTypes()])
-      setAttendanceTypes(attendance)
-      setPersonTypes(person)
-    } catch (error) {
-      console.error("[v0] Error loading attendance/person types:", error)
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar dados",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+  const loadData = () => {
+    setAttendanceTypes(getAttendanceTypes())
+    setPersonTypes(getPersonTypes())
   }
 
+  // Attendance Type Handlers
   const handleOpenAttendanceDialog = (option?: AttendanceTypeOption) => {
     if (option) {
       setEditingAttendance(option)
@@ -91,7 +78,7 @@ export function AttendanceTypesTab() {
     setIsAttendanceDialogOpen(true)
   }
 
-  const handleSaveAttendance = async () => {
+  const handleSaveAttendance = () => {
     if (!attendanceFormData.value.trim() || !attendanceFormData.label.trim()) {
       toast({
         title: "Erro",
@@ -101,7 +88,8 @@ export function AttendanceTypesTab() {
       return
     }
 
-    const existingTypes = await getAttendanceTypes()
+    // Check for duplicate values
+    const existingTypes = getAttendanceTypes()
     const isDuplicate = existingTypes.some(
       (t) => t.value === attendanceFormData.value && t.id !== editingAttendance?.id,
     )
@@ -116,7 +104,7 @@ export function AttendanceTypesTab() {
     }
 
     if (editingAttendance) {
-      await updateAttendanceType({
+      updateAttendanceType({
         ...editingAttendance,
         ...attendanceFormData,
       })
@@ -125,7 +113,7 @@ export function AttendanceTypesTab() {
         description: "Tipo de atendimento atualizado com sucesso",
       })
     } else {
-      await createAttendanceType(attendanceFormData)
+      createAttendanceType(attendanceFormData)
       toast({
         title: "Sucesso",
         description: "Tipo de atendimento criado com sucesso",
@@ -136,8 +124,9 @@ export function AttendanceTypesTab() {
     loadData()
   }
 
-  const handleDeleteAttendance = async (id: string) => {
-    const products = await getProducts()
+  const handleDeleteAttendance = (id: string) => {
+    // Check if any products use this attendance type
+    const products = getProducts()
     const usedInProducts = products.filter((p) =>
       p.attendanceTypes?.some((t) => {
         const attendanceType = attendanceTypes.find((at) => at.id === id)
@@ -155,7 +144,7 @@ export function AttendanceTypesTab() {
     }
 
     if (confirm("Tem certeza que deseja excluir este tipo de atendimento?")) {
-      await deleteAttendanceType(id)
+      deleteAttendanceType(id)
       toast({
         title: "Sucesso",
         description: "Tipo de atendimento excluído com sucesso",
@@ -164,6 +153,7 @@ export function AttendanceTypesTab() {
     }
   }
 
+  // Person Type Handlers
   const handleOpenPersonDialog = (option?: PersonTypeOption) => {
     if (option) {
       setEditingPerson(option)
@@ -181,7 +171,7 @@ export function AttendanceTypesTab() {
     setIsPersonDialogOpen(true)
   }
 
-  const handleSavePerson = async () => {
+  const handleSavePerson = () => {
     if (!personFormData.value.trim() || !personFormData.label.trim()) {
       toast({
         title: "Erro",
@@ -191,7 +181,8 @@ export function AttendanceTypesTab() {
       return
     }
 
-    const existingTypes = await getPersonTypes()
+    // Check for duplicate values
+    const existingTypes = getPersonTypes()
     const isDuplicate = existingTypes.some((t) => t.value === personFormData.value && t.id !== editingPerson?.id)
 
     if (isDuplicate) {
@@ -204,7 +195,7 @@ export function AttendanceTypesTab() {
     }
 
     if (editingPerson) {
-      await updatePersonType({
+      updatePersonType({
         ...editingPerson,
         ...personFormData,
       })
@@ -213,7 +204,7 @@ export function AttendanceTypesTab() {
         description: "Tipo de pessoa atualizado com sucesso",
       })
     } else {
-      await createPersonType(personFormData)
+      createPersonType(personFormData)
       toast({
         title: "Sucesso",
         description: "Tipo de pessoa criado com sucesso",
@@ -224,8 +215,9 @@ export function AttendanceTypesTab() {
     loadData()
   }
 
-  const handleDeletePerson = async (id: string) => {
-    const products = await getProducts()
+  const handleDeletePerson = (id: string) => {
+    // Check if any products use this person type
+    const products = getProducts()
     const usedInProducts = products.filter((p) =>
       p.personTypes?.some((t) => {
         const personType = personTypes.find((pt) => pt.id === id)
@@ -243,21 +235,13 @@ export function AttendanceTypesTab() {
     }
 
     if (confirm("Tem certeza que deseja excluir este tipo de pessoa?")) {
-      await deletePersonType(id)
+      deletePersonType(id)
       toast({
         title: "Sucesso",
         description: "Tipo de pessoa excluído com sucesso",
       })
       loadData()
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
-    )
   }
 
   return (

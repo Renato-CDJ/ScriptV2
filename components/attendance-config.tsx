@@ -15,33 +15,15 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
   const [attendanceType, setAttendanceType] = useState<string | null>(null)
   const [personType, setPersonType] = useState<string | null>(null)
   const [product, setProduct] = useState<string>("")
-  const [products, setProducts] = useState<any[]>([])
-  const [attendanceTypes, setAttendanceTypes] = useState<any[]>([])
-  const [personTypes, setPersonTypes] = useState<any[]>([])
+  const [products, setProducts] = useState(getProducts().filter((p) => p.isActive))
+  const [attendanceTypes, setAttendanceTypes] = useState(getAttendanceTypes())
+  const [personTypes, setPersonTypes] = useState(getPersonTypes())
 
   useEffect(() => {
-    const loadData = async () => {
-      const [productsData, attendanceTypesData, personTypesData] = await Promise.all([
-        getProducts(),
-        getAttendanceTypes(),
-        getPersonTypes(),
-      ])
-      setProducts(productsData.filter((p) => p.isActive))
-      setAttendanceTypes(attendanceTypesData)
-      setPersonTypes(personTypesData)
-    }
-
-    loadData()
-
-    const handleStoreUpdate = async () => {
-      const [productsData, attendanceTypesData, personTypesData] = await Promise.all([
-        getProducts(),
-        getAttendanceTypes(),
-        getPersonTypes(),
-      ])
-      setProducts(productsData.filter((p) => p.isActive))
-      setAttendanceTypes(attendanceTypesData)
-      setPersonTypes(personTypesData)
+    const handleStoreUpdate = () => {
+      setProducts(getProducts().filter((p) => p.isActive))
+      setAttendanceTypes(getAttendanceTypes())
+      setPersonTypes(getPersonTypes())
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)

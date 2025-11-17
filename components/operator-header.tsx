@@ -4,8 +4,24 @@ import { useState, useEffect, useCallback, useMemo, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
-import { Search, Sun, Moon, LogOut, Circle, PanelRightClose, PanelRightOpen, Eye, EyeOff, Home, Hash, Filter, Bell, MessageCircle, BookOpen } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import {
+  Search,
+  Sun,
+  Moon,
+  LogOut,
+  Circle,
+  PanelRightClose,
+  PanelRightOpen,
+  Eye,
+  EyeOff,
+  Home,
+  Hash,
+  Filter,
+  Bell,
+  MessageCircle,
+  BookOpen,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
 import {
   getProducts,
   getActiveMessagesForOperator,
@@ -23,7 +39,6 @@ import { Label } from "@/components/ui/label"
 import { OperatorMessagesModal } from "@/components/operator-messages-modal"
 import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { OperatorPresentationsModal } from "@/components/operator-presentations-modal"
-import { Product } from "@/lib/types"
 
 interface OperatorHeaderProps {
   searchQuery?: string
@@ -37,7 +52,7 @@ interface OperatorHeaderProps {
   onProductSelect?: (productId: string) => void
 }
 
-function OperatorHeaderComponent({
+export const OperatorHeader = memo(function OperatorHeader({
   searchQuery = "",
   onSearchChange,
   isSidebarOpen = true,
@@ -52,7 +67,7 @@ function OperatorHeaderComponent({
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [showProductSearch, setShowProductSearch] = useState(false)
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState(getProducts().filter((p) => p.isActive))
   const [selectedAttendanceTypes, setSelectedAttendanceTypes] = useState<string[]>([])
   const [selectedPersonTypes, setSelectedPersonTypes] = useState<string[]>([])
   const [showMessagesModal, setShowMessagesModal] = useState(false)
@@ -63,17 +78,8 @@ function OperatorHeaderComponent({
   const [availablePresentationsCount, setAvailablePresentationsCount] = useState(0)
 
   useEffect(() => {
-    const loadProducts = async () => {
-      const allProducts = await getProducts()
-      setProducts(allProducts.filter((p) => p.isActive))
-    }
-    loadProducts()
-  }, [])
-
-  useEffect(() => {
-    const handleStoreUpdate = async () => {
-      const allProducts = await getProducts()
-      setProducts(allProducts.filter((p) => p.isActive))
+    const handleStoreUpdate = () => {
+      setProducts(getProducts().filter((p) => p.isActive))
       updateUnseenCount()
       updateAvailablePresentationsCount()
     }
@@ -95,31 +101,31 @@ function OperatorHeaderComponent({
     return () => clearInterval(interval)
   }, [user])
 
-  const updateUnseenCount = useCallback(async () => {
+  const updateUnseenCount = useCallback(() => {
     if (!user) return
 
-    const messages = await getActiveMessagesForOperator(user.id)
+    const messages = getActiveMessagesForOperator(user.id)
     const unseenMessages = messages.filter((m) => !m.seenBy.includes(user.id)).length
 
-    const quizzes = await getActiveQuizzesForOperator()
+    const quizzes = getActiveQuizzesForOperator()
     const unansweredQuizzes = quizzes.filter((q) => !hasOperatorAnsweredQuiz(q.id, user.id)).length
 
     setUnseenMessagesCount(unseenMessages + unansweredQuizzes)
   }, [user])
 
-  const updateUnreadChatCount = useCallback(async () => {
+  const updateUnreadChatCount = useCallback(() => {
     if (!user) return
 
-    const messages = await getChatMessagesForUser(user.id, user.role)
+    const messages = getChatMessagesForUser(user.id, user.role)
     const unreadCount = messages.filter((m: any) => !m.isRead && m.senderId !== user.id).length
 
     setUnreadChatCount(unreadCount)
   }, [user])
 
-  const updateAvailablePresentationsCount = useCallback(async () => {
+  const updateAvailablePresentationsCount = useCallback(() => {
     if (!user) return
 
-    const presentations = await getActivePresentationsForOperator(user.id)
+    const presentations = getActivePresentationsForOperator(user.id)
     setAvailablePresentationsCount(presentations.length)
   }, [user])
 
@@ -195,10 +201,7 @@ function OperatorHeaderComponent({
                         type="search"
                         placeholder="Pesquisar produtos..."
                         value={searchQuery}
-                        onChange={(e) => {
-                          onSearchChange?.(e.target.value)
-                          handleSearchInput(e.target.value)
-                        }}
+                        onChange={(e) => handleSearchInput(e.target.value)}
                         className="pl-9 text-sm focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600"
                       />
                     </div>
@@ -312,7 +315,10 @@ function OperatorHeaderComponent({
                             </div>
                           </CommandEmpty>
                         ) : (
-                          <CommandGroup heading="Produtos Disponíveis">
+                          <CommandGroup
+                            heading="Produtos Disponíveis"
+                            className="p-2 [&_[cmdk-group-heading]]:bg-transparent [&_[cmdk-group-heading]]:text-foreground"
+                          >
                             {filteredProducts.map((product) => (
                               <CommandItem
                                 key={product.id}
@@ -401,7 +407,7 @@ function OperatorHeaderComponent({
                 variant="outline"
                 size="icon"
                 onClick={onBackToStart}
-                className="h-9 w-9 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 dark:from-green-600 dark:to-emerald-500 dark:hover:from-green-700 dark:hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                className="h-9 w-9 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 dark:from-green-600 dark:to-emerald-600 dark:hover:from-green-700 dark:hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                 title="Voltar ao Início"
               >
                 <Home className="h-4 w-4" />
@@ -469,7 +475,4 @@ function OperatorHeaderComponent({
       <OperatorPresentationsModal isOpen={showPresentationsModal} onClose={() => setShowPresentationsModal(false)} />
     </>
   )
-}
-
-export { OperatorHeaderComponent as OperatorHeader }
-export default OperatorHeaderComponent
+})

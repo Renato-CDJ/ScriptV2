@@ -125,18 +125,18 @@ export const ChatTab = memo(function ChatTab() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [filteredMessages])
 
-  const loadAllMessages = async () => {
-    const msgs = await getAllChatMessages()
+  const loadAllMessages = () => {
+    const msgs = getAllChatMessages()
     setAllMessages(msgs)
   }
 
-  const loadSettings = async () => {
-    const settings = await getChatSettings()
+  const loadSettings = () => {
+    const settings = getChatSettings()
     setChatEnabled(settings.isEnabled)
   }
 
-  const loadOperators = async () => {
-    const allUsers = await getAllUsers()
+  const loadOperators = () => {
+    const allUsers = getAllUsers()
     const ops = allUsers.filter((u) => u.role === "operator")
     setOperators(ops)
 
@@ -145,7 +145,7 @@ export const ChatTab = memo(function ChatTab() {
     }
   }
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!user || !newMessage.trim() || !selectedOperatorId) return
 
     const replyToData = replyingTo
@@ -156,7 +156,7 @@ export const ChatTab = memo(function ChatTab() {
         }
       : undefined
 
-    await sendChatMessage(
+    sendChatMessage(
       user.id,
       user.fullName,
       "admin",
@@ -175,7 +175,7 @@ export const ChatTab = memo(function ChatTab() {
     setAttachmentPreview(null)
     setAttachmentName(null)
     setReplyingTo(null)
-    await loadAllMessages()
+    loadAllMessages()
   }
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -185,10 +185,10 @@ export const ChatTab = memo(function ChatTab() {
     }
   }
 
-  const handleToggleChat = async (enabled: boolean) => {
+  const handleToggleChat = (enabled: boolean) => {
     if (!user) return
 
-    await updateChatSettings({
+    updateChatSettings({
       isEnabled: enabled,
       updatedAt: new Date(),
       updatedBy: user.id,
@@ -196,10 +196,10 @@ export const ChatTab = memo(function ChatTab() {
     setChatEnabled(enabled)
   }
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const handleDeleteMessage = (messageId: string) => {
     if (confirm("Tem certeza que deseja excluir esta mensagem?")) {
-      await deleteChatMessage(messageId)
-      await loadAllMessages()
+      deleteChatMessage(messageId)
+      loadAllMessages()
     }
   }
 
