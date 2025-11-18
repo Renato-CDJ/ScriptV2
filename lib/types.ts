@@ -135,12 +135,13 @@ export interface Quiz {
   id: string
   question: string
   options: QuizOption[]
-  correctAnswer: string // id of the correct option
-  createdBy: string // admin user id
-  createdByName: string // admin user name
+  correctAnswer: string
+  createdBy: string
+  createdByName: string
   createdAt: Date
   isActive: boolean
-  scheduledDate?: Date // optional date for when quiz should become active
+  scheduledDate?: Date
+  recipients?: string[] // Array of operator IDs, empty means all operators (consistent with Message and Presentation)
 }
 
 export interface QuizOption {

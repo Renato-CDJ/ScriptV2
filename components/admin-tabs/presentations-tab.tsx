@@ -160,6 +160,16 @@ export function PresentationsTab() {
       return
     }
 
+    const slidesWithoutImages = slides.filter(s => !s.imageUrl || !s.imageData)
+    if (slidesWithoutImages.length > 0) {
+      toast({
+        title: "Erro",
+        description: `${slidesWithoutImages.length} slide(s) sem imagem. Todos os slides devem ter uma imagem.`,
+        variant: "destructive",
+      })
+      return
+    }
+
     if (!sendToAll && recipients.length === 0) {
       toast({
         title: "Erro",
@@ -272,6 +282,13 @@ export function PresentationsTab() {
     return names.join(", ")
   }
 
+  const handleDialogChange = (open: boolean) => {
+    setShowDialog(open)
+    if (!open) {
+      resetForm()
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -282,7 +299,7 @@ export function PresentationsTab() {
       </div>
 
       <div className="flex gap-3">
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <Dialog open={showDialog} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button
               onClick={resetForm}

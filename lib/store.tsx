@@ -38,7 +38,9 @@ function debouncedSave(key: string, data: any) {
       try {
         localStorage.setItem(storageKey, JSON.stringify(value))
       } catch (error) {
-        console.error(`[v0] Error saving ${storageKey}:`, error)
+        if (error instanceof Error && error.message.includes("QuotaExceededError")) {
+          console.error(`Storage quota exceeded for ${storageKey}`)
+        }
       }
     })
     saveQueue.clear()
@@ -637,6 +639,20 @@ export function initializeMockData() {
     localStorage.setItem(STORAGE_KEYS.PRESENTATION_PROGRESS, JSON.stringify([]))
   }
 
+  if (!localStorage.getItem(STORAGE_KEYS.QUIZ_ATTEMPTS)) {
+    const mockQuizAttempts = [
+      // Current month attempts
+      { id: "att-1", quizId: "quiz-1", operatorId: "2", operatorName: "Monitoria 1", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
+      { id: "att-2", quizId: "quiz-1", operatorId: "3", operatorName: "Monitoria 2", selectedAnswer: "opt-2", isCorrect: false, attemptedAt: new Date() },
+      { id: "att-3", quizId: "quiz-2", operatorId: "2", operatorName: "Monitoria 1", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
+      { id: "att-4", quizId: "quiz-2", operatorId: "4", operatorName: "Monitoria 3", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
+      { id: "att-5", quizId: "quiz-1", operatorId: "4", operatorName: "Monitoria 3", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
+      { id: "att-6", quizId: "quiz-2", operatorId: "3", operatorName: "Monitoria 2", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
+      { id: "att-7", quizId: "quiz-1", operatorId: "5", operatorName: "Monitoria 4", selectedAnswer: "opt-2", isCorrect: false, attemptedAt: new Date() },
+    ]
+    localStorage.setItem(STORAGE_KEYS.QUIZ_ATTEMPTS, JSON.stringify(mockQuizAttempts))
+  }
+
   cleanupOldSessions()
 
   loadScriptsFromDataFolder()
@@ -943,7 +959,7 @@ export function deleteProduct(id: string) {
 
   const products = getProducts().filter((p) => p.id !== id)
   debouncedSave(STORAGE_KEYS.PRODUCTS, products)
-  notifyUpdate() // Notify about update
+  notifyUpdate()
 }
 
 // Additional user management functions
@@ -1391,7 +1407,7 @@ export function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Quiz {
 
   const newQuiz: Quiz = {
     ...quiz,
-    id: `quiz-${Date.now()}`,
+    id: `quiz-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // More unique IDs to avoid collisions
     createdAt: new Date(),
   }
 
@@ -1519,19 +1535,33 @@ export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRa
     return yearMatch && monthMatch
   })
 
+  const allUsers = getAllUsers()
+  const operatorUsers = allUsers.filter(u => u.role === "operator")
+  const operatorIds = new Set(operatorUsers.map(u => u.id))
+
   // Group by operator
-  const operatorStats = new Map<string, { name: string; total: number; correct: number }>()
+  const operatorStats = new Map<string, { name: string; total: number; correct: number; firstAttempt: Date }>()
 
   monthlyAttempts.forEach((attempt) => {
+    if (!operatorIds.has(attempt.operatorId)) {
+      return // Skip non-operator users
+    }
+
     const existing = operatorStats.get(attempt.operatorId) || {
       name: attempt.operatorName,
       total: 0,
       correct: 0,
+      firstAttempt: new Date(attempt.attemptedAt),
     }
 
     existing.total++
     if (attempt.isCorrect) {
       existing.correct++
+    }
+    
+    const attemptDate = new Date(attempt.attemptedAt)
+    if (attemptDate < existing.firstAttempt) {
+      existing.firstAttempt = attemptDate
     }
 
     operatorStats.set(attempt.operatorId, existing)
@@ -1548,10 +1578,10 @@ export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRa
     rank: 0, // Will be set after sorting
   }))
 
-  // Sort by score (descending), then by accuracy (descending)
   rankings.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
-    return b.accuracy - a.accuracy
+    if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy
+    return a.totalAttempts - b.totalAttempts // More attempts = lower rank on tie
   })
 
   // Assign ranks

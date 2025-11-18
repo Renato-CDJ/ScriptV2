@@ -2,27 +2,9 @@
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  LayoutDashboard,
-  FileText,
-  Tags,
-  AlertCircle,
-  Radio,
-  StickyNote,
-  Users,
-  Settings,
-  LogOut,
-  Package,
-  Sun,
-  Moon,
-  Settings2,
-  MessageSquare,
-  Shield,
-  MessageCircle,
-  Presentation,
-} from "lucide-react"
+import { LayoutDashboard, FileText, Tags, AlertCircle, Radio, StickyNote, Users, Settings, LogOut, Package, Sun, Moon, Settings2, MessageSquare, Shield, MessageCircle, Presentation } from 'lucide-react'
 import { useAuth } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 
@@ -63,7 +45,8 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
 
   const hasPermission = (permission: string) => {
     if (!user) return false
-    if (user.username === "admin") return true // Admin has all permissions
+    // Admin role has all permissions
+    if (user.role === "admin") return true
 
     const permissions = user.permissions || {}
     return permissions[permission as keyof typeof permissions] !== false
@@ -71,7 +54,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
 
   const visibleMenuItems = menuItems.filter((item) => hasPermission(item.permission))
 
-  const isMainAdmin = user?.username === "admin"
+  const isMainAdmin = user?.role === "admin"
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-orange-500/30 dark:border-orange-500/40">

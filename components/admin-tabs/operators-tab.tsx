@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Circle, UserX, Plus, Edit, Trash2, Download, Upload } from "lucide-react"
+import { Circle, UserX, Plus, Edit, Trash2, Download, Upload } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import {
   getAllUsers,
@@ -94,6 +94,12 @@ export function OperatorsTab() {
 
   const handleForceLogout = (operatorId: string) => {
     const currentUser = getCurrentUser()
+  
+    if (currentUser && currentUser.id === operatorId) {
+      if (!confirm("Você está prestes a fazer logout de sua própria sessão. Deseja continuar?")) {
+        return
+      }
+    }
 
     forceLogoutUser(operatorId)
 
@@ -149,6 +155,20 @@ export function OperatorsTab() {
         role: "operator",
         createdAt: new Date(),
         loginSessions: [],
+        permissions: {
+          dashboard: true,
+          scripts: true,
+          products: true,
+          attendanceConfig: false,
+          tabulations: false,
+          situations: false,
+          channels: false,
+          notes: true,
+          operators: false,
+          messagesQuiz: false,
+          chat: true,
+          settings: false,
+        },
       }
 
       const allUsers = getAllUsers()
@@ -283,6 +303,20 @@ export function OperatorsTab() {
           role: "operator",
           createdAt: new Date(),
           loginSessions: [],
+          permissions: {
+            dashboard: true,
+            scripts: true,
+            products: true,
+            attendanceConfig: false,
+            tabulations: false,
+            situations: false,
+            channels: false,
+            notes: true,
+            operators: false,
+            messagesQuiz: false,
+            chat: true,
+            settings: false,
+          },
         }
 
         allUsers.push(newOperator)

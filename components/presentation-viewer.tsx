@@ -25,7 +25,6 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
 
   useEffect(() => {
     if (isOpen && user) {
-      // Check if already marked as seen
       const progress = getPresentationProgressByOperator(user.id)
       const isMarked = progress.some((p) => p.presentationId === presentation.id && p.marked_as_seen)
       setMarkedAsSeen(isMarked)
@@ -82,37 +81,8 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
   }
 
   const handleToggleFullscreen = () => {
-    if (!isFullscreen) {
-      // Enter fullscreen
-      const element = document.getElementById("presentation-viewer-container")
-      if (element) {
-        if (element.requestFullscreen) {
-          element.requestFullscreen().catch((err) => {
-            console.error("Error attempting to enable fullscreen:", err)
-          })
-        }
-      }
-    } else {
-      // Exit fullscreen
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch((err) => {
-          console.error("Error attempting to exit fullscreen:", err)
-        })
-      }
-    }
     setIsFullscreen(!isFullscreen)
   }
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange)
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange)
-    }
-  }, [])
 
   const handleMarkAsSeen = () => {
     if (user && !markedAsSeen) {
@@ -129,105 +99,198 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
     return null
   }
 
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12">
+        {/* Header */}
+        <div className="w-full flex items-center justify-between gap-4 mb-4 px-4 py-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white break-words">{presentation.title}</h2>
+            {presentation.description && (
+              <p className="text-sm text-gray-300 mt-1 break-words">{presentation.description}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleFullscreen}
+              title="Sair da tela cheia"
+              className="flex-shrink-0 hover:bg-white/10 text-white"
+            >
+              <Minimize2 className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              title="Fechar"
+              className="flex-shrink-0 hover:bg-white/10 text-white"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Slide display area - centered */}
+        <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative">
+          <div className="relative w-[90vw] h-[80vh] max-w-6xl max-h-[80vh] flex items-center justify-center">
+            {currentSlide.imageUrl ? (
+              <img
+                src={currentSlide.imageUrl || "/placeholder.svg"}
+                alt={`Slide ${currentSlideIndex + 1}`}
+                className="w-full h-full object-contain rounded-lg"
+                style={{ 
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: 'center center'
+                }}
+              />
+            ) : (
+              <div className="text-center text-gray-400">
+                <p className="text-lg">Nenhuma imagem carregada para este slide</p>
+              </div>
+            )}
+
+            {/* Navigation buttons */}
+            <Button
+              variant="default"
+              size="lg"
+              onClick={handlePrevSlide}
+              disabled={!hasPrevSlide}
+              title="Slide anterior (← ou clique)"
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white border-0 z-20 transition-all duration-200 shadow-lg"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <Button
+              variant="default"
+              size="lg"
+              onClick={handleNextSlide}
+              disabled={!hasNextSlide}
+              title="Próximo slide (→ ou clique)"
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white border-0 z-20 transition-all duration-200 shadow-lg"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Footer controls */}
+        <div className="w-full border-t border-white/20 px-4 py-4 flex items-center justify-between gap-4 flex-wrap mt-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleZoomOut}
+              disabled={zoom <= 50}
+              title="Diminuir zoom"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2"
+            >
+              <ZoomOut className="h-4 w-4" />
+              <span className="text-xs ml-1">-</span>
+            </Button>
+            <span className="text-sm font-semibold w-16 text-center px-2 py-1 bg-white/10 rounded text-white">
+              {zoom}%
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleZoomIn}
+              disabled={zoom >= 200}
+              title="Aumentar zoom"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2"
+            >
+              <ZoomIn className="h-4 w-4" />
+              <span className="text-xs ml-1">+</span>
+            </Button>
+          </div>
+
+          <Badge variant="secondary" className="text-sm px-3 py-1 bg-white/20 text-white border-white/30">
+            {currentSlideIndex + 1} de {presentation.slides.length}
+          </Badge>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrevSlide}
+              disabled={!hasPrevSlide}
+              title="Slide anterior"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="text-xs ml-1">Ant</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextSlide}
+              disabled={!hasNextSlide}
+              title="Próximo slide"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2"
+            >
+              <span className="text-xs mr-1">Prox</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Normal dialog view
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className={`${isFullscreen ? "fixed inset-0 max-w-none rounded-none p-0" : "max-w-[98vw] sm:max-w-[96vw] md:max-w-[94vw] lg:max-w-[92vw] h-[95vh] rounded-lg p-0"} gap-0 flex flex-col`}
-        id="presentation-viewer-container"
-        style={isFullscreen ? { position: 'fixed', inset: '0px', width: '100vw', height: '100vh', margin: 0, maxWidth: 'none' } : {}}
-      >
-        <DialogHeader className="border-b px-6 py-4 flex-shrink-0 bg-background">
-          <div className="flex items-center justify-between gap-4 w-full">
+      <DialogContent className="max-w-[98vw] sm:max-w-[96vw] md:max-w-[94vw] h-[95vh] rounded-lg p-0 gap-0 flex flex-col bg-background">
+        <DialogHeader className="border-b px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0 bg-background">
+          <div className="flex items-center justify-between gap-4 w-full flex-wrap sm:flex-nowrap">
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-2xl font-bold">{presentation.title}</DialogTitle>
+              <DialogTitle className="text-lg sm:text-2xl font-bold break-words">{presentation.title}</DialogTitle>
               {presentation.description && (
-                <p className="text-sm text-muted-foreground mt-1">{presentation.description}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">{presentation.description}</p>
               )}
             </div>
-            {isFullscreen && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                title="Fechar"
-                className="flex-shrink-0"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            )}
-            {isFullscreen && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggleFullscreen}
-                title="Sair da tela cheia"
-                className="flex-shrink-0"
-              >
-                <Minimize2 className="h-5 w-5" />
-              </Button>
-            )}
           </div>
         </DialogHeader>
 
-        <div className={`flex-1 flex flex-col overflow-hidden ${isFullscreen ? "" : ""}`}>
-          <div className="flex-1 overflow-auto flex items-center justify-center p-8 bg-gradient-to-br from-background to-muted/20 relative">
-            <div className={`border-2 border-border rounded-xl bg-background shadow-lg p-8 flex items-center justify-center ${isFullscreen ? "max-w-full max-h-full" : "w-full h-full max-w-5xl"}`}>
-              {currentSlide.imageUrl ? (
-                <div className="flex items-center justify-center w-full h-full">
-                  <img
-                    src={currentSlide.imageUrl || "/placeholder.svg"}
-                    alt={`Slide ${currentSlideIndex + 1}`}
-                    className="max-w-full max-h-full w-auto h-auto rounded-lg object-contain"
-                    style={{ zoom: zoom / 100 }}
-                  />
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  <p className="text-lg">Nenhuma imagem carregada para este slide</p>
-                </div>
-              )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Slide display area */}
+          <div className="flex-1 overflow-hidden flex items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-background to-muted/20 relative transition-all duration-300">
+            <div className="relative flex items-center justify-center w-full h-full max-w-5xl max-h-[60vh] transition-all duration-300">
+              <div className="relative flex items-center justify-center w-full h-full border-2 border-border rounded-xl bg-background shadow-2xl overflow-hidden transition-all duration-300">
+                {currentSlide.imageUrl ? (
+                  <div className="flex items-center justify-center w-full h-full p-0 sm:p-2 md:p-4">
+                    <img
+                      src={currentSlide.imageUrl || "/placeholder.svg"}
+                      alt={`Slide ${currentSlideIndex + 1}`}
+                      className="w-full h-full object-contain rounded-lg transition-transform duration-300"
+                      style={{ 
+                        transform: `scale(${zoom / 100})`,
+                        transformOrigin: 'center center'
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground p-4">
+                    <p className="text-base sm:text-lg">Nenhuma imagem carregada para este slide</p>
+                  </div>
+                )}
+              </div>
             </div>
-            {isFullscreen && (
-              <>
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={handlePrevSlide}
-                  disabled={!hasPrevSlide}
-                  title="Slide anterior (← ou clique)"
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-0"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={handleNextSlide}
-                  disabled={!hasNextSlide}
-                  title="Próximo slide (→ ou clique)"
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-0"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
-              </>
-            )}
           </div>
 
-          <div className="border-t px-6 py-4 flex-shrink-0 bg-background space-y-4">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-3">
+          <div className="border-t px-3 sm:px-6 py-3 sm:py-4 flex-shrink-0 bg-background space-y-3 sm:space-y-4 transition-all duration-300">
+            <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
+              {/* Zoom and fullscreen controls */}
+              <div className="flex items-center gap-2 order-2 sm:order-1">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleToggleFullscreen}
-                  title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
-                  className="hover:bg-muted"
+                  title="Tela cheia"
+                  className="hover:bg-muted h-9 w-9 p-0"
                 >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-5 w-5" />
-                  ) : (
-                    <Maximize2 className="h-5 w-5" />
-                  )}
+                  <Maximize2 className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
@@ -235,12 +298,12 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                   onClick={handleZoomOut}
                   disabled={zoom <= 50}
                   title="Diminuir zoom"
-                  className="gap-2"
+                  className="hover:bg-muted h-9 px-2"
                 >
-                  <ZoomOut className="h-5 w-5" />
-                  <span className="hidden sm:inline text-xs">Zoom</span>
+                  <ZoomOut className="h-4 w-4" />
+                  <span className="hidden sm:inline text-xs ml-1">-</span>
                 </Button>
-                <span className="text-sm font-semibold w-16 text-center px-3 py-1 bg-muted rounded">
+                <span className="text-xs sm:text-sm font-semibold w-12 sm:w-16 text-center px-2 py-1 bg-muted rounded">
                   {zoom}%
                 </span>
                 <Button
@@ -249,29 +312,32 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                   onClick={handleZoomIn}
                   disabled={zoom >= 200}
                   title="Aumentar zoom"
-                  className="gap-2"
+                  className="hover:bg-muted h-9 px-2"
                 >
-                  <ZoomIn className="h-5 w-5" />
+                  <ZoomIn className="h-4 w-4" />
+                  <span className="hidden sm:inline text-xs ml-1">+</span>
                 </Button>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary" className="text-sm px-3 py-1">
+              {/* Slide counter */}
+              <div className="flex items-center gap-2 order-1 sm:order-2">
+                <Badge variant="secondary" className="text-xs sm:text-sm px-2 sm:px-3 py-1 flex-shrink-0">
                   {currentSlideIndex + 1} de {presentation.slides.length}
                 </Badge>
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Navigation buttons */}
+              <div className="flex items-center gap-2 order-3">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handlePrevSlide}
                   disabled={!hasPrevSlide}
                   title="Slide anterior"
-                  className="gap-2"
+                  className="hover:bg-muted h-9 px-2"
                 >
-                  <ChevronLeft className="h-5 w-5" />
-                  <span className="hidden sm:inline text-xs">Anterior</span>
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline text-xs ml-1">Ant</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -279,28 +345,29 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                   onClick={handleNextSlide}
                   disabled={!hasNextSlide}
                   title="Próximo slide"
-                  className="gap-2"
+                  className="hover:bg-muted h-9 px-2"
                 >
-                  <span className="hidden sm:inline text-xs">Próximo</span>
-                  <ChevronRight className="h-5 w-5" />
+                  <span className="hidden sm:inline text-xs mr-1">Prox</span>
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </div>
 
           {currentSlideIndex === presentation.slides.length - 1 && (
-            <div className="border-t px-6 py-4 flex-shrink-0 bg-muted/30 flex justify-center gap-3 items-center flex-wrap">
+            <div className="border-t px-3 sm:px-6 py-3 sm:py-4 flex-shrink-0 bg-muted/30 flex justify-center gap-2 sm:gap-3 items-center flex-wrap transition-all duration-300">
               <Button
                 onClick={handleMarkAsSeen}
                 disabled={markedAsSeen}
-                className={`${markedAsSeen ? "bg-green-600 hover:bg-green-700" : ""} gap-2 px-6`}
+                className={`gap-2 px-4 sm:px-6 text-sm sm:text-base transition-all duration-300 ${markedAsSeen ? "bg-green-600 hover:bg-green-700" : ""}`}
               >
-                <CheckCircle2 className="h-5 w-5" />
-                {markedAsSeen ? "Treinamento Concluído" : "Marcar como Visto"}
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">{markedAsSeen ? "Treinamento Concluído" : "Marcar como Visto"}</span>
+                <span className="sm:hidden">{markedAsSeen ? "Concluído" : "Visto"}</span>
               </Button>
               {markedAsSeen && (
-                <Badge variant="default" className="text-xs">
-                  Concluído em {new Date().toLocaleDateString("pt-BR")}
+                <Badge variant="default" className="text-xs sm:text-sm">
+                  Concluído
                 </Badge>
               )}
             </div>

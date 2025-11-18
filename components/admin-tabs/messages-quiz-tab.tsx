@@ -34,31 +34,7 @@ import {
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Message, Quiz, QuizOption, Ranking, ContentSegment } from "@/lib/types"
-import {
-  MessageSquare,
-  Brain,
-  Plus,
-  Trash2,
-  Edit,
-  Eye,
-  Users,
-  CheckCircle2,
-  Calendar,
-  Search,
-  Download,
-  FileSpreadsheet,
-  History,
-  Clock,
-  ChevronDown,
-  ChevronRight,
-  Trophy,
-  ChevronLeft,
-  Medal,
-  Crown,
-  Sparkles,
-  Star,
-  TrendingUp,
-} from "lucide-react"
+import { MessageSquare, Brain, Plus, Trash2, Edit, Eye, Users, CheckCircle2, Calendar, Search, Download, FileSpreadsheet, History, Clock, ChevronDown, ChevronRight, Trophy, ChevronLeft, Medal, Crown, Sparkles, Star, TrendingUp } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { RichTextEditorWYSIWYG } from "@/components/rich-text-editor-wysiwyg"
 
@@ -303,6 +279,13 @@ export function MessagesQuizTab() {
     setEditingQuiz(null)
   }
 
+  const handleDialogChange = (open: boolean) => {
+    setShowQuizDialog(open)
+    if (!open) {
+      resetQuizForm()
+    }
+  }
+
   const handleSaveQuiz = () => {
     if (!user || !quizQuestion.trim() || !quizCorrectAnswer) {
       toast({
@@ -323,7 +306,22 @@ export function MessagesQuizTab() {
       return
     }
 
-    const scheduledDate = quizScheduledDate ? new Date(quizScheduledDate) : new Date() // Default to today's date
+    if (quizScheduledDate) {
+      const selectedDate = new Date(quizScheduledDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      if (selectedDate < today) {
+        toast({
+          title: "Erro",
+          description: "A data agendada não pode ser no passado.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    const scheduledDate = quizScheduledDate ? new Date(quizScheduledDate) : new Date()
 
     if (editingQuiz) {
       updateQuiz({
@@ -838,7 +836,7 @@ export function MessagesQuizTab() {
           {activeSection === "quiz" && (
             <div className="space-y-4">
               <div className="flex gap-3">
-                <Dialog open={showQuizDialog} onOpenChange={setShowQuizDialog}>
+                <Dialog open={showQuizDialog} onOpenChange={handleDialogChange}>
                   <DialogTrigger asChild>
                     <Button
                       onClick={resetQuizForm}
@@ -1326,103 +1324,105 @@ export function MessagesQuizTab() {
 
                       <div className="space-y-6">
                         <h3 className="text-3xl font-bold">Classificação Completa</h3>
-                        <div className="rounded-lg border bg-card overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-muted/50">
-                                <TableHead className="w-28 text-center font-bold">Posição</TableHead>
-                                <TableHead className="font-bold min-w-[150px]">Operador</TableHead>
-                                <TableHead className="text-center font-bold whitespace-nowrap min-w-[120px]">
-                                  Quiz Respondidos
-                                </TableHead>
-                                <TableHead className="text-center font-bold min-w-[80px]">Acertos</TableHead>
-                                <TableHead className="text-center font-bold min-w-[80px]">Precisão</TableHead>
-                                <TableHead className="text-right font-bold min-w-[60px]">Pontos</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {rankings.map((ranking, index) => {
-                                const isTopThree = ranking.rank <= 3
+                        <div className="rounded-lg border bg-card">
+                          <div className="w-full overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                  <TableHead className="w-28 text-center font-bold">Posição</TableHead>
+                                  <TableHead className="font-bold min-w-[200px]">Operador</TableHead>
+                                  <TableHead className="text-center font-bold whitespace-nowrap min-w-[150px]">
+                                    Quiz Respondidos
+                                  </TableHead>
+                                  <TableHead className="text-center font-bold min-w-[100px]">Acertos</TableHead>
+                                  <TableHead className="text-center font-bold min-w-[100px]">Precisão</TableHead>
+                                  <TableHead className="text-right font-bold min-w-[100px] pr-6">Pontos</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {rankings.map((ranking, index) => {
+                                  const isTopThree = ranking.rank <= 3
 
-                                return (
-                                  <TableRow
-                                    key={ranking.operatorId}
-                                    className={`transition-all duration-300 animate-in fade-in slide-in-from-left ${
-                                      isTopThree ? "bg-muted/30" : ""
-                                    }`}
-                                    style={{ animationDelay: `${index * 50}ms` }}
-                                  >
-                                    <TableCell className="text-center">
-                                      <div className="flex items-center justify-center">
-                                        {ranking.rank === 1 ? (
-                                          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg">
-                                            <Crown className="h-7 w-7" />
-                                          </div>
-                                        ) : ranking.rank === 2 ? (
-                                          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-lg">
-                                            <Medal className="h-7 w-7" />
-                                          </div>
-                                        ) : ranking.rank === 3 ? (
-                                          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg">
-                                            <Medal className="h-7 w-7" />
-                                          </div>
-                                        ) : (
-                                          <span className="text-2xl font-bold break-words">{ranking.rank}º</span>
-                                        )}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="min-w-0">
-                                      <div className="flex items-center gap-2 min-w-0">
+                                  return (
+                                    <TableRow
+                                      key={ranking.operatorId}
+                                      className={`transition-all duration-300 animate-in fade-in slide-in-from-left ${
+                                        isTopThree ? "bg-muted/30" : ""
+                                      }`}
+                                      style={{ animationDelay: `${index * 50}ms` }}
+                                    >
+                                      <TableCell className="text-center py-6">
+                                        <div className="flex items-center justify-center">
+                                          {ranking.rank === 1 ? (
+                                            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg">
+                                              <Crown className="h-7 w-7" />
+                                            </div>
+                                          ) : ranking.rank === 2 ? (
+                                            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-lg">
+                                              <Medal className="h-7 w-7" />
+                                            </div>
+                                          ) : ranking.rank === 3 ? (
+                                            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg">
+                                              <Medal className="h-7 w-7" />
+                                            </div>
+                                          ) : (
+                                            <span className="text-2xl font-bold">{ranking.rank}º</span>
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="py-6">
+                                        <div className="flex items-center gap-2">
+                                          <span
+                                            className={`${isTopThree ? "font-bold text-2xl" : "text-xl"}`}
+                                          >
+                                            {ranking.operatorName}
+                                          </span>
+                                          {isTopThree && (
+                                            <Star className="h-6 w-6 text-chart-1 fill-chart-1 flex-shrink-0" />
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-center py-6">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <Brain className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                                          <span className="font-semibold text-2xl">
+                                            {ranking.totalAttempts}
+                                          </span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-center py-6">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                          <span className="font-semibold text-2xl">
+                                            {ranking.correctAnswers}
+                                          </span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-center py-6">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <TrendingUp className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                                          <span className="font-semibold text-2xl">
+                                            {ranking.accuracy.toFixed(1)}%
+                                          </span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-right py-6 pr-6">
                                         <span
-                                          className={`break-words hyphens-auto max-w-full ${isTopThree ? "font-bold text-2xl" : "text-xl"}`}
+                                          className={`text-2xl font-bold ${
+                                            isTopThree
+                                              ? "bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent"
+                                              : ""
+                                          }`}
                                         >
-                                          {ranking.operatorName}
+                                          {ranking.score}
                                         </span>
-                                        {isTopThree && (
-                                          <Star className="h-6 w-6 text-chart-1 fill-chart-1 flex-shrink-0" />
-                                        )}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                      <div className="flex items-center justify-center gap-2 flex-wrap">
-                                        <Brain className="h-6 w-6 text-muted-foreground flex-shrink-0" />
-                                        <span className="font-semibold text-2xl break-words">
-                                          {ranking.totalAttempts}
-                                        </span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                      <div className="flex items-center justify-center gap-2 flex-wrap">
-                                        <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
-                                        <span className="font-semibold text-2xl break-words">
-                                          {ranking.correctAnswers}
-                                        </span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                      <div className="flex items-center justify-center gap-2 flex-wrap">
-                                        <TrendingUp className="h-6 w-6 text-muted-foreground flex-shrink-0" />
-                                        <span className="font-semibold text-2xl break-words">
-                                          {ranking.accuracy.toFixed(1)}%
-                                        </span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <span
-                                        className={`text-2xl font-bold break-words ${
-                                          isTopThree
-                                            ? "bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent"
-                                            : ""
-                                        }`}
-                                      >
-                                        {ranking.score}
-                                      </span>
-                                    </TableCell>
-                                  </TableRow>
-                                )
-                              })}
-                            </TableBody>
-                          </Table>
+                                      </TableCell>
+                                    </TableRow>
+                                  )
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
                         </div>
                       </div>
                     </>
