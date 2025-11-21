@@ -7,26 +7,44 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Edit, Trash2, Save, X, ChevronRight } from "lucide-react"
+import { Plus, Edit, Trash2, Save, X, ChevronRight, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getSituations } from "@/lib/store"
+import {
+  getServiceSituations,
+  createServiceSituation,
+  updateServiceSituation,
+  deleteServiceSituation,
+} from "@/lib/store"
 import type { ServiceSituation } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
 export function SituationsTab() {
-  const [situations, setSituations] = useState<ServiceSituation[]>(getSituations())
+  const [situations, setSituations] = useState<ServiceSituation[]>([])
   const [editingItem, setEditingItem] = useState<ServiceSituation | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    const handleStoreUpdate = () => {
-      setSituations(getSituations())
-    }
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+    loadData()
   }, [])
+
+  const loadData = async () => {
+    setIsLoading(true)
+    try {
+      const data = await getServiceSituations()
+      setSituations(data)
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar",
+        description: "Não foi possível carregar as situações.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleEdit = (item: ServiceSituation) => {
     setEditingItem({ ...item })
@@ -35,7 +53,7 @@ export function SituationsTab() {
 
   const handleCreate = () => {
     const newItem: ServiceSituation = {
-      id: `sit-${Date.now()}`,
+      id: "",
       name: "",
       description: "",
       isActive: true,
@@ -45,53 +63,72 @@ export function SituationsTab() {
     setIsCreating(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingItem) return
 
-    if (isCreating) {
-      const newSituations = [...situations, editingItem]
-      localStorage.setItem("callcenter_situations", JSON.stringify(newSituations))
-      setSituations(newSituations)
+    try {
+      setIsLoading(true)
+      if (isCreating) {
+        await createServiceSituation(editingItem)
+        toast({
+          title: "Situação criada",
+          description: "A nova situação foi criada com sucesso.",
+        })
+      } else {
+        await updateServiceSituation(editingItem)
+        toast({
+          title: "Situação atualizada",
+          description: "As alterações foram salvas com sucesso.",
+        })
+      }
+
+      await loadData()
+      setEditingItem(null)
+      setIsCreating(false)
+    } catch (error) {
       toast({
-        title: "Situação criada",
-        description: "A nova situação foi criada com sucesso.",
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar a situação.",
+        variant: "destructive",
       })
-    } else {
-      const updatedSituations = situations.map((s) => (s.id === editingItem.id ? editingItem : s))
-      localStorage.setItem("callcenter_situations", JSON.stringify(updatedSituations))
-      setSituations(updatedSituations)
-      toast({
-        title: "Situação atualizada",
-        description: "As alterações foram salvas com sucesso.",
-      })
+    } finally {
+      setIsLoading(false)
     }
-
-    localStorage.setItem("callcenter_last_update", Date.now().toString())
-    window.dispatchEvent(new CustomEvent("store-updated"))
-
-    setEditingItem(null)
-    setIsCreating(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta situação?")) {
-      const updatedSituations = situations.filter((s) => s.id !== id)
-      localStorage.setItem("callcenter_situations", JSON.stringify(updatedSituations))
-      setSituations(updatedSituations)
-
-      localStorage.setItem("callcenter_last_update", Date.now().toString())
-      window.dispatchEvent(new CustomEvent("store-updated"))
-
-      toast({
-        title: "Situação excluída",
-        description: "A situação foi removida com sucesso.",
-      })
+      try {
+        setIsLoading(true)
+        await deleteServiceSituation(id)
+        await loadData()
+        toast({
+          title: "Situação excluída",
+          description: "A situação foi removida com sucesso.",
+        })
+      } catch (error) {
+        toast({
+          title: "Erro ao excluir",
+          description: "Ocorreu um erro ao excluir a situação.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
   const handleCancel = () => {
     setEditingItem(null)
     setIsCreating(false)
+  }
+
+  if (isLoading && !situations.length) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -103,7 +140,7 @@ export function SituationsTab() {
         </div>
         <Button
           onClick={handleCreate}
-          disabled={!!editingItem}
+          disabled={!!editingItem || isLoading}
           className="bg-orange-500 hover:bg-orange-600 text-white"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -152,11 +189,15 @@ export function SituationsTab() {
             </div>
 
             <div className="flex gap-2 pt-4">
-              <Button onClick={handleSave} className="bg-orange-500 hover:bg-orange-600 text-white">
-                <Save className="h-4 w-4 mr-2" />
+              <Button
+                onClick={handleSave}
+                disabled={isLoading}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 Salvar
               </Button>
-              <Button variant="outline" onClick={handleCancel}>
+              <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>

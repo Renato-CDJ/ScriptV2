@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Save, Clock } from "lucide-react"
+import { Save, Clock, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getNotes, saveNote } from "@/lib/store"
 import type { Note } from "@/lib/types"
@@ -15,43 +15,71 @@ export function NotesTab() {
   const [content, setContent] = useState("")
   const [notes, setNotes] = useState<Note[]>([])
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
     if (user) {
-      const userNotes = getNotes(user.id)
-      setNotes(userNotes)
-      if (userNotes.length > 0) {
-        setContent(userNotes[userNotes.length - 1].content)
-        setLastSaved(userNotes[userNotes.length - 1].updatedAt)
-      }
+      loadNotes()
     }
   }, [user])
 
-  const handleSave = () => {
+  const loadNotes = async () => {
+    if (!user) return
+    setIsLoading(true)
+    try {
+      const userNotes = await getNotes(user.id)
+      setNotes(userNotes)
+      if (userNotes.length > 0) {
+        setContent(userNotes[0].content) // Assuming getNotes returns ordered by updated_at desc
+        setLastSaved(userNotes[0].updatedAt)
+      }
+    } catch (error) {
+      console.error("Error loading notes:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSave = async () => {
     if (!user) return
 
-    saveNote(user.id, content)
-    setLastSaved(new Date())
-    setNotes(getNotes(user.id))
+    try {
+      setIsLoading(true)
+      await saveNote(user.id, content)
+      setLastSaved(new Date())
+      await loadNotes()
 
-    toast({
-      title: "Nota salva",
-      description: "Suas anotações foram salvas com sucesso.",
-    })
+      toast({
+        title: "Nota salva",
+        description: "Suas anotações foram salvas com sucesso.",
+      })
+    } catch (error) {
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar sua nota.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Auto-save every 30 seconds if there are changes
   useEffect(() => {
     if (!content || !user) return
 
-    const autoSaveInterval = setInterval(() => {
-      saveNote(user.id, content)
+    const autoSaveInterval = setInterval(async () => {
+      // Only save if content is different from last saved note
+      if (notes.length > 0 && notes[0].content === content) return
+
+      await saveNote(user.id, content)
       setLastSaved(new Date())
+      // We don't reload notes here to avoid UI jumps, just update last saved
     }, 30000)
 
     return () => clearInterval(autoSaveInterval)
-  }, [content, user])
+  }, [content, user, notes])
 
   return (
     <div className="space-y-6">
@@ -76,8 +104,8 @@ export function NotesTab() {
                 )}
               </CardDescription>
             </div>
-            <Button onClick={handleSave}>
-              <Save className="h-4 w-4 mr-2" />
+            <Button onClick={handleSave} disabled={isLoading}>
+              {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Salvar
             </Button>
           </div>
@@ -104,9 +132,7 @@ export function NotesTab() {
           <CardContent>
             <div className="space-y-2">
               {notes
-                .slice(0, -1)
-                .reverse()
-                .slice(0, 5)
+                .slice(1, 6) // Skip the first one (current) and take next 5
                 .map((note) => (
                   <div key={note.id} className="p-3 bg-muted rounded-lg text-sm">
                     <p className="text-xs text-muted-foreground mb-1">

@@ -8,14 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Edit, Trash2, Save, X, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-
-interface Phraseology {
-  id: string
-  title: string
-  content: string
-  category?: string
-  createdAt: Date
-}
+import { getPhraseologies, createPhraseology, updatePhraseology, deletePhraseology } from "@/lib/store"
+import type { Phraseology } from "@/lib/types"
 
 export function PhraseologyTab() {
   const [phraseologies, setPhraseologies] = useState<Phraseology[]>([])
@@ -25,26 +19,11 @@ export function PhraseologyTab() {
 
   useEffect(() => {
     loadPhraseologies()
-    const handleStoreUpdate = () => {
-      loadPhraseologies()
-    }
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
-  const loadPhraseologies = () => {
-    if (typeof window === "undefined") return
-    const stored = localStorage.getItem("callcenter_phraseologies")
-    if (stored) {
-      setPhraseologies(JSON.parse(stored))
-    }
-  }
-
-  const savePhraseologies = (data: Phraseology[]) => {
-    if (typeof window === "undefined") return
-    localStorage.setItem("callcenter_phraseologies", JSON.stringify(data))
-    localStorage.setItem("callcenter_last_update", Date.now().toString())
-    window.dispatchEvent(new CustomEvent("store-updated"))
+  const loadPhraseologies = async () => {
+    const data = await getPhraseologies()
+    setPhraseologies(data)
   }
 
   const handleImportPhraseology = () => {
@@ -60,43 +39,39 @@ export function PhraseologyTab() {
         const data = JSON.parse(text)
 
         let importedCount = 0
-        const newPhraseologies: Phraseology[] = []
 
-        // Check for direct phraseology format
         if (data.fraseologias) {
-          Object.entries(data.fraseologias).forEach(([key, value]: [string, any]) => {
-            newPhraseologies.push({
-              id: `phrase-${Date.now()}-${importedCount}`,
+          const promises = Object.entries(data.fraseologias).map(async ([key, value]: [string, any]) => {
+            await createPhraseology({
               title: value.title || key,
               content: value.content || value.text || "",
               category: value.category || "Geral",
-              createdAt: new Date(),
             })
             importedCount++
           })
-        }
-        // Check for nested format in marcas
-        else if (data.marcas) {
+          await Promise.all(promises)
+        } else if (data.marcas) {
+          const promises: Promise<any>[] = []
           Object.entries(data.marcas).forEach(([productName, productData]: [string, any]) => {
             Object.entries(productData).forEach(([key, value]: [string, any]) => {
               if (value.title?.toLowerCase().includes("fraseologia")) {
-                newPhraseologies.push({
-                  id: `phrase-${Date.now()}-${importedCount}`,
-                  title: value.title,
-                  content: value.content || value.text || "",
-                  category: productName,
-                  createdAt: new Date(),
-                })
-                importedCount++
+                promises.push(
+                  createPhraseology({
+                    title: value.title,
+                    content: value.content || value.text || "",
+                    category: productName,
+                  }).then(() => {
+                    importedCount++
+                  }),
+                )
               }
             })
           })
+          await Promise.all(promises)
         }
 
         if (importedCount > 0) {
-          const updatedPhraseologies = [...phraseologies, ...newPhraseologies]
-          setPhraseologies(updatedPhraseologies)
-          savePhraseologies(updatedPhraseologies)
+          await loadPhraseologies()
           toast({
             title: "Fraseologias importadas com sucesso!",
             description: `${importedCount} fraseologia(s) foram importadas.`,
@@ -123,50 +98,60 @@ export function PhraseologyTab() {
 
   const handleCreate = () => {
     const newItem: Phraseology = {
-      id: `phrase-${Date.now()}`,
+      id: "",
       title: "",
       content: "",
       category: "Geral",
       createdAt: new Date(),
+      updatedAt: new Date(),
     }
     setEditingItem(newItem)
     setIsCreating(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingItem) return
 
     if (isCreating) {
-      const newPhraseologies = [...phraseologies, editingItem]
-      setPhraseologies(newPhraseologies)
-      savePhraseologies(newPhraseologies)
-      toast({
-        title: "Fraseologia criada",
-        description: "A nova fraseologia foi criada com sucesso.",
+      const created = await createPhraseology({
+        title: editingItem.title,
+        content: editingItem.content,
+        category: editingItem.category,
       })
+
+      if (created) {
+        await loadPhraseologies()
+        toast({
+          title: "Fraseologia criada",
+          description: "A nova fraseologia foi criada com sucesso.",
+        })
+      }
     } else {
-      const updatedPhraseologies = phraseologies.map((p) => (p.id === editingItem.id ? editingItem : p))
-      setPhraseologies(updatedPhraseologies)
-      savePhraseologies(updatedPhraseologies)
-      toast({
-        title: "Fraseologia atualizada",
-        description: "As alterações foram salvas com sucesso.",
-      })
+      const updated = await updatePhraseology(editingItem)
+
+      if (updated) {
+        await loadPhraseologies()
+        toast({
+          title: "Fraseologia atualizada",
+          description: "As alterações foram salvas com sucesso.",
+        })
+      }
     }
 
     setEditingItem(null)
     setIsCreating(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta fraseologia?")) {
-      const updatedPhraseologies = phraseologies.filter((p) => p.id !== id)
-      setPhraseologies(updatedPhraseologies)
-      savePhraseologies(updatedPhraseologies)
-      toast({
-        title: "Fraseologia excluída",
-        description: "A fraseologia foi removida com sucesso.",
-      })
+      const success = await deletePhraseology(id)
+      if (success) {
+        await loadPhraseologies()
+        toast({
+          title: "Fraseologia excluída",
+          description: "A fraseologia foi removida com sucesso.",
+        })
+      }
     }
   }
 
