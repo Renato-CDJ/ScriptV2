@@ -1,11 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { LoginForm } from "@/components/login-form"
 import { MouseTrail } from "@/components/mouse-trail"
-import Link from "next/link"
 
 export default function HomePage() {
   const { user, isLoading } = useAuth()

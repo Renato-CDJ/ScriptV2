@@ -198,7 +198,7 @@ const OperatorContent = memo(function OperatorContent() {
 
   if (!user) return null
 
-  const operatorFirstName = (user.fullName || "").split(" ")[0] || user.username
+  const operatorFirstName = user.fullName.split(" ")[0]
 
   return (
     <div className="flex flex-col h-screen h-dvh bg-background overflow-hidden">

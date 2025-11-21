@@ -23,8 +23,6 @@ import type {
   PresentationProgress, // Imported for presentation progress
 } from "./types"
 
-import * as firebaseStore from "./firebase-store"
-
 const saveQueue: Map<string, any> = new Map()
 let saveTimeout: NodeJS.Timeout | null = null
 
@@ -658,28 +656,6 @@ export function initializeMockData() {
   cleanupOldSessions()
 
   loadScriptsFromDataFolder()
-}
-
-export async function initializeMockDataAsync() {
-  if (typeof window === "undefined") return
-
-  // Try to load from Firebase first if available
-  try {
-    console.log("[v0] Checking Firebase for existing data...")
-
-    // Check if we have Firebase data by trying to fetch products
-    const firebaseProducts = await firebaseStore.getProducts()
-
-    if (firebaseProducts && firebaseProducts.length > 0) {
-      console.log("[v0] Found data in Firebase, skipping localStorage initialization")
-      return // Data already in Firebase
-    }
-  } catch (error) {
-    console.log("[v0] Firebase check failed, using localStorage:", error)
-  }
-
-  // Fallback to localStorage initialization
-  initializeMockData()
 }
 
 // User authentication
@@ -1977,46 +1953,4 @@ export function exportPresentationReport(presentationId: string): string {
   })
 
   return csvContent
-}
-
-export async function syncDataToFirebaseIfNeeded() {
-  if (typeof window === "undefined") return
-
-  try {
-    const lastUpdate = getLastUpdate()
-    const hasLocalData = localStorage.getItem(STORAGE_KEYS.PRODUCTS)
-
-    if (hasLocalData && lastUpdate) {
-      console.log("[v0] Syncing local data to Firebase...")
-
-      // Get current data from localStorage
-      const users = getAllUsers()
-      const products = getProducts()
-      const steps = getScriptSteps()
-      const tabulations = getTabulations()
-      const situations = getSituations()
-      const channels = getChannels()
-      const messages = getMessages()
-
-      // Check if Firebase is empty or needs update
-      const firebaseProducts = await firebaseStore.getProducts()
-
-      if (firebaseProducts.length === 0) {
-        console.log("[v0] Firebase is empty, syncing data...")
-
-        // Sync products
-        for (const product of products) {
-          try {
-            await firebaseStore.updateProduct(product)
-          } catch {
-            await firebaseStore.createProduct(product)
-          }
-        }
-
-        console.log("[v0] Data synced to Firebase successfully")
-      }
-    }
-  } catch (error) {
-    console.error("[v0] Sync error:", error)
-  }
 }

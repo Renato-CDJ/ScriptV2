@@ -23,7 +23,7 @@ export const LoginForm = memo(function LoginForm() {
   const handleUsernameChange = useCallback(
     (value: string) => {
       setUsername(value)
-      setShowPasswordField(value.toLowerCase() === "admin" || value.includes("@"))
+      setShowPasswordField(value.trim().length > 0)
       setError("")
     },
     [],
@@ -37,14 +37,7 @@ export const LoginForm = memo(function LoginForm() {
 
       try {
         console.log("[v0] Submitting login form")
-        
-        let loginPassword = password
-        if (!password && !username.includes("@") && username.toLowerCase() !== "admin") {
-          console.log("[v0] No password provided for username, using default")
-          loginPassword = "123456"
-        }
-
-        const user = await authenticateWithFirebase(username, loginPassword)
+        const user = await authenticateWithFirebase(username, password)
 
         if (user) {
           console.log("[v0] Login successful")
@@ -104,7 +97,7 @@ export const LoginForm = memo(function LoginForm() {
               <Input
                 id="username"
                 type="text"
-                placeholder="Usuário"
+                placeholder="Digite seu usuário ou e-mail"
                 value={username}
                 onChange={(e) => handleUsernameChange(e.target.value)}
                 required
@@ -115,7 +108,7 @@ export const LoginForm = memo(function LoginForm() {
             </div>
           </div>
 
-          {(username.includes("@") || username.toLowerCase() === "admin" || showPasswordField) && (
+          {showPasswordField && (
             <div className="space-y-2 animate-fade-in">
               <label htmlFor="password" className="sr-only">
                 Senha
@@ -128,7 +121,7 @@ export const LoginForm = memo(function LoginForm() {
                   placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required={username.includes("@") || username.toLowerCase() === "admin"}
+                  required
                   autoComplete="current-password"
                   disabled={isLoading}
                   className="h-14 pl-12 text-base bg-white dark:bg-zinc-800/50 border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"

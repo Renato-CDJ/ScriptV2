@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
-import { Send, Trash2, MessageCircle, User, Search, ImageIcon, Smile, Reply, X } from 'lucide-react'
+import { Send, Trash2, MessageCircle, User, Search, ImageIcon, Smile, Reply, X } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import {
   sendChatMessage,
@@ -135,18 +135,13 @@ export const ChatTab = memo(function ChatTab() {
     setChatEnabled(settings.isEnabled)
   }
 
-  const loadOperators = async () => {
-    try {
-      const allUsers = await getAllUsers()
-      const ops = allUsers.filter((u) => u.role === "operator")
-      setOperators(ops)
+  const loadOperators = () => {
+    const allUsers = getAllUsers()
+    const ops = allUsers.filter((u) => u.role === "operator")
+    setOperators(ops)
 
-      if (ops.length > 0 && !selectedOperatorId) {
-        setSelectedOperatorId(ops[0].id)
-      }
-    } catch (error) {
-      console.error("Error loading operators for chat:", error)
-      // Fail silently for chat, or maybe show a toast
+    if (ops.length > 0 && !selectedOperatorId) {
+      setSelectedOperatorId(ops[0].id)
     }
   }
 

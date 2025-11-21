@@ -9,11 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Trash2, Plus, Package, Cloud } from 'lucide-react'
+import { Pencil, Trash2, Plus, Package } from "lucide-react"
 import { getProducts, updateProduct, deleteProduct, createProduct } from "@/lib/store"
-import { MigrationTab } from "@/components/admin-tabs/migration-tab"
-import { FirebaseVerification } from "@/components/firebase-verification"
-import { AdminSetupFirebaseModal } from "@/components/admin-setup-firebase-modal"
 import type { Product } from "@/lib/types"
 
 export default function SettingsPage() {
@@ -147,7 +144,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Configurações</h1>
-          <p className="text-muted-foreground">Gerencie produtos, integrações e sincronização de dados</p>
+          <p className="text-muted-foreground">Gerencie produtos e suas descrições</p>
         </div>
       </div>
 
@@ -156,10 +153,6 @@ export default function SettingsPage() {
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4" />
             Produtos
-          </TabsTrigger>
-          <TabsTrigger value="firebase" className="gap-2">
-            <Cloud className="h-4 w-4" />
-            Firebase
           </TabsTrigger>
         </TabsList>
 
@@ -343,30 +336,6 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-        <TabsContent value="firebase" className="space-y-6">
-          <div className="space-y-6">
-            {/* Admin Setup Modal */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuração do Administrador</CardTitle>
-                <CardDescription>Registre seu admin no Firebase para autenticação</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdminSetupFirebaseModal />
-              </CardContent>
-            </Card>
-
-            {/* Migration Section */}
-            <MigrationTab />
-
-            {/* Verification Section */}
-            <div className="pt-4">
-              <h2 className="text-xl font-bold mb-4">Verificação de Dados</h2>
-              <FirebaseVerification />
-            </div>
-          </div>
         </TabsContent>
       </Tabs>
     </div>
