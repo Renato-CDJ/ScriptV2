@@ -8,10 +8,9 @@ import { ScriptCard } from "@/components/script-card"
 import { AttendanceConfig } from "@/components/attendance-config"
 import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { useAuth } from "@/lib/auth-context"
-import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/store"
+import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/firebase-store"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { useRouter } from 'next/navigation'
-import { useRealtimeSubscription } from "@/hooks/use-realtime"
 
 const OperatorContent = memo(function OperatorContent() {
   const { user, logout } = useAuth()
@@ -26,33 +25,6 @@ const OperatorContent = memo(function OperatorContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentProductId, setCurrentProductId] = useState<string | null>(null)
   const [showChatModal, setShowChatModal] = useState(false)
-
-  // Realtime subscription for script updates
-  useRealtimeSubscription({
-    table: "script_steps",
-    filter: currentProductId ? `product_id=eq.${currentProductId}` : undefined,
-    callback: async (payload) => {
-      if (currentStep && payload.new && payload.new.id === currentStep.id) {
-        // Refresh current step if it was updated
-        const updatedStep = await getScriptStepById(currentStep.id, currentProductId!)
-        if (updatedStep) {
-          setCurrentStep(updatedStep)
-        }
-      }
-    }
-  })
-
-  // Realtime subscription for chat messages
-  useRealtimeSubscription({
-    table: "chat_messages",
-    filter: user ? `recipient_id=eq.${user.id}` : undefined,
-    event: "INSERT",
-    callback: (payload) => {
-      // Show notification or update chat indicator
-      // This could be handled by a global notification context
-      console.log("New message received:", payload.new)
-    }
-  })
 
   const handleBackToStart = useCallback(() => {
     setIsSessionActive(false)
@@ -83,12 +55,34 @@ const OperatorContent = memo(function OperatorContent() {
     return () => clearInterval(interval)
   }, [logout, router])
 
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
+    const handleStoreUpdate = async () => {
+      if (currentStep && currentProductId) {
+        clearTimeout(timeoutId)
+        timeoutId = setTimeout(async () => {
+          const updatedStep = await getScriptStepById(currentStep.id, currentProductId)
+          if (updatedStep) {
+            setCurrentStep(updatedStep)
+          }
+        }, 150)
+      }
+    }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener("store-updated", handleStoreUpdate)
+    }
+  }, [currentStep, currentProductId])
+
   const handleSearch = useCallback(
     async (query: string) => {
       setSearchQuery(query)
 
       if (query.trim() && isSessionActive && currentProductId) {
-        const steps = await getScriptSteps(currentProductId)
+        const steps = (await getScriptSteps()).filter((s) => s.productId === currentProductId)
         const foundStep = steps.find((step) => step.title.toLowerCase().includes(query.toLowerCase()))
 
         if (foundStep) {
@@ -163,20 +157,24 @@ const OperatorContent = memo(function OperatorContent() {
   )
 
   const handleGoBack = useCallback(async () => {
-    if (stepHistory.length > 1 && currentProductId) {
-      const newHistory = [...stepHistory]
-      newHistory.pop()
-      setStepHistory(newHistory)
+    setStepHistory((prev) => {
+      if (prev.length > 1 && currentProductId) {
+        const newHistory = [...prev]
+        newHistory.pop()
 
-      const previousStepId = newHistory[newHistory.length - 1]
-      const previousStep = await getScriptStepById(previousStepId, currentProductId)
+        const previousStepId = newHistory[newHistory.length - 1]
+        getScriptStepById(previousStepId, currentProductId).then((previousStep) => {
+          if (previousStep) {
+            setCurrentStep(previousStep)
+            setSearchQuery("")
+          }
+        })
 
-      if (previousStep) {
-        setCurrentStep(previousStep)
-        setSearchQuery("")
+        return newHistory
       }
-    }
-  }, [stepHistory, currentProductId])
+      return prev
+    })
+  }, [currentProductId])
 
   const handleProductSelect = useCallback(async (productId: string) => {
     const product = await getProductById(productId)
@@ -200,7 +198,7 @@ const OperatorContent = memo(function OperatorContent() {
 
   if (!user) return null
 
-  const operatorFirstName = user.fullName.split(" ")[0]
+  const operatorFirstName = (user.fullName || "").split(" ")[0] || user.username
 
   return (
     <div className="flex flex-col h-screen h-dvh bg-background overflow-hidden">

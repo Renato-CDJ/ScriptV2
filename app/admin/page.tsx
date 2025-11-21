@@ -38,9 +38,6 @@ const AccessControlTab = lazy(() =>
 const PresentationsTab = lazy(() =>
   import("@/components/admin-tabs/presentations-tab").then((m) => ({ default: m.PresentationsTab })),
 )
-const PhraseologyTab = lazy(() =>
-  import("@/components/admin-tabs/phraseology-tab").then((m) => ({ default: m.PhraseologyTab })),
-)
 
 const LoadingFallback = memo(function LoadingFallback() {
   return (
@@ -147,12 +144,6 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <PresentationsTab />
-          </Suspense>
-        )
-      case "phraseologies":
-        return (
-          <Suspense fallback={<LoadingFallback />}>
-            <PhraseologyTab />
           </Suspense>
         )
       default:

@@ -6,37 +6,24 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Edit, Trash2, Save, X, Loader2 } from "lucide-react"
-import { getTabulations, createTabulation, updateTabulation, deleteTabulation } from "@/lib/store"
+import { Plus, Edit, Trash2, Save, X } from "lucide-react"
+import { getTabulations } from "@/lib/store"
 import type { Tabulation } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
 export function TabulationsTab() {
-  const [tabulations, setTabulations] = useState<Tabulation[]>([])
+  const [tabulations, setTabulations] = useState<Tabulation[]>(getTabulations())
   const [editingItem, setEditingItem] = useState<Tabulation | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    setIsLoading(true)
-    try {
-      const data = await getTabulations()
-      setTabulations(data)
-    } catch (error) {
-      toast({
-        title: "Erro ao carregar",
-        description: "Não foi possível carregar as tabulações.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+    const handleStoreUpdate = () => {
+      setTabulations(getTabulations())
     }
-  }
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+  }, [])
 
   const handleEdit = (item: Tabulation) => {
     setEditingItem({ ...item })
@@ -45,7 +32,7 @@ export function TabulationsTab() {
 
   const handleCreate = () => {
     const newItem: Tabulation = {
-      id: "",
+      id: `tab-${Date.now()}`,
       name: "",
       description: "",
       color: "#3b82f6",
@@ -55,72 +42,53 @@ export function TabulationsTab() {
     setIsCreating(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!editingItem) return
 
-    try {
-      setIsLoading(true)
-      if (isCreating) {
-        await createTabulation(editingItem)
-        toast({
-          title: "Tabulação criada",
-          description: "A nova tabulação foi criada com sucesso.",
-        })
-      } else {
-        await updateTabulation(editingItem)
-        toast({
-          title: "Tabulação atualizada",
-          description: "As alterações foram salvas com sucesso.",
-        })
-      }
-
-      await loadData()
-      setEditingItem(null)
-      setIsCreating(false)
-    } catch (error) {
+    if (isCreating) {
+      const newTabulations = [...tabulations, editingItem]
+      localStorage.setItem("callcenter_tabulations", JSON.stringify(newTabulations))
+      setTabulations(newTabulations)
       toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar a tabulação.",
-        variant: "destructive",
+        title: "Tabulação criada",
+        description: "A nova tabulação foi criada com sucesso.",
       })
-    } finally {
-      setIsLoading(false)
+    } else {
+      const updatedTabulations = tabulations.map((t) => (t.id === editingItem.id ? editingItem : t))
+      localStorage.setItem("callcenter_tabulations", JSON.stringify(updatedTabulations))
+      setTabulations(updatedTabulations)
+      toast({
+        title: "Tabulação atualizada",
+        description: "As alterações foram salvas com sucesso.",
+      })
     }
+
+    localStorage.setItem("callcenter_last_update", Date.now().toString())
+    window.dispatchEvent(new CustomEvent("store-updated"))
+
+    setEditingItem(null)
+    setIsCreating(false)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta tabulação?")) {
-      try {
-        setIsLoading(true)
-        await deleteTabulation(id)
-        await loadData()
-        toast({
-          title: "Tabulação excluída",
-          description: "A tabulação foi removida com sucesso.",
-        })
-      } catch (error) {
-        toast({
-          title: "Erro ao excluir",
-          description: "Ocorreu um erro ao excluir a tabulação.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+      const updatedTabulations = tabulations.filter((t) => t.id !== id)
+      localStorage.setItem("callcenter_tabulations", JSON.stringify(updatedTabulations))
+      setTabulations(updatedTabulations)
+
+      localStorage.setItem("callcenter_last_update", Date.now().toString())
+      window.dispatchEvent(new CustomEvent("store-updated"))
+
+      toast({
+        title: "Tabulação excluída",
+        description: "A tabulação foi removida com sucesso.",
+      })
     }
   }
 
   const handleCancel = () => {
     setEditingItem(null)
     setIsCreating(false)
-  }
-
-  if (isLoading && !tabulations.length) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
   }
 
   return (
@@ -132,7 +100,7 @@ export function TabulationsTab() {
         </div>
         <Button
           onClick={handleCreate}
-          disabled={!!editingItem || isLoading}
+          disabled={!!editingItem}
           className="bg-orange-500 hover:bg-orange-600 text-white"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -187,15 +155,11 @@ export function TabulationsTab() {
             </div>
 
             <div className="flex gap-2 pt-4">
-              <Button
-                onClick={handleSave}
-                disabled={isLoading}
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-              >
-                {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              <Button onClick={handleSave} className="bg-orange-500 hover:bg-orange-600 text-white">
+                <Save className="h-4 w-4 mr-2" />
                 Salvar
               </Button>
-              <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+              <Button variant="outline" onClick={handleCancel}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>

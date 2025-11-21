@@ -6,38 +6,25 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Edit, Trash2, Save, X, ExternalLink, Copy, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, Save, X, ExternalLink, Copy } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getChannels, createChannel, updateChannel, deleteChannel } from "@/lib/store"
+import { getChannels } from "@/lib/store"
 import type { Channel } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
 export function ChannelsTab() {
-  const [channels, setChannels] = useState<Channel[]>([])
+  const [channels, setChannels] = useState<Channel[]>(getChannels())
   const [editingItem, setEditingItem] = useState<Channel | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    setIsLoading(true)
-    try {
-      const data = await getChannels()
-      setChannels(data)
-    } catch (error) {
-      toast({
-        title: "Erro ao carregar",
-        description: "Não foi possível carregar os canais.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+    const handleStoreUpdate = () => {
+      setChannels(getChannels())
     }
-  }
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+  }, [])
 
   const handleEdit = (item: Channel) => {
     setEditingItem({ ...item })
@@ -46,7 +33,7 @@ export function ChannelsTab() {
 
   const handleCreate = () => {
     const newItem: Channel = {
-      id: "",
+      id: `ch-${Date.now()}`,
       name: "",
       contact: "",
       isActive: true,
@@ -56,58 +43,47 @@ export function ChannelsTab() {
     setIsCreating(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!editingItem) return
 
-    try {
-      setIsLoading(true)
-      if (isCreating) {
-        await createChannel(editingItem)
-        toast({
-          title: "Canal criado",
-          description: "O novo canal foi criado com sucesso.",
-        })
-      } else {
-        await updateChannel(editingItem)
-        toast({
-          title: "Canal atualizado",
-          description: "As alterações foram salvas com sucesso.",
-        })
-      }
-
-      await loadData()
-      setEditingItem(null)
-      setIsCreating(false)
-    } catch (error) {
+    if (isCreating) {
+      const newChannels = [...channels, editingItem]
+      localStorage.setItem("callcenter_channels", JSON.stringify(newChannels))
+      setChannels(newChannels)
       toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar o canal.",
-        variant: "destructive",
+        title: "Canal criado",
+        description: "O novo canal foi criado com sucesso.",
       })
-    } finally {
-      setIsLoading(false)
+    } else {
+      const updatedChannels = channels.map((c) => (c.id === editingItem.id ? editingItem : c))
+      localStorage.setItem("callcenter_channels", JSON.stringify(updatedChannels))
+      setChannels(updatedChannels)
+      toast({
+        title: "Canal atualizado",
+        description: "As alterações foram salvas com sucesso.",
+      })
     }
+
+    localStorage.setItem("callcenter_last_update", Date.now().toString())
+    window.dispatchEvent(new CustomEvent("store-updated"))
+
+    setEditingItem(null)
+    setIsCreating(false)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este canal?")) {
-      try {
-        setIsLoading(true)
-        await deleteChannel(id)
-        await loadData()
-        toast({
-          title: "Canal excluído",
-          description: "O canal foi removido com sucesso.",
-        })
-      } catch (error) {
-        toast({
-          title: "Erro ao excluir",
-          description: "Ocorreu um erro ao excluir o canal.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+      const updatedChannels = channels.filter((c) => c.id !== id)
+      localStorage.setItem("callcenter_channels", JSON.stringify(updatedChannels))
+      setChannels(updatedChannels)
+
+      localStorage.setItem("callcenter_last_update", Date.now().toString())
+      window.dispatchEvent(new CustomEvent("store-updated"))
+
+      toast({
+        title: "Canal excluído",
+        description: "O canal foi removido com sucesso.",
+      })
     }
   }
 
@@ -131,14 +107,6 @@ export function ChannelsTab() {
     }
   }
 
-  if (isLoading && !channels.length) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -148,7 +116,7 @@ export function ChannelsTab() {
         </div>
         <Button
           onClick={handleCreate}
-          disabled={!!editingItem || isLoading}
+          disabled={!!editingItem}
           className="bg-orange-500 hover:bg-orange-600 text-white"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -199,15 +167,11 @@ export function ChannelsTab() {
             </div>
 
             <div className="flex gap-2 pt-4">
-              <Button
-                onClick={handleSave}
-                disabled={isLoading}
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-              >
-                {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              <Button onClick={handleSave} className="bg-orange-500 hover:bg-orange-600 text-white">
+                <Save className="h-4 w-4 mr-2" />
                 Salvar
               </Button>
-              <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+              <Button variant="outline" onClick={handleCancel}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>

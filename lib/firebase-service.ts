@@ -54,19 +54,24 @@ export async function getUser(userId: string): Promise<User | null> {
 
 export async function getUserByUsername(username: string): Promise<User | null> {
   try {
-    const usersRef = collection(db, "users")
-    const q = query(usersRef, where("username", "==", username), limit(1))
+    const usernamesRef = collection(db, "usernames")
+    const q = query(usernamesRef, where("username", "==", username), limit(1))
     const querySnapshot = await getDocs(q)
 
     if (!querySnapshot.empty) {
-      const userDoc = querySnapshot.docs[0]
-      const data = userDoc.data()
-      return {
-        ...data,
-        id: userDoc.id,
-        createdAt: data.createdAt?.toDate?.() || new Date(),
-        lastLoginAt: data.lastLoginAt?.toDate?.() || undefined,
-      } as User
+      const usernameDoc = querySnapshot.docs[0].data()
+      const userId = usernameDoc.userId
+
+      const userDoc = await getDoc(doc(db, "users", userId))
+      if (userDoc.exists()) {
+        const data = userDoc.data()
+        return {
+          ...data,
+          id: userDoc.id,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          lastLoginAt: data.lastLoginAt?.toDate?.() || undefined,
+        } as User
+      }
     }
     return null
   } catch (error) {
@@ -89,6 +94,29 @@ export async function createUser(user: Omit<User, "id">): Promise<string> {
   }
 }
 
+export async function getAllUsers(): Promise<User[]> {
+  try {
+    const usersSnapshot = await getDocs(collection(db, "users"))
+    return usersSnapshot.docs.map((doc) => {
+      const data = doc.data()
+      return {
+        ...data,
+        id: doc.id,
+        createdAt: data.createdAt?.toDate?.() || new Date(),
+        lastLoginAt: data.lastLoginAt?.toDate?.() || undefined,
+      } as User
+    })
+  } catch (error: any) {
+    if (error.code === "permission-denied" || error.message?.includes("Missing or insufficient permissions")) {
+      console.warn("[v0] Permission denied when fetching users. Please update Firestore rules.")
+      console.warn("[v0] See FIREBASE_RULES_UPDATE.md for instructions.")
+      return [] // Return empty array instead of throwing
+    }
+    console.error("Error getting users:", error)
+    throw error
+  }
+}
+
 export async function updateUser(userId: string, data: Partial<User>): Promise<void> {
   try {
     const userRef = doc(db, "users", userId)
@@ -101,6 +129,15 @@ export async function updateUser(userId: string, data: Partial<User>): Promise<v
     await updateDoc(userRef, updateData)
   } catch (error) {
     console.error("Error updating user:", error)
+    throw error
+  }
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, "users", userId))
+  } catch (error) {
+    console.error("Error deleting user:", error)
     throw error
   }
 }

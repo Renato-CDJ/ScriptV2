@@ -16,9 +16,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Pencil, Trash2, Package } from "lucide-react"
-import { getProducts, createProduct, updateProduct, deleteProduct, getScriptSteps } from "@/lib/store"
-import type { Product } from "@/lib/types"
+import { Plus, Pencil, Trash2, Package } from 'lucide-react'
+import { getProducts, createProduct, updateProduct, deleteProduct, getScriptSteps } from "@/lib/firebase-store"
+import type { Product, ScriptStep } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
 export function ProductsTab() {
@@ -35,16 +35,27 @@ export function ProductsTab() {
   })
   const { toast } = useToast()
 
+  const [abordagemSteps, setAbordagemSteps] = useState<ScriptStep[]>([])
+
   useEffect(() => {
     loadProducts()
-    const handleStoreUpdate = () => loadProducts()
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
-  const loadProducts = () => {
-    setProducts(getProducts())
+  const loadProducts = async () => {
+    const productsData = await getProducts()
+    setProducts(productsData)
   }
+
+  useEffect(() => {
+    const loadAbordagemSteps = async () => {
+      const allSteps = await getScriptSteps()
+      const filtered = allSteps.filter(
+        (step) => step.title.toLowerCase().includes("abordagem") || step.id.toLowerCase().includes("abordagem"),
+      )
+      setAbordagemSteps(filtered)
+    }
+    loadAbordagemSteps()
+  }, [])
 
   const handleOpenDialog = (product?: Product) => {
     const newDialogId = `dialog-${Date.now()}`
@@ -72,7 +83,7 @@ export function ProductsTab() {
     setIsDialogOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim() || !formData.scriptId) {
       toast({
         title: "Erro",
@@ -91,46 +102,62 @@ export function ProductsTab() {
       return
     }
 
-    if (editingProduct) {
-      updateProduct({
-        ...editingProduct,
-        ...formData,
+    try {
+      if (editingProduct) {
+        await updateProduct({
+          ...editingProduct,
+          ...formData,
+        })
+        toast({
+          title: "Sucesso",
+          description: "Produto atualizado com sucesso",
+        })
+      } else {
+        await createProduct({
+          ...formData,
+          isActive: true,
+        })
+        toast({
+          title: "Sucesso",
+          description: "Produto criado com sucesso",
+        })
+      }
+
+      setIsDialogOpen(false)
+      setFormData({
+        name: "",
+        scriptId: "",
+        category: "habitacional",
+        attendanceTypes: [],
+        personTypes: [],
       })
+      setEditingProduct(null)
+      await loadProducts()
+    } catch (error) {
       toast({
-        title: "Sucesso",
-        description: "Produto atualizado com sucesso",
-      })
-    } else {
-      createProduct({
-        ...formData,
-        isActive: true,
-      })
-      toast({
-        title: "Sucesso",
-        description: "Produto criado com sucesso",
+        title: "Erro",
+        description: "Ocorreu um erro ao salvar o produto.",
+        variant: "destructive",
       })
     }
-
-    setIsDialogOpen(false)
-    setFormData({
-      name: "",
-      scriptId: "",
-      category: "habitacional",
-      attendanceTypes: [],
-      personTypes: [],
-    })
-    setEditingProduct(null)
-    loadProducts()
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este produto?")) {
-      deleteProduct(id)
-      toast({
-        title: "Sucesso",
-        description: "Produto excluído com sucesso",
-      })
-      loadProducts()
+      try {
+        await deleteProduct(id)
+        toast({
+          title: "Sucesso",
+          description: "Produto excluído com sucesso",
+        })
+        await loadProducts()
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao excluir o produto.",
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -151,14 +178,6 @@ export function ProductsTab() {
         : [...prev.personTypes, type],
     }))
   }
-
-  const abordagemSteps = useMemo(() => {
-    const allSteps = getScriptSteps()
-    // Filter steps that are "Abordagem" (approach/first screen of each product)
-    return allSteps.filter(
-      (step) => step.title.toLowerCase().includes("abordagem") || step.id.toLowerCase().includes("abordagem"),
-    )
-  }, [])
 
   return (
     <div className="space-y-6">

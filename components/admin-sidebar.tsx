@@ -2,28 +2,9 @@
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  LayoutDashboard,
-  FileText,
-  Tags,
-  AlertCircle,
-  Radio,
-  StickyNote,
-  Users,
-  Settings,
-  LogOut,
-  Package,
-  Sun,
-  Moon,
-  Settings2,
-  MessageSquare,
-  Shield,
-  MessageCircle,
-  Presentation,
-  MessageSquareText,
-} from "lucide-react"
+import { LayoutDashboard, FileText, Tags, AlertCircle, Radio, StickyNote, Users, Settings, LogOut, Package, Sun, Moon, Settings2, MessageSquare, Shield, MessageCircle, Presentation } from 'lucide-react'
 import { useAuth } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 
@@ -40,7 +21,6 @@ const menuItems = [
   { id: "tabulations", label: "Tabulações", icon: Tags, permission: "tabulations" },
   { id: "situations", label: "Situações", icon: AlertCircle, permission: "situations" },
   { id: "channels", label: "Canais", icon: Radio, permission: "channels" },
-  { id: "phraseologies", label: "Fraseologias", icon: MessageSquareText, permission: "phraseologies" },
   { id: "notes", label: "Bloco de Notas", icon: StickyNote, permission: "notes" },
   { id: "operators", label: "Operadores", icon: Users, permission: "operators" },
   { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },

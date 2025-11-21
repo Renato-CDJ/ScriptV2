@@ -16,23 +16,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Circle, UserX, Plus, Edit, Trash2, Download, Upload } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Circle, UserX, Plus, Edit, Trash2, Download, Upload, AlertCircle } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import {
-  getAllUsers,
-  updateUser,
-  deleteUser,
   forceLogoutUser,
   getTodayLoginSessions,
   getTodayConnectedTime,
   getCurrentUser,
   isUserOnline,
 } from "@/lib/store"
+import { createFirebaseUser } from "@/lib/firebase-auth"
+import { updateUser, deleteUser, getAllUsers } from "@/lib/firebase-service"
 import type { User } from "@/lib/types"
 import * as XLSX from "xlsx"
 
 export function OperatorsTab() {
   const [operators, setOperators] = useState<User[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingOperator, setEditingOperator] = useState<User | null>(null)
@@ -44,9 +46,19 @@ export function OperatorsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const loadOperators = () => {
-      const allUsers = getAllUsers()
-      setOperators(allUsers.filter((u) => u.role === "operator"))
+    const loadOperators = async () => {
+      try {
+        setError(null)
+        const allUsers = await getAllUsers()
+        setOperators(allUsers.filter((u) => u.role === "operator"))
+      } catch (error: any) {
+        console.error("Error loading operators:", error)
+        if (error.code === "permission-denied" || error.message?.includes("Missing or insufficient permissions")) {
+          setError("Erro de permissão: Atualize as regras do Firestore no console do Firebase para permitir listar usuários.")
+        } else {
+          setError("Erro ao carregar operadores. Tente novamente.")
+        }
+      }
     }
 
     loadOperators()
@@ -82,13 +94,14 @@ export function OperatorsTab() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = (operatorId: string) => {
+  const handleDelete = async (operatorId: string) => {
     if (confirm("Tem certeza que deseja excluir este operador?")) {
-      deleteUser(operatorId)
+      await deleteUser(operatorId)
       toast({
         title: "Sucesso",
         description: "Operador excluído com sucesso",
       })
+      window.dispatchEvent(new CustomEvent("store-updated"))
     }
   }
 
@@ -114,7 +127,7 @@ export function OperatorsTab() {
     })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.fullName.trim() || !formData.username.trim()) {
       toast({
         title: "Erro",
@@ -131,7 +144,7 @@ export function OperatorsTab() {
         fullName: formData.fullName,
         username: formData.username,
       }
-      updateUser(updatedOperator)
+      await updateUser(updatedOperator.id, updatedOperator)
       toast({
         title: "Sucesso",
         description: "Operador atualizado com sucesso",
@@ -147,39 +160,28 @@ export function OperatorsTab() {
         return
       }
 
-      const newOperator: User = {
-        id: `op-${Date.now()}`,
-        username: formData.username,
-        fullName: formData.fullName,
-        isOnline: false,
-        role: "operator",
-        createdAt: new Date(),
-        loginSessions: [],
-        permissions: {
-          dashboard: true,
-          scripts: true,
-          products: true,
-          attendanceConfig: false,
-          tabulations: false,
-          situations: false,
-          channels: false,
-          notes: true,
-          operators: false,
-          messagesQuiz: false,
-          chat: true,
-          settings: false,
-        },
+      try {
+        await createFirebaseUser({
+          username: formData.username,
+          email: `${formData.username}@scriptv2.local`,
+          password: "123456", // Default password
+          name: formData.fullName,
+          role: "operator"
+        })
+
+        // Trigger store update notification
+        window.dispatchEvent(new CustomEvent("store-updated"))
+
+        // Update local state immediately
+        // setOperators([...operators, newOperator])
+      } catch (error: any) {
+        toast({
+          title: "Erro",
+          description: error.message,
+          variant: "destructive",
+        })
+        return
       }
-
-      const allUsers = getAllUsers()
-      allUsers.push(newOperator)
-      localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
-
-      // Trigger store update notification
-      window.dispatchEvent(new CustomEvent("store-updated"))
-
-      // Update local state immediately
-      setOperators([...operators, newOperator])
     }
 
     toast({
@@ -272,59 +274,45 @@ export function OperatorsTab() {
       }
 
       // Import operators
-      const allUsers = getAllUsers()
+      const allUsers = await getAllUsers()
       let importedCount = 0
       let skippedCount = 0
       const errors: string[] = []
 
-      rows.forEach((row, index) => {
+      for (const row of rows) {
         const fullName = row[nameColumnIndex]?.trim()
         const username = row[usernameColumnIndex]?.trim()
 
         if (!fullName || !username) {
-          errors.push(`Linha ${index + 2}: Dados incompletos`)
+          errors.push(`Linha: Dados incompletos`)
           skippedCount++
-          return
+          continue
         }
 
         // Check if username already exists
         if (allUsers.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
-          errors.push(`Linha ${index + 2}: Usuário "${username}" já existe`)
+          errors.push(`Usuário "${username}" já existe`)
           skippedCount++
-          return
+          continue
         }
 
-        // Create new operator
-        const newOperator: User = {
-          id: `op-${Date.now()}-${index}`,
-          username: username,
-          fullName: fullName,
-          isOnline: false,
-          role: "operator",
-          createdAt: new Date(),
-          loginSessions: [],
-          permissions: {
-            dashboard: true,
-            scripts: true,
-            products: true,
-            attendanceConfig: false,
-            tabulations: false,
-            situations: false,
-            channels: false,
-            notes: true,
-            operators: false,
-            messagesQuiz: false,
-            chat: true,
-            settings: false,
-          },
+        // Create new operator in Firebase
+        try {
+          await createFirebaseUser({
+            username: username,
+            email: `${username}@scriptv2.local`,
+            password: "123456",
+            name: fullName,
+            role: "operator"
+          })
+          importedCount++
+        } catch (e) {
+          skippedCount++
         }
-
-        allUsers.push(newOperator)
-        importedCount++
-      })
+      }
 
       // Save to localStorage
-      localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
+      // localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
       window.dispatchEvent(new CustomEvent("store-updated"))
 
       // Show results
@@ -482,6 +470,20 @@ export function OperatorsTab() {
           </Button>
         </div>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erro de Permissão</AlertTitle>
+          <AlertDescription>
+            {error}
+            <br />
+            <span className="text-xs mt-2 block">
+              Vá para o Console do Firebase &gt; Firestore &gt; Regras e cole as regras fornecidas no chat.
+            </span>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-4">
         {operators.map((operator) => {

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode, useMemo, useCallback } from "react"
 import type { User } from "./types"
-import { getCurrentUser, logout as logoutUser, initializeMockData, cleanupOldSessions } from "./store"
+import { onAuthStateChange, logoutFirebase } from "./firebase-auth"
 
 interface AuthContextType {
   user: User | null
@@ -18,25 +18,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Initialize mock data on first load
-    initializeMockData()
+    console.log("[v0] Setting up Firebase auth listener")
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      console.log("[v0] Auth state changed:", firebaseUser)
+      setUser(firebaseUser)
+      setIsLoading(false)
+    })
 
-    // Check for existing session
-    const currentUser = getCurrentUser()
-    setUser(currentUser)
-    setIsLoading(false)
-
-    cleanupOldSessions()
+    // Cleanup subscription
+    return () => unsubscribe()
   }, [])
 
-  const logout = useCallback(() => {
-    logoutUser()
+  const logout = useCallback(async () => {
+    await logoutFirebase()
     setUser(null)
   }, [])
 
   const refreshUser = useCallback(() => {
-    const currentUser = getCurrentUser()
-    setUser(currentUser)
+    // Mas mantemos a função para compatibilidade
+    console.log("[v0] Refresh user called - Firebase handles this automatically")
   }, [])
 
   const contextValue = useMemo(() => ({ user, isLoading, logout, refreshUser }), [user, isLoading, logout, refreshUser])

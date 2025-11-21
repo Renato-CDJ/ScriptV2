@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RichTextEditorWYSIWYG } from "@/components/rich-text-editor-wysiwyg"
-import { Plus, Edit, Trash2, Save, X, Eye, Upload, ChevronDown, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, Save, X, Eye, Upload, ChevronDown, ChevronRight, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlertCircle } from 'lucide-react'
 import {
   getScriptSteps,
   updateScriptStep,
@@ -16,7 +16,7 @@ import {
   deleteScriptStep,
   importScriptFromJson,
   getProducts,
-} from "@/lib/store"
+} from "@/lib/firebase-store"
 import type { ScriptStep, ScriptButton, Product } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { AdminScriptPreview } from "@/components/admin-script-preview"
@@ -32,34 +32,17 @@ export function ScriptsTab() {
   const [previewStep, setPreviewStep] = useState<ScriptStep | null>(null)
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
   const [availableScripts, setAvailableScripts] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    loadData()
-    loadAvailableScripts()
-
-    // Subscribe to realtime updates if needed, or just refresh on focus
-    // For now we'll rely on manual refresh after actions
-  }, [])
-
-  const loadData = async () => {
-    setIsLoading(true)
-    try {
-      const [fetchedSteps, fetchedProducts] = await Promise.all([getScriptSteps(), getProducts()])
-      setSteps(fetchedSteps)
-      setProducts(fetchedProducts)
-    } catch (error) {
-      console.error("Error loading data:", error)
-      toast({
-        title: "Erro ao carregar dados",
-        description: "Não foi possível carregar os roteiros e produtos.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+    const handleStoreUpdate = () => {
+      refreshSteps()
     }
-  }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
+    loadAvailableScripts()
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+  }, [])
 
   const loadAvailableScripts = () => {
     try {
@@ -70,18 +53,19 @@ export function ScriptsTab() {
     }
   }
 
-  const refreshSteps = () => {
-    loadData()
+  const refreshSteps = async () => {
+    const [stepsData, productsData] = await Promise.all([getScriptSteps(), getProducts()])
+    setSteps(stepsData)
+    setProducts(productsData)
   }
 
   const isScriptImported = (scriptName: string): boolean => {
     const productId = `prod-${scriptName.toLowerCase().replace(/\s+/g, "-")}`
-    return products.some((p) => p.scriptId === productId)
+    return products.some((p) => p.id === productId)
   }
 
   const handleImportAvailableScript = async (scriptData: any, scriptName: string) => {
     try {
-      setIsLoading(true)
       const result = await importScriptFromJson(scriptData)
 
       if (result.stepCount > 0) {
@@ -99,8 +83,6 @@ export function ScriptsTab() {
         description: `Não foi possível importar o script ${scriptName}.`,
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -137,7 +119,6 @@ export function ScriptsTab() {
       if (!file) return
 
       try {
-        setIsLoading(true)
         const text = await file.text()
         const data = JSON.parse(text)
 
@@ -149,7 +130,6 @@ export function ScriptsTab() {
             description: "Por favor, use a aba 'Fraseologias' para importar arquivos de fraseologia.",
             variant: "destructive",
           })
-          setIsLoading(false)
           return
         }
 
@@ -160,7 +140,6 @@ export function ScriptsTab() {
             description: validation.errors.join(", "),
             variant: "destructive",
           })
-          setIsLoading(false)
           return
         }
 
@@ -185,11 +164,55 @@ export function ScriptsTab() {
           description: "O arquivo não está no formato correto. Esperado: { marcas: { PRODUTO: { step_key: {...} } } }",
           variant: "destructive",
         })
-      } finally {
-        setIsLoading(false)
       }
     }
     input.click()
+  }
+
+  const handleLoadScripts = async () => {
+    try {
+      const scripts = getAutoLoadScripts()
+
+      if (scripts.length === 0) {
+        toast({
+          title: "Nenhum script encontrado",
+          description: "Não há arquivos JSON na pasta data/scripts para carregar.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      let totalProducts = 0
+      let totalSteps = 0
+
+      const results = await Promise.all(
+        scripts.map(async (scriptData) => {
+          try {
+            return await importScriptFromJson(scriptData)
+          } catch (error) {
+            console.error("Error loading individual script:", error)
+            return { productCount: 0, stepCount: 0 }
+          }
+        })
+      )
+
+      results.forEach((result) => {
+        totalProducts += result.productCount
+        totalSteps += result.stepCount
+      })
+
+      await refreshSteps()
+      toast({
+        title: "Scripts carregados com sucesso!",
+        description: `${totalProducts} produto(s) e ${totalSteps} tela(s) foram importados da pasta data/scripts.`,
+      })
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar scripts",
+        description: "Não foi possível carregar os scripts da pasta data/scripts.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleEdit = (step: ScriptStep) => {
@@ -227,7 +250,6 @@ export function ScriptsTab() {
     if (!editingStep) return
 
     try {
-      setIsLoading(true)
       if (isCreating) {
         await createScriptStep(editingStep)
         toast({
@@ -251,15 +273,12 @@ export function ScriptsTab() {
         description: "Ocorreu um erro ao salvar o roteiro.",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este roteiro?")) {
       try {
-        setIsLoading(true)
         await deleteScriptStep(id)
         await refreshSteps()
         toast({
@@ -272,8 +291,6 @@ export function ScriptsTab() {
           description: "Ocorreu um erro ao excluir o roteiro.",
           variant: "destructive",
         })
-      } finally {
-        setIsLoading(false)
       }
     }
   }
@@ -341,12 +358,19 @@ export function ScriptsTab() {
     })
   }
 
-  if (isLoading && !steps.length) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+  const getAlignmentIcon = (align: string) => {
+    switch (align) {
+      case "left":
+        return <AlignLeft className="h-4 w-4" />
+      case "center":
+        return <AlignCenter className="h-4 w-4" />
+      case "right":
+        return <AlignRight className="h-4 w-4" />
+      case "justify":
+        return <AlignJustify className="h-4 w-4" />
+      default:
+        return <AlignLeft className="h-4 w-4" />
+    }
   }
 
   return (
@@ -357,18 +381,17 @@ export function ScriptsTab() {
           <p className="text-muted-foreground mt-1">Crie e edite os scripts de atendimento com formatação avançada</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={handleImportScript} disabled={!!editingStep || !!previewStep || isLoading}>
+          <Button variant="outline" onClick={handleImportScript} disabled={!!editingStep || !!previewStep}>
             <Upload className="h-4 w-4 mr-2" />
             Importar JSON
           </Button>
-          <Button onClick={handleCreate} disabled={!!editingStep || !!previewStep || isLoading}>
+          <Button onClick={handleCreate} disabled={!!editingStep || !!previewStep}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Roteiro
           </Button>
         </div>
       </div>
 
-      {/* ... existing code for preview and edit modes ... */}
       {previewStep ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -432,7 +455,6 @@ export function ScriptsTab() {
                   </div>
                 </div>
 
-                {/* ... existing alert card ... */}
                 <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
@@ -648,11 +670,11 @@ export function ScriptsTab() {
             </Tabs>
 
             <div className="flex gap-3 pt-4 border-t">
-              <Button onClick={handleSave} disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              <Button onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
                 Salvar Roteiro
               </Button>
-              <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+              <Button variant="outline" onClick={handleCancel}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
