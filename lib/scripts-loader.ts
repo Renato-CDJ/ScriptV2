@@ -41,13 +41,13 @@ export async function loadScriptsFromFolder(): Promise<{
 /**
  * Loads a single JSON file and imports its scripts
  */
-export async function loadScriptFile(jsonData: any): Promise<{
+export function loadScriptFile(jsonData: any): {
   productCount: number
   stepCount: number
   error?: string
-}> {
+} {
   try {
-    const result = await importScriptFromJson(jsonData)
+    const result = importScriptFromJson(jsonData)
     return {
       productCount: result.productCount,
       stepCount: result.stepCount,

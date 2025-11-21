@@ -15,7 +15,6 @@ export interface AdminPermissions {
   messagesQuiz?: boolean
   chat?: boolean
   settings?: boolean
-  phraseologies?: boolean
 }
 
 export interface User {
@@ -247,13 +246,4 @@ export interface PresentationProgress {
   viewedAt: Date
   marked_as_seen: boolean
   completion_date?: Date
-}
-
-export interface Phraseology {
-  id: string
-  title: string
-  content: string
-  category: string
-  createdAt: Date
-  updatedAt: Date
 }
