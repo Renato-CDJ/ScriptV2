@@ -5,9 +5,9 @@ import { useState, useCallback, useMemo, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { authenticateWithFirebase } from "@/lib/firebase-auth"
+import { authenticateUser } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
-import { AlertCircle, User, Lock, Sun, Moon } from 'lucide-react'
+import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
 
@@ -20,13 +20,15 @@ export const LoginForm = memo(function LoginForm() {
   const { theme, setTheme } = useTheme()
   const { refreshUser } = useAuth()
 
+  const validUsers = useMemo(() => ["admin", "monitoria1", "monitoria2", "monitoria3", "monitoria4"], [])
+
   const handleUsernameChange = useCallback(
     (value: string) => {
       setUsername(value)
-      setShowPasswordField(value.trim().length > 0)
+      setShowPasswordField(validUsers.includes(value.toLowerCase()))
       setError("")
     },
-    [],
+    [validUsers],
   )
 
   const handleSubmit = useCallback(
@@ -35,25 +37,23 @@ export const LoginForm = memo(function LoginForm() {
       setError("")
       setIsLoading(true)
 
-      try {
-        console.log("[v0] Submitting login form")
-        const user = await authenticateWithFirebase(username, password)
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
-        if (user) {
-          console.log("[v0] Login successful")
-          refreshUser()
+      const user = authenticateUser(username, password)
+
+      if (user) {
+        refreshUser()
+      } else {
+        if (showPasswordField) {
+          setError("Senha incorreta")
         } else {
-          console.log("[v0] Login failed - invalid credentials")
-          setError("Usuário ou senha incorretos")
+          setError("Usuário não encontrado")
         }
-      } catch (error: any) {
-        console.error("[v0] Login error:", error)
-        setError("Erro ao fazer login. Tente novamente.")
-      } finally {
-        setIsLoading(false)
       }
+
+      setIsLoading(false)
     },
-    [username, password, refreshUser],
+    [username, password, showPasswordField, refreshUser],
   )
 
   const toggleTheme = useCallback(() => {

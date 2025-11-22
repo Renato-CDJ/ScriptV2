@@ -8,9 +8,9 @@ import { ScriptCard } from "@/components/script-card"
 import { AttendanceConfig } from "@/components/attendance-config"
 import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { useAuth } from "@/lib/auth-context"
-import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/firebase-store"
+import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/store"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 
 const OperatorContent = memo(function OperatorContent() {
   const { user, logout } = useAuth()
@@ -58,11 +58,11 @@ const OperatorContent = memo(function OperatorContent() {
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
 
-    const handleStoreUpdate = async () => {
+    const handleStoreUpdate = () => {
       if (currentStep && currentProductId) {
         clearTimeout(timeoutId)
-        timeoutId = setTimeout(async () => {
-          const updatedStep = await getScriptStepById(currentStep.id, currentProductId)
+        timeoutId = setTimeout(() => {
+          const updatedStep = getScriptStepById(currentStep.id, currentProductId)
           if (updatedStep) {
             setCurrentStep(updatedStep)
           }
@@ -78,11 +78,11 @@ const OperatorContent = memo(function OperatorContent() {
   }, [currentStep, currentProductId])
 
   const handleSearch = useCallback(
-    async (query: string) => {
+    (query: string) => {
       setSearchQuery(query)
 
       if (query.trim() && isSessionActive && currentProductId) {
-        const steps = (await getScriptSteps()).filter((s) => s.productId === currentProductId)
+        const steps = getScriptSteps().filter((s) => s.productId === currentProductId)
         const foundStep = steps.find((step) => step.title.toLowerCase().includes(query.toLowerCase()))
 
         if (foundStep) {
@@ -93,14 +93,14 @@ const OperatorContent = memo(function OperatorContent() {
     [isSessionActive, currentProductId],
   )
 
-  const handleStartAttendance = useCallback(async (config: AttendanceConfigType) => {
+  const handleStartAttendance = useCallback((config: AttendanceConfigType) => {
     setAttendanceConfig(config)
 
-    const product = await getProductById(config.product)
+    const product = getProductById(config.product)
 
     if (product) {
       setCurrentProductId(product.id)
-      const firstStep = await getScriptStepById(product.scriptId, product.id)
+      const firstStep = getScriptStepById(product.scriptId, product.id)
 
       if (firstStep) {
         setCurrentStep(firstStep)
@@ -116,7 +116,7 @@ const OperatorContent = memo(function OperatorContent() {
   }, [])
 
   const handleButtonClick = useCallback(
-    async (nextStepId: string | null, buttonLabel?: string) => {
+    (nextStepId: string | null, buttonLabel?: string) => {
       console.log("[v0] Button clicked with nextStepId:", nextStepId)
       console.log("[v0] Button label:", buttonLabel)
       console.log("[v0] Current productId:", currentProductId)
@@ -135,7 +135,7 @@ const OperatorContent = memo(function OperatorContent() {
       }
 
       if (nextStepId) {
-        const nextStep = await getScriptStepById(nextStepId, currentProductId)
+        const nextStep = getScriptStepById(nextStepId, currentProductId)
         console.log("[v0] Next step found:", nextStep?.title || "Not found")
 
         if (nextStep) {
@@ -156,19 +156,19 @@ const OperatorContent = memo(function OperatorContent() {
     [currentProductId, handleBackToStart],
   )
 
-  const handleGoBack = useCallback(async () => {
+  const handleGoBack = useCallback(() => {
     setStepHistory((prev) => {
       if (prev.length > 1 && currentProductId) {
         const newHistory = [...prev]
         newHistory.pop()
 
         const previousStepId = newHistory[newHistory.length - 1]
-        getScriptStepById(previousStepId, currentProductId).then((previousStep) => {
-          if (previousStep) {
-            setCurrentStep(previousStep)
-            setSearchQuery("")
-          }
-        })
+        const previousStep = getScriptStepById(previousStepId, currentProductId)
+
+        if (previousStep) {
+          setCurrentStep(previousStep)
+          setSearchQuery("")
+        }
 
         return newHistory
       }
@@ -176,12 +176,12 @@ const OperatorContent = memo(function OperatorContent() {
     })
   }, [currentProductId])
 
-  const handleProductSelect = useCallback(async (productId: string) => {
-    const product = await getProductById(productId)
+  const handleProductSelect = useCallback((productId: string) => {
+    const product = getProductById(productId)
 
     if (product) {
       setCurrentProductId(product.id)
-      const firstStep = await getScriptStepById(product.scriptId, product.id)
+      const firstStep = getScriptStepById(product.scriptId, product.id)
 
       if (firstStep) {
         setCurrentStep(firstStep)

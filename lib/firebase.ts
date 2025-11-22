@@ -1,27 +1,26 @@
-import { initializeApp, getApps } from "firebase/app"
+import { initializeApp, getApps, getApp } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
 import { getAuth } from "firebase/auth"
-import { getAnalytics } from "firebase/analytics"
+import { getAnalytics, isSupported } from "firebase/analytics"
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBH6Zrnkn0SVA2t4-56EJd02mJXRPM66EM",
-  authDomain: "scriptv2-f0f7f.firebaseapp.com",
-  projectId: "scriptv2-f0f7f",
-  storageBucket: "scriptv2-f0f7f.firebasestorage.app",
-  messagingSenderId: "565324216652",
-  appId: "1:565324216652:web:432748016f06b169b437e9",
-  measurementId: "G-TBV385KG5S",
+  apiKey: "AIzaSyB1Ys-2gMkMa4QNN3s8lkSDtrSpKQcT2LA",
+  authDomain: "banco-de-dados-roteiro.firebaseapp.com",
+  projectId: "banco-de-dados-roteiro",
+  storageBucket: "banco-de-dados-roteiro.firebasestorage.app",
+  messagingSenderId: "845018804492",
+  appId: "1:845018804492:web:0a502e1be5f015abadd929",
+  measurementId: "G-YJWTK2GSTH",
 }
 
 // Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp()
 const db = getFirestore(app)
 const auth = getAuth(app)
 
-// Initialize Analytics only on client-side
-let analytics
+// Initialize Analytics (client-side only)
 if (typeof window !== "undefined") {
-  analytics = getAnalytics(app)
+  isSupported().then((yes) => yes && getAnalytics(app))
 }
 
-export { app, db, auth, analytics }
+export { app, db, auth }

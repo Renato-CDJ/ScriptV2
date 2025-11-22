@@ -22,6 +22,8 @@ import type {
   Presentation, // Imported for presentations
   PresentationProgress, // Imported for presentation progress
 } from "./types"
+import { db } from "./firebase" // Import Firebase db
+import { doc, setDoc, updateDoc } from "firebase/firestore" // Import Firestore functions
 
 const saveQueue: Map<string, any> = new Map()
 let saveTimeout: NodeJS.Timeout | null = null
@@ -642,13 +644,69 @@ export function initializeMockData() {
   if (!localStorage.getItem(STORAGE_KEYS.QUIZ_ATTEMPTS)) {
     const mockQuizAttempts = [
       // Current month attempts
-      { id: "att-1", quizId: "quiz-1", operatorId: "2", operatorName: "Monitoria 1", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
-      { id: "att-2", quizId: "quiz-1", operatorId: "3", operatorName: "Monitoria 2", selectedAnswer: "opt-2", isCorrect: false, attemptedAt: new Date() },
-      { id: "att-3", quizId: "quiz-2", operatorId: "2", operatorName: "Monitoria 1", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
-      { id: "att-4", quizId: "quiz-2", operatorId: "4", operatorName: "Monitoria 3", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
-      { id: "att-5", quizId: "quiz-1", operatorId: "4", operatorName: "Monitoria 3", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
-      { id: "att-6", quizId: "quiz-2", operatorId: "3", operatorName: "Monitoria 2", selectedAnswer: "opt-1", isCorrect: true, attemptedAt: new Date() },
-      { id: "att-7", quizId: "quiz-1", operatorId: "5", operatorName: "Monitoria 4", selectedAnswer: "opt-2", isCorrect: false, attemptedAt: new Date() },
+      {
+        id: "att-1",
+        quizId: "quiz-1",
+        operatorId: "2",
+        operatorName: "Monitoria 1",
+        selectedAnswer: "opt-1",
+        isCorrect: true,
+        attemptedAt: new Date(),
+      },
+      {
+        id: "att-2",
+        quizId: "quiz-1",
+        operatorId: "3",
+        operatorName: "Monitoria 2",
+        selectedAnswer: "opt-2",
+        isCorrect: false,
+        attemptedAt: new Date(),
+      },
+      {
+        id: "att-3",
+        quizId: "quiz-2",
+        operatorId: "2",
+        operatorName: "Monitoria 1",
+        selectedAnswer: "opt-1",
+        isCorrect: true,
+        attemptedAt: new Date(),
+      },
+      {
+        id: "att-4",
+        quizId: "quiz-2",
+        operatorId: "4",
+        operatorName: "Monitoria 3",
+        selectedAnswer: "opt-1",
+        isCorrect: true,
+        attemptedAt: new Date(),
+      },
+      {
+        id: "att-5",
+        quizId: "quiz-1",
+        operatorId: "4",
+        operatorName: "Monitoria 3",
+        selectedAnswer: "opt-1",
+        isCorrect: true,
+        attemptedAt: new Date(),
+      },
+      {
+        id: "att-6",
+        quizId: "quiz-2",
+        operatorId: "3",
+        operatorName: "Monitoria 2",
+        selectedAnswer: "opt-1",
+        isCorrect: true,
+        attemptedAt: new Date(),
+      },
+      {
+        id: "att-7",
+        quizId: "quiz-1",
+        operatorId: "5",
+        operatorName: "Monitoria 4",
+        selectedAnswer: "opt-2",
+        isCorrect: false,
+        attemptedAt: new Date(),
+      },
     ]
     localStorage.setItem(STORAGE_KEYS.QUIZ_ATTEMPTS, JSON.stringify(mockQuizAttempts))
   }
@@ -1536,8 +1594,8 @@ export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRa
   })
 
   const allUsers = getAllUsers()
-  const operatorUsers = allUsers.filter(u => u.role === "operator")
-  const operatorIds = new Set(operatorUsers.map(u => u.id))
+  const operatorUsers = allUsers.filter((u) => u.role === "operator")
+  const operatorIds = new Set(operatorUsers.map((u) => u.id))
 
   // Group by operator
   const operatorStats = new Map<string, { name: string; total: number; correct: number; firstAttempt: Date }>()
@@ -1558,7 +1616,7 @@ export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRa
     if (attempt.isCorrect) {
       existing.correct++
     }
-    
+
     const attemptDate = new Date(attempt.attemptedAt)
     if (attemptDate < existing.firstAttempt) {
       existing.firstAttempt = attemptDate
@@ -1737,6 +1795,28 @@ export function updateChatSettings(settings: ChatSettings) {
   notifyUpdate()
 }
 
+export function syncChatMessage(message: ChatMessage) {
+  if (typeof window === "undefined") return
+
+  const messages = getAllChatMessages()
+  const existingIndex = messages.findIndex((m) => m.id === message.id)
+
+  if (existingIndex >= 0) {
+    // Update if exists (e.g., read status changed)
+    // Only update if actually different to avoid loops
+    if (JSON.stringify(messages[existingIndex]) !== JSON.stringify(message)) {
+      messages[existingIndex] = message
+      debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
+      notifyUpdate()
+    }
+  } else {
+    // Add if new
+    messages.push(message)
+    debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
+    notifyUpdate()
+  }
+}
+
 export function sendChatMessage(
   senderId: string,
   senderName: string,
@@ -1779,6 +1859,15 @@ export function sendChatMessage(
   debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
   notifyUpdate()
 
+  try {
+    setDoc(doc(db, "chat_messages", newMessage.id), {
+      ...newMessage,
+      createdAt: newMessage.createdAt, // Firestore handles Date objects
+    }).catch((err) => console.error("Error sending message to Firebase:", err))
+  } catch (e) {
+    console.error("Error initiating Firebase write:", e)
+  }
+
   return newMessage
 }
 
@@ -1792,6 +1881,14 @@ export function markChatMessageAsRead(messageId: string) {
     message.isRead = true
     debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
     notifyUpdate()
+
+    try {
+      updateDoc(doc(db, "chat_messages", messageId), {
+        isRead: true,
+      }).catch((err) => console.error("Error updating message read status in Firebase:", err))
+    } catch (e) {
+      console.error("Error initiating Firebase update:", e)
+    }
   }
 }
 
