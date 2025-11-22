@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Circle, UserX, Plus, Edit, Trash2, Download, Upload } from 'lucide-react'
+import { Circle, UserX, Plus, Edit, Trash2, Download, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   getAllUsers,
@@ -27,6 +27,8 @@ import {
   getTodayConnectedTime,
   getCurrentUser,
   isUserOnline,
+  debouncedSave,
+  STORAGE_KEYS,
 } from "@/lib/store"
 import type { User } from "@/lib/types"
 import * as XLSX from "xlsx"
@@ -94,7 +96,7 @@ export function OperatorsTab() {
 
   const handleForceLogout = (operatorId: string) => {
     const currentUser = getCurrentUser()
-  
+
     if (currentUser && currentUser.id === operatorId) {
       if (!confirm("Você está prestes a fazer logout de sua própria sessão. Deseja continuar?")) {
         return
@@ -173,19 +175,17 @@ export function OperatorsTab() {
 
       const allUsers = getAllUsers()
       allUsers.push(newOperator)
-      localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
 
-      // Trigger store update notification
-      window.dispatchEvent(new CustomEvent("store-updated"))
+      debouncedSave(STORAGE_KEYS.USERS, allUsers)
 
       // Update local state immediately
       setOperators([...operators, newOperator])
-    }
 
-    toast({
-      title: "Sucesso",
-      description: "Operador adicionado com sucesso",
-    })
+      toast({
+        title: "Sucesso",
+        description: "Operador adicionado com sucesso",
+      })
+    }
 
     setIsDialogOpen(false)
   }
@@ -323,9 +323,7 @@ export function OperatorsTab() {
         importedCount++
       })
 
-      // Save to localStorage
-      localStorage.setItem("callcenter_users", JSON.stringify(allUsers))
-      window.dispatchEvent(new CustomEvent("store-updated"))
+      debouncedSave(STORAGE_KEYS.USERS, allUsers)
 
       // Show results
       if (importedCount > 0) {
@@ -477,7 +475,7 @@ export function OperatorsTab() {
             Exportar Relatório
           </Button>
           <Button onClick={handleOpenDialog} className="gap-2">
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 mr-2" />
             Adicionar Operador
           </Button>
         </div>

@@ -31,7 +31,7 @@ let saveTimeout: NodeJS.Timeout | null = null
 
 const FIREBASE_COLLECTION = "app_data"
 
-function debouncedSave(key: string, data: any) {
+export function debouncedSave(key: string, data: any) {
   saveQueue.set(key, data)
 
   if (saveTimeout) {
@@ -617,8 +617,7 @@ const MOCK_CHANNELS: Channel[] = [
   },
 ]
 
-// Storage keys
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   USERS: "callcenter_users",
   CURRENT_USER: "callcenter_current_user",
   SCRIPT_STEPS: "callcenter_script_steps",
@@ -646,8 +645,9 @@ export function initializeMockData() {
 
   enableRealtimeSync()
 
-  if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(MOCK_USERS))
+  const existingUsers = localStorage.getItem(STORAGE_KEYS.USERS)
+  if (!existingUsers) {
+    debouncedSave(STORAGE_KEYS.USERS, MOCK_USERS)
     console.log(
       "[v0] Users initialized:",
       MOCK_USERS.map((u) => u.username),
