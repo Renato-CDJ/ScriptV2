@@ -22,11 +22,14 @@ import type {
   Presentation, // Imported for presentations
   PresentationProgress, // Imported for presentation progress
 } from "./types"
-import { db } from "./firebase" // Import Firebase db
-import { doc, setDoc, updateDoc } from "firebase/firestore" // Import Firestore functions
+import { db, auth } from "./firebase" // Updated import for auth
+import { doc, setDoc, onSnapshot } from "firebase/firestore"
+import { signInAnonymously, onAuthStateChanged } from "firebase/auth" // Imported for anonymous auth
 
 const saveQueue: Map<string, any> = new Map()
 let saveTimeout: NodeJS.Timeout | null = null
+
+const FIREBASE_COLLECTION = "app_data"
 
 function debouncedSave(key: string, data: any) {
   saveQueue.set(key, data)
@@ -39,6 +42,9 @@ function debouncedSave(key: string, data: any) {
     saveQueue.forEach((value, storageKey) => {
       try {
         localStorage.setItem(storageKey, JSON.stringify(value))
+
+        const docRef = doc(db, FIREBASE_COLLECTION, storageKey)
+        setDoc(docRef, { value }, { merge: true }).catch((err) => console.error("Error syncing to Firebase:", err))
       } catch (error) {
         if (error instanceof Error && error.message.includes("QuotaExceededError")) {
           console.error(`Storage quota exceeded for ${storageKey}`)
@@ -47,6 +53,93 @@ function debouncedSave(key: string, data: any) {
     })
     saveQueue.clear()
   }, 250) // Batch writes every 250ms
+}
+
+let unsubscribers: (() => void)[] = []
+let firebaseSyncFailed = false
+
+export function enableRealtimeSync() {
+  if (typeof window === "undefined") return
+
+  // Check if already syncing to avoid duplicate listeners
+  if (unsubscribers.length > 0) return
+
+  console.log("[v0] Attempting to enable Firebase realtime sync...")
+  console.log("[v0] If you see permission errors, update your Firestore Security Rules in the Firebase Console")
+
+  // Ensure user is authenticated anonymously to bypass basic security rules
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      setupListeners()
+    } else {
+      signInAnonymously(auth)
+        .then(() => {
+          console.log("[v0] Signed in anonymously to Firebase")
+        })
+        .catch((error) => {
+          console.error("Error signing in anonymously:", error)
+          firebaseSyncFailed = true
+        })
+    }
+  })
+}
+
+function setupListeners() {
+  // Unsubscribe existing listeners if any
+  unsubscribers.forEach((unsub) => unsub())
+  unsubscribers = []
+
+  const keysToSync = Object.values(STORAGE_KEYS)
+
+  keysToSync.forEach((key) => {
+    const unsub = onSnapshot(
+      doc(db, FIREBASE_COLLECTION, key),
+      (doc) => {
+        if (doc.exists()) {
+          const data = doc.data()
+          if (data && data.value) {
+            // Update local storage without triggering save back to firebase (avoid loop)
+            // We do this by writing directly to localStorage, bypassing debouncedSave
+            const currentValue = localStorage.getItem(key)
+            const newValue = JSON.stringify(data.value)
+
+            if (currentValue !== newValue) {
+              localStorage.setItem(key, newValue)
+              // Notify app of update
+              window.dispatchEvent(new CustomEvent("store-updated"))
+            }
+          }
+        }
+      },
+      (error) => {
+        if (!firebaseSyncFailed) {
+          console.error(`\n⚠️  Firebase Firestore Permission Error\n`)
+          console.error(`Your Firestore Security Rules are blocking access.`)
+          console.error(`\nTo fix this:\n`)
+          console.error(`1. Go to Firebase Console: https://console.firebase.google.com/`)
+          console.error(`2. Select your project: banco-de-dados-roteiro`)
+          console.error(`3. Go to Firestore Database > Rules`)
+          console.error(`4. Update your rules to:\n`)
+          console.error(`rules_version = '2';`)
+          console.error(`service cloud.firestore {`)
+          console.error(`  match /databases/{database}/documents {`)
+          console.error(`    match /{document=**} {`)
+          console.error(`      allow read, write: if request.auth != null;`)
+          console.error(`    }`)
+          console.error(`  }`)
+          console.error(`}\n`)
+          console.error(`5. Click "Publish"\n`)
+          console.error(`⚠️  The app will work with local storage only until Firebase is configured.\n`)
+          firebaseSyncFailed = true
+        }
+      },
+    )
+    unsubscribers.push(unsub)
+  })
+
+  if (!firebaseSyncFailed) {
+    console.log("[v0] Realtime sync enabled successfully")
+  }
 }
 
 export function loadScriptsFromDataFolder() {
@@ -551,19 +644,27 @@ const STORAGE_KEYS = {
 export function initializeMockData() {
   if (typeof window === "undefined") return
 
-  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(MOCK_USERS))
-  console.log(
-    "[v0] Users initialized:",
-    MOCK_USERS.map((u) => u.username),
-  )
+  enableRealtimeSync()
+
+  if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(MOCK_USERS))
+    console.log(
+      "[v0] Users initialized:",
+      MOCK_USERS.map((u) => u.username),
+    )
+  }
 
   if (!localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS)) {
     localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify([]))
   }
 
-  localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(MOCK_TABULATIONS))
+  if (!localStorage.getItem(STORAGE_KEYS.TABULATIONS)) {
+    localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(MOCK_TABULATIONS))
+  }
 
-  localStorage.setItem(STORAGE_KEYS.SITUATIONS, JSON.stringify(MOCK_SITUATIONS))
+  if (!localStorage.getItem(STORAGE_KEYS.SITUATIONS)) {
+    localStorage.setItem(STORAGE_KEYS.SITUATIONS, JSON.stringify(MOCK_SITUATIONS))
+  }
 
   if (!localStorage.getItem(STORAGE_KEYS.CHANNELS)) {
     localStorage.setItem(STORAGE_KEYS.CHANNELS, JSON.stringify(MOCK_CHANNELS))
@@ -1795,28 +1896,6 @@ export function updateChatSettings(settings: ChatSettings) {
   notifyUpdate()
 }
 
-export function syncChatMessage(message: ChatMessage) {
-  if (typeof window === "undefined") return
-
-  const messages = getAllChatMessages()
-  const existingIndex = messages.findIndex((m) => m.id === message.id)
-
-  if (existingIndex >= 0) {
-    // Update if exists (e.g., read status changed)
-    // Only update if actually different to avoid loops
-    if (JSON.stringify(messages[existingIndex]) !== JSON.stringify(message)) {
-      messages[existingIndex] = message
-      debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
-      notifyUpdate()
-    }
-  } else {
-    // Add if new
-    messages.push(message)
-    debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
-    notifyUpdate()
-  }
-}
-
 export function sendChatMessage(
   senderId: string,
   senderName: string,
@@ -1859,15 +1938,6 @@ export function sendChatMessage(
   debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
   notifyUpdate()
 
-  try {
-    setDoc(doc(db, "chat_messages", newMessage.id), {
-      ...newMessage,
-      createdAt: newMessage.createdAt, // Firestore handles Date objects
-    }).catch((err) => console.error("Error sending message to Firebase:", err))
-  } catch (e) {
-    console.error("Error initiating Firebase write:", e)
-  }
-
   return newMessage
 }
 
@@ -1881,14 +1951,6 @@ export function markChatMessageAsRead(messageId: string) {
     message.isRead = true
     debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
     notifyUpdate()
-
-    try {
-      updateDoc(doc(db, "chat_messages", messageId), {
-        isRead: true,
-      }).catch((err) => console.error("Error updating message read status in Firebase:", err))
-    } catch (e) {
-      console.error("Error initiating Firebase update:", e)
-    }
   }
 }
 

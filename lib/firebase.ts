@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
 import { getAuth } from "firebase/auth"
-import { getAnalytics, isSupported } from "firebase/analytics"
 
 const firebaseConfig = {
   apiKey: "AIzaSyB1Ys-2gMkMa4QNN3s8lkSDtrSpKQcT2LA",
@@ -17,10 +16,5 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp()
 const db = getFirestore(app)
 const auth = getAuth(app)
-
-// Initialize Analytics (client-side only)
-if (typeof window !== "undefined") {
-  isSupported().then((yes) => yes && getAnalytics(app))
-}
 
 export { app, db, auth }
