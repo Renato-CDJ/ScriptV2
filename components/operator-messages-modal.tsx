@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,7 +21,26 @@ import {
   getMonthlyQuizRanking,
 } from "@/lib/store"
 import type { Message, Quiz } from "@/lib/types"
-import { MessageSquare, Brain, CheckCircle2, XCircle, Eye, History, Sparkles, Trophy, Maximize2, Zap, Star, Mail, Bell, Medal, Crown, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  MessageSquare,
+  Brain,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  History,
+  Sparkles,
+  Trophy,
+  Maximize2,
+  Zap,
+  Star,
+  Mail,
+  Bell,
+  Medal,
+  Crown,
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -329,7 +347,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
             {/* Content Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-4 sm:px-6 py-4">
+              <ScrollArea className="flex-1 px-4 sm:px-6 py-4 overflow-y-auto">
                 {console.log("[v0] Current sidebarView:", sidebarView)}
                 {sidebarView === "messages" && (
                   <div className="space-y-4 sm:space-y-6 py-2 px-1">
@@ -607,19 +625,24 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
                           {/* Display inline result alert below quiz */}
                           {showResult && (
-                            <div className={`mt-8 p-6 sm:p-8 rounded-2xl border-2 transition-all duration-500 transform animate-in fade-in zoom-in-95 ${
-                              isCorrect
-                                ? "bg-green-500/15 border-green-500 dark:border-green-600 shadow-2xl shadow-green-500/30"
-                                : "bg-red-500/15 border-red-500 dark:border-red-600 shadow-2xl shadow-red-500/30"
-                            }`}>
+                            <div
+                              className={`mt-8 p-6 sm:p-8 rounded-2xl border-2 transition-all duration-500 transform animate-in fade-in zoom-in-95 ${
+                                isCorrect
+                                  ? "bg-green-500/15 border-green-500 dark:border-green-600 shadow-2xl shadow-green-500/30"
+                                  : "bg-red-500/15 border-red-500 dark:border-red-600 shadow-2xl shadow-red-500/30"
+                              }`}
+                            >
                               <div className="relative overflow-hidden">
                                 {isCorrect && (
                                   <>
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 dark:bg-yellow-600/10 rounded-full blur-2xl animate-pulse" />
-                                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-green-400/20 dark:bg-green-600/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: "500ms" }} />
+                                    <div
+                                      className="absolute bottom-0 left-0 w-40 h-40 bg-green-400/20 dark:bg-green-600/10 rounded-full blur-2xl animate-pulse"
+                                      style={{ animationDelay: "500ms" }}
+                                    />
                                   </>
                                 )}
-                                
+
                                 <div className="relative z-10">
                                   <div className="flex items-center gap-4 sm:gap-6 mb-4">
                                     {isCorrect ? (
@@ -631,30 +654,36 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                     ) : (
                                       <XCircle className="h-12 w-12 sm:h-14 sm:w-14 text-red-600 dark:text-red-400 animate-pulse flex-shrink-0" />
                                     )}
-                                    
+
                                     <div className="flex-1 min-w-0">
-                                      <h3 className={`text-2xl sm:text-3xl font-bold mb-1 ${
-                                        isCorrect 
-                                          ? "text-green-600 dark:text-green-400" 
-                                          : "text-red-700 dark:text-red-400"
-                                      }`}>
+                                      <h3
+                                        className={`text-2xl sm:text-3xl font-bold mb-1 ${
+                                          isCorrect
+                                            ? "text-green-600 dark:text-green-400"
+                                            : "text-red-700 dark:text-red-400"
+                                        }`}
+                                      >
                                         {isCorrect ? "🎉 Parabéns!" : "Resposta Incorreta"}
                                       </h3>
-                                      <p className={`text-lg sm:text-xl font-semibold ${
-                                        isCorrect
-                                          ? "text-green-700 dark:text-green-500"
-                                          : "text-red-600 dark:text-red-500"
-                                      }`}>
+                                      <p
+                                        className={`text-lg sm:text-xl font-semibold ${
+                                          isCorrect
+                                            ? "text-green-700 dark:text-green-500"
+                                            : "text-red-600 dark:text-red-500"
+                                        }`}
+                                      >
                                         {isCorrect ? "Resposta Correta!" : "Tente novamente!"}
                                       </p>
                                     </div>
                                   </div>
-                                  
-                                  <p className={`text-base sm:text-lg leading-relaxed mb-6 ${
-                                    isCorrect
-                                      ? "text-green-700 dark:text-green-500"
-                                      : "text-red-600 dark:text-red-500"
-                                  }`}>
+
+                                  <p
+                                    className={`text-base sm:text-lg leading-relaxed mb-6 ${
+                                      isCorrect
+                                        ? "text-green-700 dark:text-green-500"
+                                        : "text-red-600 dark:text-red-500"
+                                    }`}
+                                  >
                                     {isCorrect
                                       ? "Excelente trabalho! Você demonstrou conhecimento e acertou a questão."
                                       : "Não foi desta vez, tente novamente em um próximo Quiz."}
@@ -674,7 +703,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
                                       Voltar
                                     </Button>
-                                    
+
                                     {isCorrect && (
                                       <Button
                                         variant="outline"
@@ -701,11 +730,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             </div>
                           )}
 
-                          {!showResult && (
-                            <Separator className="my-4 sm:my-6" />
-                          )}
+                          {!showResult && <Separator className="my-4 sm:my-6" />}
 
-                          <div className={`flex gap-2 sm:gap-4 ${showResult ? 'hidden' : ''}`}>
+                          <div className={`flex gap-2 sm:gap-4 ${showResult ? "hidden" : ""}`}>
                             <Button
                               variant="outline"
                               onClick={() => setSelectedQuiz(null)}
@@ -744,10 +771,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             </div>
                             <div className="min-w-0">
                               <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent break-words hyphens-auto">
-                                Ranking Mensal - {getMonthName(selectedMonth)} {selectedYear}
+                                Ranking Mensal
                               </CardTitle>
                               <CardDescription className="text-sm sm:text-base md:text-lg mt-1">
-                                Classificação geral dos operadores
+                                {getMonthName(selectedMonth)} {selectedYear}
                               </CardDescription>
                             </div>
                           </div>
@@ -791,10 +818,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                 <p className="text-muted-foreground">Os melhores operadores do ranking</p>
                               </div>
 
-                              <div className="flex items-end justify-center gap-3 px-4 py-6 sm:px-8 md:px-12">
+                              <div className="flex flex-col sm:flex-row items-center sm:items-end justify-center gap-6 sm:gap-3 px-2 sm:px-4 py-6 sm:px-8 md:px-12">
                                 {/* 2nd Place - Left */}
                                 {rankings[1] && (
-                                  <div className="flex flex-col items-center flex-1 animate-in fade-in slide-in-from-left duration-700">
+                                  <div className="flex flex-col items-center w-full sm:flex-1 animate-in fade-in slide-in-from-left duration-700">
                                     <div className="mb-3 text-center">
                                       <div
                                         className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 shadow-xl mb-2 animate-bounce"
@@ -808,19 +835,15 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
                                         {rankings[1].score}
                                       </p>
-                                      <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
-                                        pontos
-                                      </p>
+                                      <p className="text-xs sm:text-sm md:text-base text-muted-foreground">pontos</p>
                                     </div>
                                     <div
-                                      className="w-full bg-gradient-to-br from-gray-300 to-gray-500 rounded-t-2xl shadow-2xl border-4 border-gray-400 dark:border-gray-600 relative overflow-hidden"
+                                      className="w-full max-w-[200px] sm:max-w-none bg-gradient-to-br from-gray-300 to-gray-500 rounded-t-2xl shadow-2xl border-4 border-gray-400 dark:border-gray-600 relative overflow-hidden"
                                       style={{ height: "120px" }}
                                     >
                                       <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                        <p className="text-5xl sm:text-6xl md:text-7xl font-black text-white/90">
-                                          2
-                                        </p>
+                                        <p className="text-5xl sm:text-6xl md:text-7xl font-black text-white/90">2</p>
                                       </div>
                                     </div>
                                   </div>
@@ -828,7 +851,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
                                 {/* 1st Place - Center (Highest) */}
                                 {rankings[0] && (
-                                  <div className="flex flex-col items-center flex-1 animate-in fade-in zoom-in-95 duration-700">
+                                  <div className="flex flex-col items-center w-full sm:flex-1 animate-in fade-in zoom-in-95 duration-700 order-first sm:order-none">
                                     <div className="mb-3 text-center">
                                       <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-2xl mb-2 animate-bounce">
                                         <Crown className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 text-white" />
@@ -839,20 +862,16 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       <p className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
                                         {rankings[0].score}
                                       </p>
-                                      <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
-                                        pontos
-                                      </p>
+                                      <p className="text-xs sm:text-sm md:text-base text-muted-foreground">pontos</p>
                                     </div>
                                     <div
-                                      className="w-full bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-t-2xl shadow-2xl border-4 border-yellow-500 dark:border-yellow-700 relative overflow-hidden"
+                                      className="w-full max-w-[200px] sm:max-w-none bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-t-2xl shadow-2xl border-4 border-yellow-500 dark:border-yellow-700 relative overflow-hidden"
                                       style={{ height: "160px" }}
                                     >
                                       <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                       <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-pulse" />
                                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                        <p className="text-6xl sm:text-7xl md:text-8xl font-black text-white/90">
-                                          1
-                                        </p>
+                                        <p className="text-6xl sm:text-7xl md:text-8xl font-black text-white/90">1</p>
                                       </div>
                                       <Sparkles className="absolute top-3 right-3 h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 text-white/80 animate-spin" />
                                       <Star className="absolute bottom-3 left-3 h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white/80 animate-pulse" />
@@ -862,10 +881,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
                                 {/* 3rd Place - Right */}
                                 {rankings[2] && (
-                                  <div
-                                    className="flex flex-col items-center flex-1 animate-in fade-in slide-in-from-right duration-700"
-                                    style={{ animationDelay: "400ms" }}
-                                  >
+                                  <div className="flex flex-col items-center w-full sm:flex-1 animate-in fade-in slide-in-from-right duration-700">
                                     <div className="mb-3 text-center">
                                       <div
                                         className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-xl mb-2 animate-bounce"
@@ -879,19 +895,15 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
                                         {rankings[2].score}
                                       </p>
-                                      <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
-                                        pontos
-                                      </p>
+                                      <p className="text-xs sm:text-sm md:text-base text-muted-foreground">pontos</p>
                                     </div>
                                     <div
-                                      className="w-full bg-gradient-to-br from-orange-400 to-orange-600 rounded-t-2xl shadow-2xl border-4 border-orange-500 dark:border-orange-700 relative overflow-hidden"
+                                      className="w-full max-w-[200px] sm:max-w-none bg-gradient-to-br from-orange-400 to-orange-600 rounded-t-2xl shadow-2xl border-4 border-orange-500 dark:border-orange-700 relative overflow-hidden"
                                       style={{ height: "100px" }}
                                     >
                                       <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                        <p className="text-5xl sm:text-6xl md:text-7xl font-black text-white/90">
-                                          3
-                                        </p>
+                                        <p className="text-5xl sm:text-6xl md:text-7xl font-black text-white/90">3</p>
                                       </div>
                                     </div>
                                   </div>
@@ -908,23 +920,31 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   <Table>
                                     <TableHeader className="bg-muted/50">
                                       <TableRow>
-                                        <TableHead className="w-20 sm:w-24 md:w-28 text-center font-bold whitespace-nowrap">
-                                          Posição
+                                        <TableHead className="w-16 sm:w-20 md:w-24 text-center font-bold whitespace-nowrap">
+                                          Pos.
                                         </TableHead>
-                                        <TableHead className="font-bold min-w-[150px] sm:min-w-[200px]">Operador</TableHead>
-                                        <TableHead className="text-center font-bold whitespace-nowrap min-w-[120px] sm:min-w-[150px]">
-                                          Quiz Respondidos
+                                        <TableHead className="font-bold min-w-[120px] sm:min-w-[150px]">
+                                          Operador
                                         </TableHead>
-                                        <TableHead className="text-center font-bold whitespace-nowrap min-w-[80px] sm:min-w-[100px]">Acertos</TableHead>
-                                        <TableHead className="text-center font-bold whitespace-nowrap min-w-[80px] sm:min-w-[100px]">Precisão</TableHead>
-                                        <TableHead className="text-right font-bold min-w-[80px] sm:min-w-[100px] pr-6">Pontos</TableHead>
+                                        <TableHead className="text-center font-bold whitespace-nowrap min-w-[100px] sm:min-w-[120px]">
+                                          Quiz
+                                        </TableHead>
+                                        <TableHead className="text-center font-bold whitespace-nowrap min-w-[80px] sm:min-w-[90px]">
+                                          Acertos
+                                        </TableHead>
+                                        <TableHead className="text-center font-bold whitespace-nowrap min-w-[80px] sm:min-w-[90px]">
+                                          Precisão
+                                        </TableHead>
+                                        <TableHead className="text-right font-bold min-w-[70px] sm:min-w-[80px] pr-4 sm:pr-6">
+                                          Pontos
+                                        </TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                       {rankings.map((ranking, index) => {
                                         const isCurrentUser = user && ranking.operatorId === user.id
                                         const isTopThree = ranking.rank <= 3
-                                        
+
                                         console.log("[v0] Rendering row", index + 1, "for", ranking.operatorName)
 
                                         return (
@@ -939,65 +959,69 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                             }`}
                                             style={{ animationDelay: `${index * 50}ms` }}
                                           >
-                                            <TableCell className="text-center py-4 sm:py-5 md:py-6">
+                                            <TableCell className="text-center py-3 sm:py-4 md:py-5">
                                               <div className="flex items-center justify-center">
                                                 {ranking.rank === 1 ? (
-                                                  <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg">
-                                                    <Crown className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
+                                                  <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg">
+                                                    <Crown className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                                                   </div>
                                                 ) : ranking.rank === 2 ? (
-                                                  <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-lg">
-                                                    <Medal className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
+                                                  <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-lg">
+                                                    <Medal className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                                                   </div>
                                                 ) : ranking.rank === 3 ? (
-                                                  <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg">
-                                                    <Medal className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
+                                                  <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg">
+                                                    <Medal className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                                                   </div>
                                                 ) : (
-                                                  <span className="text-lg sm:text-xl md:text-2xl font-bold">
+                                                  <span className="text-base sm:text-lg md:text-xl font-bold">
                                                     {ranking.rank}º
                                                   </span>
                                                 )}
                                               </div>
                                             </TableCell>
-                                            <TableCell className="py-4 sm:py-5 md:py-6">
+                                            <TableCell className="py-3 sm:py-4 md:py-5">
                                               <div className="flex items-center gap-2">
-                                                <span className={`text-sm sm:text-base md:text-lg ${isTopThree ? "font-bold text-base sm:text-lg md:text-xl" : "font-semibold"}`}>
+                                                <span
+                                                  className={`text-xs sm:text-sm md:text-base ${isTopThree ? "font-bold" : "font-semibold"} break-words`}
+                                                >
                                                   {ranking.operatorName}
                                                 </span>
                                                 {isCurrentUser && (
-                                                  <Badge className="bg-chart-1 text-white flex-shrink-0 text-xs">Você</Badge>
+                                                  <Badge className="bg-chart-1 text-white flex-shrink-0 text-xs">
+                                                    Você
+                                                  </Badge>
                                                 )}
                                                 {isTopThree && (
-                                                  <Star className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-chart-1 fill-chart-1 flex-shrink-0" />
+                                                  <Star className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-chart-1 fill-chart-1 flex-shrink-0" />
                                                 )}
                                               </div>
                                             </TableCell>
-                                            <TableCell className="text-center py-4 sm:py-5 md:py-6">
-                                              <div className="flex items-center justify-center gap-2">
-                                                <Brain className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-muted-foreground flex-shrink-0" />
-                                                <span className="font-semibold text-sm sm:text-base md:text-lg">
+                                            <TableCell className="text-center py-3 sm:py-4 md:py-5">
+                                              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                                <Brain className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-muted-foreground flex-shrink-0" />
+                                                <span className="font-semibold text-xs sm:text-sm md:text-base">
                                                   {ranking.totalAttempts}
                                                 </span>
                                               </div>
                                             </TableCell>
-                                            <TableCell className="text-center py-4 sm:py-5 md:py-6">
-                                              <div className="flex items-center justify-center gap-2">
-                                                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
-                                                <span className="font-semibold text-sm sm:text-base md:text-lg">
+                                            <TableCell className="text-center py-3 sm:py-4 md:py-5">
+                                              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                                <span className="font-semibold text-xs sm:text-sm md:text-base">
                                                   {ranking.correctAnswers}
                                                 </span>
                                               </div>
                                             </TableCell>
-                                            <TableCell className="text-center py-4 sm:py-5 md:py-6">
-                                              <div className="flex items-center justify-center gap-2">
-                                                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-muted-foreground flex-shrink-0" />
-                                                <span className="font-semibold text-sm sm:text-base md:text-lg">
+                                            <TableCell className="text-center py-3 sm:py-4 md:py-5">
+                                              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-muted-foreground flex-shrink-0" />
+                                                <span className="font-semibold text-xs sm:text-sm md:text-base">
                                                   {ranking.accuracy.toFixed(1)}%
                                                 </span>
                                               </div>
                                             </TableCell>
-                                            <TableCell className="text-right py-4 sm:py-5 md:py-6 pr-6">
+                                            <TableCell className="text-right py-3 sm:py-4 md:py-5 pr-4 sm:pr-6">
                                               <span
                                                 className={`text-base sm:text-lg md:text-xl font-bold ${
                                                   isTopThree

@@ -31,6 +31,19 @@ let saveTimeout: NodeJS.Timeout | null = null
 
 const FIREBASE_COLLECTION = "app_data"
 
+function convertFirestoreTimestamp(value: any): Date {
+  // If it's a Firestore timestamp object
+  if (value && typeof value === "object" && "seconds" in value && "nanoseconds" in value) {
+    return new Date(value.seconds * 1000 + value.nanoseconds / 1000000)
+  }
+  // If it's already a Date object
+  if (value instanceof Date) {
+    return value
+  }
+  // If it's a string or number, try to convert
+  return new Date(value)
+}
+
 export function debouncedSave(key: string, data: any) {
   saveQueue.set(key, data)
 
@@ -43,8 +56,19 @@ export function debouncedSave(key: string, data: any) {
       try {
         localStorage.setItem(storageKey, JSON.stringify(value))
 
+        if (firebaseSyncFailed) return
+
         const docRef = doc(db, FIREBASE_COLLECTION, storageKey)
-        setDoc(docRef, { value }, { merge: true }).catch((err) => console.error("Error syncing to Firebase:", err))
+        setDoc(docRef, { value }, { merge: true }).catch((err) => {
+          if (err.message.includes("Missing or insufficient permissions") || err.code === "permission-denied") {
+            if (!firebaseSyncFailed) {
+              console.warn("[v0] Firebase sync disabled due to permission error. Falling back to local storage.")
+              firebaseSyncFailed = true
+            }
+          } else {
+            console.error("Error syncing to Firebase:", err)
+          }
+        })
       } catch (error) {
         if (error instanceof Error && error.message.includes("QuotaExceededError")) {
           console.error(`Storage quota exceeded for ${storageKey}`)
@@ -1455,7 +1479,12 @@ export function deletePersonType(id: string) {
 // Messages management functions
 export function getMessages(): Message[] {
   if (typeof window === "undefined") return []
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || "[]")
+  const messages = JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || "[]")
+
+  return messages.map((m: Message) => ({
+    ...m,
+    createdAt: convertFirestoreTimestamp(m.createdAt),
+  }))
 }
 
 export function getActiveMessages(): Message[] {
@@ -1554,7 +1583,13 @@ export function getHistoricalMessagesForOperator(operatorId: string): Message[] 
 // Quizzes management functions
 export function getQuizzes(): Quiz[] {
   if (typeof window === "undefined") return []
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.QUIZZES) || "[]")
+  const quizzes = JSON.parse(localStorage.getItem(STORAGE_KEYS.QUIZZES) || "[]")
+
+  return quizzes.map((q: Quiz) => ({
+    ...q,
+    createdAt: convertFirestoreTimestamp(q.createdAt),
+    scheduledDate: q.scheduledDate ? convertFirestoreTimestamp(q.scheduledDate) : undefined,
+  }))
 }
 
 export function getActiveQuizzes(): Quiz[] {
@@ -1637,7 +1672,12 @@ export function hasOperatorAnsweredQuiz(quizId: string, operatorId: string): boo
 // Quiz Attempts management functions
 export function getQuizAttempts(): QuizAttempt[] {
   if (typeof window === "undefined") return []
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.QUIZ_ATTEMPTS) || "[]")
+  const raw = JSON.parse(localStorage.getItem(STORAGE_KEYS.QUIZ_ATTEMPTS) || "[]")
+
+  return raw.map((attempt: any) => ({
+    ...attempt,
+    attemptedAt: convertFirestoreTimestamp(attempt.attemptedAt),
+  }))
 }
 
 export function getQuizAttemptsByOperator(operatorId: string): QuizAttempt[] {
@@ -1686,7 +1726,13 @@ export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRa
   const attempts = getQuizAttempts()
 
   const monthlyAttempts = attempts.filter((attempt) => {
-    const attemptDate = attempt.attemptedAt instanceof Date ? attempt.attemptedAt : new Date(attempt.attemptedAt)
+    const attemptDate = attempt.attemptedAt
+
+    // Validate the date is valid before using it in comparisons
+    if (isNaN(attemptDate.getTime())) {
+      console.warn("[v0] Invalid date found in quiz attempt:", attempt.attemptedAt)
+      return false
+    }
 
     const yearMatch = attemptDate.getFullYear() === targetYear
     const monthMatch = attemptDate.getMonth() === targetMonth
@@ -1706,11 +1752,19 @@ export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRa
       return // Skip non-operator users
     }
 
+    const attemptDate = attempt.attemptedAt
+
+    // Skip if date is invalid
+    if (isNaN(attemptDate.getTime())) {
+      console.warn("[v0] Invalid date in attempt for operator:", attempt.operatorName)
+      return
+    }
+
     const existing = operatorStats.get(attempt.operatorId) || {
       name: attempt.operatorName,
       total: 0,
       correct: 0,
-      firstAttempt: new Date(attempt.attemptedAt),
+      firstAttempt: attemptDate,
     }
 
     existing.total++
@@ -1718,7 +1772,6 @@ export function getMonthlyQuizRanking(year?: number, month?: number): OperatorRa
       existing.correct++
     }
 
-    const attemptDate = new Date(attempt.attemptedAt)
     if (attemptDate < existing.firstAttempt) {
       existing.firstAttempt = attemptDate
     }
@@ -1879,7 +1932,13 @@ export function cleanupOldSessions() {
 
 export function getAllChatMessages(): ChatMessage[] {
   if (typeof window === "undefined") return []
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES) || "[]")
+  const messages = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES) || "[]")
+
+  // Convert Firestore timestamps to Date objects
+  return messages.map((msg: any) => ({
+    ...msg,
+    createdAt: convertFirestoreTimestamp(msg.createdAt),
+  }))
 }
 
 export function getChatSettings(): ChatSettings {

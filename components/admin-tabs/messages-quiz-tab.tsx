@@ -33,8 +33,32 @@ import {
   getMonthlyQuizRanking,
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
-import type { Message, Quiz, QuizOption, Ranking, ContentSegment } from "@/lib/types"
-import { MessageSquare, Brain, Plus, Trash2, Edit, Eye, Users, CheckCircle2, Calendar, Search, Download, FileSpreadsheet, History, Clock, ChevronDown, ChevronRight, Trophy, ChevronLeft, Medal, Crown, Sparkles, Star, TrendingUp } from 'lucide-react'
+import type { Message, Quiz, QuizOption, OperatorRanking, ContentSegment } from "@/lib/types"
+import {
+  MessageSquare,
+  Brain,
+  Plus,
+  Trash2,
+  Edit,
+  Eye,
+  Users,
+  CheckCircle2,
+  Calendar,
+  Search,
+  Download,
+  FileSpreadsheet,
+  History,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  Trophy,
+  ChevronLeft,
+  Medal,
+  Crown,
+  Sparkles,
+  Star,
+  TrendingUp,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { RichTextEditorWYSIWYG } from "@/components/rich-text-editor-wysiwyg"
 
@@ -76,7 +100,7 @@ export function MessagesQuizTab() {
   const [quizScheduledDate, setQuizScheduledDate] = useState("")
 
   // Ranking state
-  const [rankings, setRankings] = useState<Ranking[]>([])
+  const [rankings, setRankings] = useState<OperatorRanking[]>([])
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
@@ -310,7 +334,7 @@ export function MessagesQuizTab() {
       const selectedDate = new Date(quizScheduledDate)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      
+
       if (selectedDate < today) {
         toast({
           title: "Erro",
@@ -1372,9 +1396,7 @@ export function MessagesQuizTab() {
                                       </TableCell>
                                       <TableCell className="py-6">
                                         <div className="flex items-center gap-2">
-                                          <span
-                                            className={`${isTopThree ? "font-bold text-2xl" : "text-xl"}`}
-                                          >
+                                          <span className={`${isTopThree ? "font-bold text-2xl" : "text-xl"}`}>
                                             {ranking.operatorName}
                                           </span>
                                           {isTopThree && (
@@ -1385,25 +1407,19 @@ export function MessagesQuizTab() {
                                       <TableCell className="text-center py-6">
                                         <div className="flex items-center justify-center gap-2">
                                           <Brain className="h-6 w-6 text-muted-foreground flex-shrink-0" />
-                                          <span className="font-semibold text-2xl">
-                                            {ranking.totalAttempts}
-                                          </span>
+                                          <span className="font-semibold text-2xl">{ranking.totalAttempts}</span>
                                         </div>
                                       </TableCell>
                                       <TableCell className="text-center py-6">
                                         <div className="flex items-center justify-center gap-2">
                                           <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
-                                          <span className="font-semibold text-2xl">
-                                            {ranking.correctAnswers}
-                                          </span>
+                                          <span className="font-semibold text-2xl">{ranking.correctAnswers}</span>
                                         </div>
                                       </TableCell>
                                       <TableCell className="text-center py-6">
                                         <div className="flex items-center justify-center gap-2">
                                           <TrendingUp className="h-6 w-6 text-muted-foreground flex-shrink-0" />
-                                          <span className="font-semibold text-2xl">
-                                            {ranking.accuracy.toFixed(1)}%
-                                          </span>
+                                          <span className="font-semibold text-2xl">{ranking.accuracy.toFixed(1)}%</span>
                                         </div>
                                       </TableCell>
                                       <TableCell className="text-right py-6 pr-6">

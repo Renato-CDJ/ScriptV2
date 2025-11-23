@@ -393,11 +393,12 @@ export const ChatTab = memo(function ChatTab() {
                                   )}
                                   <p className="text-sm whitespace-pre-wrap break-words hyphens-auto">{msg.content}</p>
                                   {msg.attachment && msg.attachment.type === "image" && (
-                                    <div className="mt-2">
+                                    <div className="mt-2 overflow-hidden">
                                       <img
                                         src={msg.attachment.url || "/placeholder.svg"}
                                         alt={msg.attachment.name}
-                                        className="rounded-lg max-w-full max-h-64 object-contain"
+                                        className="rounded-lg max-w-full max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                        onClick={() => window.open(msg.attachment!.url, "_blank")}
                                       />
                                     </div>
                                   )}

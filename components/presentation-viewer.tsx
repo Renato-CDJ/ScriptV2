@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { markPresentationAsSeen, getPresentationProgressByOperator } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Presentation } from "@/lib/types"
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, CheckCircle2, X, Maximize2, Minimize2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, CheckCircle2, Maximize2, Minimize2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface PresentationViewerProps {
@@ -34,7 +34,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (!isFullscreen) return
-      
+
       if (event.key === "ArrowRight") {
         if (currentSlideIndex < presentation.slides.length - 1) {
           setCurrentSlideIndex(currentSlideIndex + 1)
@@ -101,48 +101,17 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12">
-        {/* Header */}
-        <div className="w-full flex items-center justify-between gap-4 mb-4 px-4 py-3">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white break-words">{presentation.title}</h2>
-            {presentation.description && (
-              <p className="text-sm text-gray-300 mt-1 break-words">{presentation.description}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleToggleFullscreen}
-              title="Sair da tela cheia"
-              className="flex-shrink-0 hover:bg-white/10 text-white"
-            >
-              <Minimize2 className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              title="Fechar"
-              className="flex-shrink-0 hover:bg-white/10 text-white"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Slide display area - centered */}
-        <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative">
-          <div className="relative w-[90vw] h-[80vh] max-w-6xl max-h-[80vh] flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center">
+        <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative px-2 py-2">
+          <div className="relative w-full h-full max-w-full flex items-center justify-center">
             {currentSlide.imageUrl ? (
               <img
                 src={currentSlide.imageUrl || "/placeholder.svg"}
                 alt={`Slide ${currentSlideIndex + 1}`}
                 className="w-full h-full object-contain rounded-lg"
-                style={{ 
+                style={{
                   transform: `scale(${zoom / 100})`,
-                  transformOrigin: 'center center'
+                  transformOrigin: "center center",
                 }}
               />
             ) : (
@@ -158,7 +127,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
               onClick={handlePrevSlide}
               disabled={!hasPrevSlide}
               title="Slide anterior (← ou clique)"
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white border-0 z-20 transition-all duration-200 shadow-lg"
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white border-0 z-20 transition-all duration-200 shadow-lg"
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
@@ -168,15 +137,14 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
               onClick={handleNextSlide}
               disabled={!hasNextSlide}
               title="Próximo slide (→ ou clique)"
-              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white border-0 z-20 transition-all duration-200 shadow-lg"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white border-0 z-20 transition-all duration-200 shadow-lg"
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
           </div>
         </div>
 
-        {/* Footer controls */}
-        <div className="w-full border-t border-white/20 px-4 py-4 flex items-center justify-between gap-4 flex-wrap mt-4">
+        <div className="w-full border-t border-white/20 px-4 py-3 flex items-center justify-between gap-4 flex-wrap bg-black/50">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -184,7 +152,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
               onClick={handleZoomOut}
               disabled={zoom <= 50}
               title="Diminuir zoom"
-              className="hover:bg-white/10 text-white border-white/30 h-9 px-2"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2 bg-transparent"
             >
               <ZoomOut className="h-4 w-4" />
               <span className="text-xs ml-1">-</span>
@@ -216,7 +184,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
               onClick={handlePrevSlide}
               disabled={!hasPrevSlide}
               title="Slide anterior"
-              className="hover:bg-white/10 text-white border-white/30 h-9 px-2"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2 bg-transparent"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="text-xs ml-1">Ant</span>
@@ -227,10 +195,20 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
               onClick={handleNextSlide}
               disabled={!hasNextSlide}
               title="Próximo slide"
-              className="hover:bg-white/10 text-white border-white/30 h-9 px-2"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2 bg-transparent"
             >
               <span className="text-xs mr-1">Prox</span>
               <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleFullscreen}
+              title="Sair da tela cheia (ESC)"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2 bg-transparent"
+            >
+              <Minimize2 className="h-4 w-4" />
+              <span className="text-xs ml-1 hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>
@@ -264,9 +242,9 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                       src={currentSlide.imageUrl || "/placeholder.svg"}
                       alt={`Slide ${currentSlideIndex + 1}`}
                       className="w-full h-full object-contain rounded-lg transition-transform duration-300"
-                      style={{ 
+                      style={{
                         transform: `scale(${zoom / 100})`,
-                        transformOrigin: 'center center'
+                        transformOrigin: "center center",
                       }}
                     />
                   </div>
@@ -288,7 +266,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                   size="sm"
                   onClick={handleToggleFullscreen}
                   title="Tela cheia"
-                  className="hover:bg-muted h-9 w-9 p-0"
+                  className="hover:bg-muted h-9 w-9 p-0 bg-transparent"
                 >
                   <Maximize2 className="h-4 w-4" />
                 </Button>
@@ -298,7 +276,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                   onClick={handleZoomOut}
                   disabled={zoom <= 50}
                   title="Diminuir zoom"
-                  className="hover:bg-muted h-9 px-2"
+                  className="hover:bg-muted h-9 px-2 bg-transparent"
                 >
                   <ZoomOut className="h-4 w-4" />
                   <span className="hidden sm:inline text-xs ml-1">-</span>
@@ -334,7 +312,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                   onClick={handlePrevSlide}
                   disabled={!hasPrevSlide}
                   title="Slide anterior"
-                  className="hover:bg-muted h-9 px-2"
+                  className="hover:bg-muted h-9 px-2 bg-transparent"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   <span className="hidden sm:inline text-xs ml-1">Ant</span>
@@ -345,7 +323,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                   onClick={handleNextSlide}
                   disabled={!hasNextSlide}
                   title="Próximo slide"
-                  className="hover:bg-muted h-9 px-2"
+                  className="hover:bg-muted h-9 px-2 bg-transparent"
                 >
                   <span className="hidden sm:inline text-xs mr-1">Prox</span>
                   <ChevronRight className="h-4 w-4" />

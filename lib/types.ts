@@ -247,3 +247,15 @@ export interface PresentationProgress {
   marked_as_seen: boolean
   completion_date?: Date
 }
+
+export interface OperatorRanking {
+  operatorId: string
+  operatorName: string
+  totalAttempts: number
+  correctAnswers: number
+  score: number
+  accuracy: number
+  rank: number
+}
+
+export type Ranking = OperatorRanking
