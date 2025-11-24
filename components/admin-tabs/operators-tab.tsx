@@ -369,25 +369,15 @@ export function OperatorsTab() {
 
   const handleExportReport = () => {
     // Prepare data for Excel
-    const headers = ["Nome", "Quantidade Logins no Dia", "Tempo Conectado", "Último Login"]
+    const headers = ["Nome", "Quantidade Logins no Dia", "Tempo Conectado"]
     const rows = operators.map((operator) => {
       const todaySessions = getTodayLoginSessions(operator.id)
       const connectedTime = getTodayConnectedTime(operator.id)
-      const lastLogin = operator.lastLoginAt
-        ? new Date(operator.lastLoginAt).toLocaleString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "Nunca"
 
       return [
         operator.fullName,
         todaySessions.length.toString(),
         connectedTime > 0 ? formatDuration(connectedTime) : "0h 0min",
-        lastLogin,
       ]
     })
 
@@ -531,7 +521,7 @@ export function OperatorsTab() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Logins Hoje</p>
                     <p className="font-semibold">{todaySessions.length}</p>
@@ -539,19 +529,6 @@ export function OperatorsTab() {
                   <div>
                     <p className="text-muted-foreground">Tempo Conectado Hoje</p>
                     <p className="font-semibold">{connectedTime > 0 ? formatDuration(connectedTime) : "0h 0min"}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Último Login</p>
-                    <p className="font-semibold">
-                      {operator.lastLoginAt
-                        ? new Date(operator.lastLoginAt).toLocaleString("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "Nunca"}
-                    </p>
                   </div>
                 </div>
               </CardContent>

@@ -31,7 +31,7 @@ let saveTimeout: NodeJS.Timeout | null = null
 
 const FIREBASE_COLLECTION = "app_data"
 
-function convertFirestoreTimestamp(value: any): Date {
+export function convertFirestoreTimestamp(value: any): Date {
   // If it's a Firestore timestamp object
   if (value && typeof value === "object" && "seconds" in value && "nanoseconds" in value) {
     return new Date(value.seconds * 1000 + value.nanoseconds / 1000000)
@@ -60,7 +60,15 @@ export function debouncedSave(key: string, data: any) {
 
         const docRef = doc(db, FIREBASE_COLLECTION, storageKey)
         setDoc(docRef, { value }, { merge: true }).catch((err) => {
-          if (err.message.includes("Missing or insufficient permissions") || err.code === "permission-denied") {
+          // Robust error checking for permission issues
+          const errorMessage = err?.message || (typeof err === "string" ? err : "") || ""
+          const errorCode = err?.code || ""
+
+          if (
+            errorMessage.includes("Missing or insufficient permissions") ||
+            errorCode === "permission-denied" ||
+            errorMessage.toLowerCase().includes("permission")
+          ) {
             if (!firebaseSyncFailed) {
               console.warn("[v0] Firebase sync disabled due to permission error. Falling back to local storage.")
               firebaseSyncFailed = true
@@ -358,7 +366,7 @@ const MOCK_TABULATIONS: Tabulation[] = [
   {
     id: "tab-10",
     name: "RECUSA AÇÃO/CAMPANHA",
-    description: "Cliente não aceita a ação/campanha ofertada.",
+    description: "Cliente não aceita a ação/ campanha ofertada.",
     color: "#ef4444",
     createdAt: new Date(),
   },
@@ -1216,10 +1224,43 @@ export function getTodayLoginSessions(userId: string): LoginSession[] {
   today.setHours(0, 0, 0, 0)
 
   return user.loginSessions.filter((session) => {
-    const sessionDate = new Date(session.loginAt)
+    const sessionDate = convertFirestoreTimestamp(session.loginAt)
     sessionDate.setHours(0, 0, 0, 0)
     return sessionDate.getTime() === today.getTime()
   })
+}
+
+export function getLoginSessionsForDate(userId: string, date: Date): LoginSession[] {
+  if (typeof window === "undefined") return []
+
+  const users = getAllUsers()
+  const user = users.find((u) => u.id === userId)
+
+  if (!user || !user.loginSessions) return []
+
+  const targetDate = new Date(date)
+  targetDate.setHours(0, 0, 0, 0)
+
+  return user.loginSessions.filter((session) => {
+    const sessionDate = convertFirestoreTimestamp(session.loginAt)
+    sessionDate.setHours(0, 0, 0, 0)
+    return sessionDate.getTime() === targetDate.getTime()
+  })
+}
+
+export function getConnectedTimeForDate(userId: string, date: Date): number {
+  const sessions = getLoginSessionsForDate(userId, date)
+  const isToday = new Date().toDateString() === date.toDateString()
+
+  return sessions.reduce((total, session) => {
+    if (session.duration) {
+      return total + session.duration
+    } else if (!session.logoutAt && isToday) {
+      // Still logged in and checking for today
+      return total + (Date.now() - convertFirestoreTimestamp(session.loginAt).getTime())
+    }
+    return total
+  }, 0)
 }
 
 export function getTodayConnectedTime(userId: string): number {
@@ -1230,7 +1271,7 @@ export function getTodayConnectedTime(userId: string): number {
       return total + session.duration
     } else if (!session.logoutAt) {
       // Still logged in
-      return total + (Date.now() - new Date(session.loginAt).getTime())
+      return total + (Date.now() - convertFirestoreTimestamp(session.loginAt).getTime())
     }
     return total
   }, 0)
@@ -1386,6 +1427,32 @@ export function getOnlineOperatorsCount(): number {
 
   const users = getAllUsers()
   return users.filter((u) => u.role === "operator" && u.isOnline === true).length
+}
+
+export function getQuizRespondentsCount(): number {
+  if (typeof window === "undefined") return 0
+  const attempts = getQuizAttempts()
+  // Get unique operator IDs from attempts
+  const uniqueOperators = new Set(attempts.map((a) => a.operatorId))
+  return uniqueOperators.size
+}
+
+export function getMessageViewersCount(): number {
+  if (typeof window === "undefined") return 0
+  const messages = getMessages()
+  // Flatten all seenBy arrays and get unique operator IDs
+  const allViewers = messages.flatMap((m) => m.seenBy || [])
+  const uniqueViewers = new Set(allViewers)
+  return uniqueViewers.size
+}
+
+export function getPresentationViewersCount(): number {
+  if (typeof window === "undefined") return 0
+  const progress = getPresentationProgress()
+  // Filter for marked_as_seen and get unique operator IDs
+  const seenProgress = progress.filter((p) => p.marked_as_seen)
+  const uniqueViewers = new Set(seenProgress.map((p) => p.operatorId))
+  return uniqueViewers.size
 }
 
 // Attendance type options
