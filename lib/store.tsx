@@ -25,9 +25,10 @@ import type {
 import { db, auth } from "./firebase" // Updated import for auth
 import { doc, setDoc, onSnapshot } from "firebase/firestore"
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth" // Imported for anonymous auth
+import debounce from "lodash.debounce" // Import debounce
 
 const saveQueue: Map<string, any> = new Map()
-let saveTimeout: NodeJS.Timeout | null = null
+const saveTimeout: NodeJS.Timeout | null = null
 
 const FIREBASE_COLLECTION = "app_data"
 
@@ -44,51 +45,109 @@ export function convertFirestoreTimestamp(value: any): Date {
   return new Date(value)
 }
 
-export function debouncedSave(key: string, data: any) {
-  saveQueue.set(key, data)
+// Helper function to sanitize data for Firebase by handling large strings and invalid nested entities
+function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {}
 
-  if (saveTimeout) {
-    clearTimeout(saveTimeout)
+  for (const key in data) {
+    const value = data[key]
+
+    if (value === undefined || value === null) {
+      // Skip undefined/null values
+      continue
+    } else if (value instanceof Date) {
+      sanitized[key] = value.toISOString()
+    } else if (Array.isArray(value)) {
+      // For arrays, sanitize each element and limit large base64 strings
+      sanitized[key] = value.map((item) => {
+        if (typeof item === "object" && item !== null) {
+          const sanitizedItem: Record<string, unknown> = {}
+          for (const itemKey in item as Record<string, unknown>) {
+            const itemValue = (item as Record<string, unknown>)[itemKey]
+            // Always skip imageData fields for Firebase - they're stored in localStorage only
+            if (itemKey === "imageData" && typeof itemValue === "string") {
+              sanitizedItem[itemKey] = "[LOCAL_STORAGE_ONLY]"
+            } else if (itemValue === undefined) {
+              continue
+            } else if (itemValue instanceof Date) {
+              sanitizedItem[itemKey] = (itemValue as Date).toISOString()
+            } else {
+              sanitizedItem[itemKey] = itemValue
+            }
+          }
+          return sanitizedItem
+        }
+        return item
+      })
+    } else if (typeof value === "object") {
+      sanitized[key] = sanitizeForFirebase(value as Record<string, unknown>)
+    } else {
+      sanitized[key] = value
+    }
   }
 
-  saveTimeout = setTimeout(() => {
-    saveQueue.forEach((value, storageKey) => {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(value))
-
-        if (firebaseSyncFailed) return
-
-        const docRef = doc(db, FIREBASE_COLLECTION, storageKey)
-        setDoc(docRef, { value }, { merge: true }).catch((err) => {
-          // Robust error checking for permission issues
-          const errorMessage = err?.message || (typeof err === "string" ? err : "") || ""
-          const errorCode = err?.code || ""
-
-          if (
-            errorMessage.includes("Missing or insufficient permissions") ||
-            errorCode === "permission-denied" ||
-            errorMessage.toLowerCase().includes("permission")
-          ) {
-            if (!firebaseSyncFailed) {
-              console.warn("[v0] Firebase sync disabled due to permission error. Falling back to local storage.")
-              firebaseSyncFailed = true
-            }
-          } else {
-            console.error("Error syncing to Firebase:", err)
-          }
-        })
-      } catch (error) {
-        if (error instanceof Error && error.message.includes("QuotaExceededError")) {
-          console.error(`Storage quota exceeded for ${storageKey}`)
-        }
-      }
-    })
-    saveQueue.clear()
-  }, 250) // Batch writes every 250ms
+  return sanitized
 }
 
+let firebaseSyncDisabled = false // Renamed from firebaseSyncFailed for clarity
+
+export const debouncedSave = debounce(async (key: string, data: unknown) => {
+  if (typeof window === "undefined") return
+
+  // Always save to localStorage first (with full data including imageData)
+  localStorage.setItem(key, JSON.stringify(data))
+
+  // If Firebase sync is disabled due to permissions, skip
+  if (firebaseSyncDisabled) {
+    return
+  }
+
+  if (key === STORAGE_KEYS.PRESENTATIONS) {
+    // Presentations are stored in localStorage only due to Firebase size limits
+    return
+  }
+
+  // Try to sync to Firebase (with sanitized data)
+  try {
+    if (db) {
+      const dataToSync = Array.isArray(data)
+        ? data.map((item) =>
+            typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
+          )
+        : typeof data === "object" && data !== null
+          ? sanitizeForFirebase(data as Record<string, unknown>)
+          : data
+
+      await setDoc(doc(db, FIREBASE_COLLECTION, key), {
+        data: dataToSync,
+        updatedAt: new Date().toISOString(),
+      })
+    }
+  } catch (error: unknown) {
+    // Check for various forms of permission errors
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const isPermissionError =
+      errorMessage.includes("permission") ||
+      errorMessage.includes("Permission") ||
+      errorMessage.includes("PERMISSION") ||
+      errorMessage.includes("insufficient") ||
+      errorMessage.includes("unauthorized") ||
+      errorMessage.includes("invalid nested entity") ||
+      errorMessage.includes("exceeds the maximum allowed size")
+
+    if (isPermissionError) {
+      if (!firebaseSyncDisabled) {
+        console.warn("⚠️  Firebase Firestore Permission Error or Invalid Data - Falling back to localStorage only")
+        firebaseSyncDisabled = true
+      }
+    } else {
+      console.error("Error syncing to Firebase:", error)
+    }
+  }
+}, 500) // Batch writes every 500ms
+
 let unsubscribers: (() => void)[] = []
-let firebaseSyncFailed = false
+// let firebaseSyncFailed = false // Removed as firebaseSyncDisabled is used instead
 
 export function enableRealtimeSync() {
   if (typeof window === "undefined") return
@@ -110,7 +169,7 @@ export function enableRealtimeSync() {
         })
         .catch((error) => {
           console.error("Error signing in anonymously:", error)
-          firebaseSyncFailed = true
+          firebaseSyncDisabled = true // Use firebaseSyncDisabled
         })
     }
   })
@@ -125,15 +184,16 @@ function setupListeners() {
 
   keysToSync.forEach((key) => {
     const unsub = onSnapshot(
-      doc(db, FIREBASE_COLLECTION, key),
+      doc(db, FIREBASE_COLLECTION, key), // Use FIREBASE_COLLECTION here
       (doc) => {
         if (doc.exists()) {
           const data = doc.data()
-          if (data && data.value) {
+          if (data && data.data) {
+            // Check for 'data' property now
             // Update local storage without triggering save back to firebase (avoid loop)
             // We do this by writing directly to localStorage, bypassing debouncedSave
             const currentValue = localStorage.getItem(key)
-            const newValue = JSON.stringify(data.value)
+            const newValue = JSON.stringify(data.data) // Use data.data
 
             if (currentValue !== newValue) {
               localStorage.setItem(key, newValue)
@@ -144,7 +204,8 @@ function setupListeners() {
         }
       },
       (error) => {
-        if (!firebaseSyncFailed) {
+        if (!firebaseSyncDisabled) {
+          // Use firebaseSyncDisabled
           console.error(`\n⚠️  Firebase Firestore Permission Error\n`)
           console.error(`Your Firestore Security Rules are blocking access.`)
           console.error(`\nTo fix this:\n`)
@@ -162,14 +223,15 @@ function setupListeners() {
           console.error(`}\n`)
           console.error(`5. Click "Publish"\n`)
           console.error(`⚠️  The app will work with local storage only until Firebase is configured.\n`)
-          firebaseSyncFailed = true
+          firebaseSyncDisabled = true // Use firebaseSyncDisabled
         }
       },
     )
     unsubscribers.push(unsub)
   })
 
-  if (!firebaseSyncFailed) {
+  if (!firebaseSyncDisabled) {
+    // Use firebaseSyncDisabled
     console.log("[v0] Realtime sync enabled successfully")
   }
 }

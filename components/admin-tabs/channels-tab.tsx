@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { Plus, Edit, Trash2, Save, X, ExternalLink, Copy } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getChannels } from "@/lib/store"
@@ -133,24 +133,28 @@ export function ChannelsTab() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Canal</Label>
-              <Input
+              <Textarea
                 id="name"
                 value={editingItem.name}
                 onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
                 placeholder="Ex: WhatsApp Suporte"
+                rows={2}
+                className="resize-none"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="contact">Número ou Link</Label>
-              <Input
+              <Textarea
                 id="contact"
                 value={editingItem.contact || ""}
                 onChange={(e) => setEditingItem({ ...editingItem, contact: e.target.value })}
                 placeholder="Ex: (11) 98765-4321 ou https://wa.me/5511987654321"
+                rows={3}
+                className="resize-none"
               />
               <p className="text-xs text-muted-foreground">
-                Pode ser um número de telefone, link do WhatsApp, e-mail ou URL
+                Pode ser um número de telefone, link do WhatsApp, e-mail ou URL. Use Enter para quebrar linha.
               </p>
             </div>
 
@@ -198,8 +202,8 @@ export function ChannelsTab() {
                       )}
                     </div>
                     {channel.contact && (
-                      <div className="flex items-center gap-2 mt-3">
-                        <code className="text-sm bg-muted px-2 py-1 rounded flex-1 break-all text-wrap">
+                      <div className="flex items-start gap-2 mt-3">
+                        <code className="text-sm bg-muted px-2 py-1 rounded flex-1 break-all whitespace-pre-wrap">
                           {channel.contact}
                         </code>
                         <div className="flex gap-1 shrink-0">

@@ -474,7 +474,6 @@ export function OperatorsTab() {
       <div className="grid gap-4">
         {operators.map((operator) => {
           const todaySessions = getTodayLoginSessions(operator.id)
-          const connectedTime = getTodayConnectedTime(operator.id)
           const loggedInToday = hasLoggedInToday(operator)
           const online = isUserOnline(operator.id)
 
@@ -521,15 +520,9 @@ export function OperatorsTab() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Logins Hoje</p>
-                    <p className="font-semibold">{todaySessions.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Tempo Conectado Hoje</p>
-                    <p className="font-semibold">{connectedTime > 0 ? formatDuration(connectedTime) : "0h 0min"}</p>
-                  </div>
+                <div className="text-sm">
+                  <p className="text-muted-foreground">Logins Hoje</p>
+                  <p className="font-semibold">{todaySessions.length}</p>
                 </div>
               </CardContent>
             </Card>
