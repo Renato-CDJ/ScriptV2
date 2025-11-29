@@ -27,7 +27,7 @@ import {
   getTodayConnectedTime,
   getCurrentUser,
   isUserOnline,
-  debouncedSave,
+  saveImmediately, // Import saveImmediately instead of debouncedSave
   STORAGE_KEYS,
 } from "@/lib/store"
 import type { User } from "@/lib/types"
@@ -176,7 +176,7 @@ export function OperatorsTab() {
       const allUsers = getAllUsers()
       allUsers.push(newOperator)
 
-      debouncedSave(STORAGE_KEYS.USERS, allUsers)
+      saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
       // Update local state immediately
       setOperators([...operators, newOperator])
@@ -323,7 +323,7 @@ export function OperatorsTab() {
         importedCount++
       })
 
-      debouncedSave(STORAGE_KEYS.USERS, allUsers)
+      saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
       // Show results
       if (importedCount > 0) {

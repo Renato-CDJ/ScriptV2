@@ -91,6 +91,16 @@ function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unkn
 
 let firebaseSyncDisabled = false // Renamed from firebaseSyncFailed for clarity
 
+export function saveImmediately(key: string, data: unknown) {
+  if (typeof window === "undefined") return
+
+  // Save to localStorage immediately
+  localStorage.setItem(key, JSON.stringify(data))
+
+  // Also trigger debounced Firebase sync
+  debouncedSave(key, data)
+}
+
 export const debouncedSave = debounce(async (key: string, data: unknown) => {
   if (typeof window === "undefined") return
 
@@ -185,9 +195,9 @@ function setupListeners() {
   keysToSync.forEach((key) => {
     const unsub = onSnapshot(
       doc(db, FIREBASE_COLLECTION, key), // Use FIREBASE_COLLECTION here
-      (doc) => {
-        if (doc.exists()) {
-          const data = doc.data()
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data()
           if (data && data.data) {
             // Check for 'data' property now
             // Update local storage without triggering save back to firebase (avoid loop)
@@ -195,9 +205,37 @@ function setupListeners() {
             const currentValue = localStorage.getItem(key)
             const newValue = JSON.stringify(data.data) // Use data.data
 
-            if (currentValue !== newValue) {
+            if (key === STORAGE_KEYS.USERS && currentValue) {
+              try {
+                const localUsers = JSON.parse(currentValue) as User[]
+                const remoteUsers = data.data as User[]
+
+                // Merge: keep all unique users by ID, prefer local data for conflicts
+                const mergedUsers = [...localUsers]
+
+                remoteUsers.forEach((remoteUser: User) => {
+                  const existingIndex = mergedUsers.findIndex((u) => u.id === remoteUser.id)
+                  if (existingIndex === -1) {
+                    // User doesn't exist locally, add it
+                    mergedUsers.push(remoteUser)
+                  }
+                  // If user exists locally, keep local version (it's more recent)
+                })
+
+                const mergedValue = JSON.stringify(mergedUsers)
+                if (currentValue !== mergedValue) {
+                  localStorage.setItem(key, mergedValue)
+                  window.dispatchEvent(new CustomEvent("store-updated"))
+                }
+              } catch (e) {
+                // If merge fails, fall back to normal behavior
+                if (currentValue !== newValue) {
+                  localStorage.setItem(key, newValue)
+                  window.dispatchEvent(new CustomEvent("store-updated"))
+                }
+              }
+            } else if (currentValue !== newValue) {
               localStorage.setItem(key, newValue)
-              // Notify app of update
               window.dispatchEvent(new CustomEvent("store-updated"))
             }
           }
@@ -1230,7 +1268,7 @@ export function updateUser(user: User) {
 
     if (index !== -1) {
       users[index] = user
-      debouncedSave(STORAGE_KEYS.USERS, users)
+      saveImmediately(STORAGE_KEYS.USERS, users)
       notifyUpdate()
     }
   } catch (error) {
@@ -1243,7 +1281,7 @@ export function deleteUser(userId: string) {
 
   try {
     const users = getAllUsers().filter((u) => u.id !== userId)
-    debouncedSave(STORAGE_KEYS.USERS, users)
+    saveImmediately(STORAGE_KEYS.USERS, users)
     notifyUpdate()
   } catch (error) {
     console.error("[v0] Error deleting user:", error)
@@ -1265,7 +1303,7 @@ export function forceLogoutUser(userId: string) {
         user.isOnline = false
 
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
-        debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
+        saveImmediately(STORAGE_KEYS.USERS, updatedUsers)
         notifyUpdate()
       }
     }

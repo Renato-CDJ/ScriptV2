@@ -122,7 +122,22 @@ const OperatorContent = memo(function OperatorContent() {
       console.log("[v0] Current productId:", currentProductId)
 
       if (buttonLabel && buttonLabel.toUpperCase().includes("FINALIZAR")) {
-        console.log("[v0] FINALIZAR button clicked - returning to config")
+        console.log("[v0] FINALIZAR button clicked - returning to product approach")
+
+        if (currentProductId) {
+          const product = getProductById(currentProductId)
+          if (product) {
+            const firstStep = getScriptStepById(product.scriptId, product.id)
+            if (firstStep) {
+              setCurrentStep(firstStep)
+              setStepHistory([firstStep.id])
+              setSearchQuery("")
+              console.log("[v0] Returned to first step:", firstStep.title)
+              return
+            }
+          }
+        }
+        // Fallback to config if product not found
         handleBackToStart()
         return
       }
