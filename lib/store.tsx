@@ -1455,7 +1455,7 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
           const existingSteps = getScriptSteps()
           const filteredSteps = existingSteps.filter((s) => s.productId !== productId)
           const newSteps = [...filteredSteps, ...steps]
-          debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, newSteps)
+          saveImmediately(STORAGE_KEYS.SCRIPT_STEPS, newSteps)
           stepCount += steps.length
 
           const firstStep =
@@ -1488,7 +1488,7 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
             existingProducts.push(product)
             productCount++
           }
-          debouncedSave(STORAGE_KEYS.PRODUCTS, existingProducts)
+          saveImmediately(STORAGE_KEYS.PRODUCTS, existingProducts)
         }
       })
 
