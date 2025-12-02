@@ -89,16 +89,99 @@ function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unkn
   return sanitized
 }
 
+// </CHANGE> Helper function to strip imageData from presentations for Firebase sync
+function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
+  return presentations.map((pres) => {
+    if (typeof pres === "object" && pres !== null) {
+      const presentation = pres as Record<string, unknown>
+      const slides = presentation.slides as Array<Record<string, unknown>> | undefined
+
+      if (slides && Array.isArray(slides)) {
+        return {
+          ...presentation,
+          slides: slides.map((slide) => ({
+            ...slide,
+            // Replace imageData with a placeholder indicator
+            imageData: slide.imageData ? "[IMAGE_STORED_LOCALLY]" : undefined,
+          })),
+        }
+      }
+    }
+    return pres
+  })
+}
+
 let firebaseSyncDisabled = false // Renamed from firebaseSyncFailed for clarity
+let pendingFirebaseWrites = 0
+const MAX_PENDING_WRITES = 10
 
 export function saveImmediately(key: string, data: unknown) {
   if (typeof window === "undefined") return
 
-  // Save to localStorage immediately
+  // Save to localStorage immediately (with full data including imageData)
   localStorage.setItem(key, JSON.stringify(data))
 
-  // Also trigger debounced Firebase sync
-  debouncedSave(key, data)
+  // Notify listeners about the update
+  notifyUpdate()
+
+  // Skip if Firebase sync is disabled or too many pending writes
+  if (firebaseSyncDisabled || pendingFirebaseWrites >= MAX_PENDING_WRITES) {
+    return
+  }
+
+  // Schedule Firebase sync with a small delay to batch operations
+  pendingFirebaseWrites++
+  setTimeout(async () => {
+    try {
+      if (db && !firebaseSyncDisabled) {
+        let dataToSync: unknown
+
+        if (key === STORAGE_KEYS.PRESENTATIONS && Array.isArray(data)) {
+          dataToSync = sanitizePresentationsForFirebase(data)
+        } else {
+          dataToSync = Array.isArray(data)
+            ? data.map((item) =>
+                typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
+              )
+            : typeof data === "object" && data !== null
+              ? sanitizeForFirebase(data as Record<string, unknown>)
+              : data
+        }
+
+        await setDoc(doc(db, FIREBASE_COLLECTION, key), {
+          data: dataToSync,
+          updatedAt: new Date().toISOString(),
+        })
+      }
+    } catch (error: unknown) {
+      handleFirebaseError(error)
+    } finally {
+      pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
+    }
+  }, 100)
+}
+
+function handleFirebaseError(error: unknown) {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  const isKnownError =
+    errorMessage.includes("permission") ||
+    errorMessage.includes("Permission") ||
+    errorMessage.includes("PERMISSION") ||
+    errorMessage.includes("insufficient") ||
+    errorMessage.includes("unauthorized") ||
+    errorMessage.includes("invalid nested entity") ||
+    errorMessage.includes("exceeds the maximum allowed size") ||
+    errorMessage.includes("resource-exhausted") ||
+    errorMessage.includes("exhausted maximum allowed queued writes")
+
+  if (isKnownError) {
+    if (!firebaseSyncDisabled) {
+      console.warn("⚠️  Firebase Firestore Permission Error or Resource Limit - Falling back to localStorage only")
+      firebaseSyncDisabled = true
+    }
+  } else {
+    console.error("Error syncing to Firebase:", error)
+  }
 }
 
 export const debouncedSave = debounce(async (key: string, data: unknown) => {
@@ -112,21 +195,27 @@ export const debouncedSave = debounce(async (key: string, data: unknown) => {
     return
   }
 
-  if (key === STORAGE_KEYS.PRESENTATIONS) {
-    // Presentations are stored in localStorage only due to Firebase size limits
+  if (pendingFirebaseWrites >= MAX_PENDING_WRITES) {
     return
   }
 
   // Try to sync to Firebase (with sanitized data)
   try {
     if (db) {
-      const dataToSync = Array.isArray(data)
-        ? data.map((item) =>
-            typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
-          )
-        : typeof data === "object" && data !== null
-          ? sanitizeForFirebase(data as Record<string, unknown>)
-          : data
+      pendingFirebaseWrites++
+      let dataToSync: unknown
+
+      if (key === STORAGE_KEYS.PRESENTATIONS && Array.isArray(data)) {
+        dataToSync = sanitizePresentationsForFirebase(data)
+      } else {
+        dataToSync = Array.isArray(data)
+          ? data.map((item) =>
+              typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
+            )
+          : typeof data === "object" && data !== null
+            ? sanitizeForFirebase(data as Record<string, unknown>)
+            : data
+      }
 
       await setDoc(doc(db, FIREBASE_COLLECTION, key), {
         data: dataToSync,
@@ -134,25 +223,9 @@ export const debouncedSave = debounce(async (key: string, data: unknown) => {
       })
     }
   } catch (error: unknown) {
-    // Check for various forms of permission errors
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    const isPermissionError =
-      errorMessage.includes("permission") ||
-      errorMessage.includes("Permission") ||
-      errorMessage.includes("PERMISSION") ||
-      errorMessage.includes("insufficient") ||
-      errorMessage.includes("unauthorized") ||
-      errorMessage.includes("invalid nested entity") ||
-      errorMessage.includes("exceeds the maximum allowed size")
-
-    if (isPermissionError) {
-      if (!firebaseSyncDisabled) {
-        console.warn("⚠️  Firebase Firestore Permission Error or Invalid Data - Falling back to localStorage only")
-        firebaseSyncDisabled = true
-      }
-    } else {
-      console.error("Error syncing to Firebase:", error)
-    }
+    handleFirebaseError(error)
+  } finally {
+    pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
   }
 }, 500) // Batch writes every 500ms
 
@@ -651,7 +724,7 @@ const MOCK_SITUATIONS: ServiceSituation[] = [
     id: "sit-8",
     name: "CONTRATOS DE EMPRÉSTIMO CONSIGNADO",
     description:
-      'Devemos orientar o cliente pedindo para que ele verifique novamente se o valor foi de fato descontado da folha de pagamento. Caso ele fale que vai verificar, podemos aguardar em linha este retorno. Se o cliente disser que não pode fazer essa verificação durante o atendimento, podemos solicitar o melhor horário e telefone para realizar um contato futuro.\n\nQUESTIONAMENTO NORMALMENTE REALIZADO PELO CLIENTE:\n"Isso é descontado na minha folha de pagamento, não está aparecendo no sistema?"',
+      'Devemos orientar o cliente pedindo para que ele verifique novamente se o valor foi de fato descontado da folha de pagamento. Caso ele fale que vai aguardar em linha este retorno. Se o cliente disser que não pode fazer essa verificação durante o atendimento, podemos solicitar o melhor horário e telefone para realizar um contato futuro.\n\nQUESTIONAMENTO NORMALMENTE REALIZADO PELO CLIENTE:\n"Isso é descontado na minha folha de pagamento, não está aparecendo no sistema?"',
     isActive: true,
     createdAt: new Date(),
   },
@@ -1669,7 +1742,7 @@ export function createMessage(message: Omit<Message, "id" | "createdAt" | "seenB
   }
 
   const messages = getMessages()
-  messages.push(newMessage)
+  messages.push(newMessage) // Corrected: used 'newMessage' instead of 'newMemo'
   debouncedSave(STORAGE_KEYS.MESSAGES, messages)
   notifyUpdate()
 

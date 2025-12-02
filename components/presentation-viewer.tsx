@@ -6,13 +6,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { markPresentationAsSeen, getPresentationProgressByOperator } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Presentation } from "@/lib/types"
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, CheckCircle2, Maximize2, Minimize2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, CheckCircle2, Maximize2, Minimize2, ImageIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface PresentationViewerProps {
   presentation: Presentation
   isOpen: boolean
   onClose: () => void
+}
+
+function isImageAvailable(slide: { imageUrl?: string; imageData?: string }): boolean {
+  if (slide.imageData === "[IMAGE_STORED_LOCALLY]") return false
+  return !!slide.imageUrl
 }
 
 export function PresentationViewer({ presentation, isOpen, onClose }: PresentationViewerProps) {
@@ -95,6 +100,16 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
     }
   }
 
+  const UnavailableImagePlaceholder = () => (
+    <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
+      <ImageIcon className="h-16 w-16 mb-4 opacity-50" />
+      <p className="text-lg font-medium text-center">Imagem não disponível neste dispositivo</p>
+      <p className="text-sm text-center mt-2 max-w-md">
+        Esta apresentação foi criada em outro computador. As imagens só estão disponíveis no dispositivo original.
+      </p>
+    </div>
+  )
+
   if (!currentSlide) {
     return null
   }
@@ -104,7 +119,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
       <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center">
         <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative px-2 py-2">
           <div className="relative w-full h-full max-w-full flex items-center justify-center">
-            {currentSlide.imageUrl ? (
+            {isImageAvailable(currentSlide) ? (
               <img
                 src={currentSlide.imageUrl || "/placeholder.svg"}
                 alt={`Slide ${currentSlideIndex + 1}`}
@@ -115,12 +130,13 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                 }}
               />
             ) : (
-              <div className="text-center text-gray-400">
-                <p className="text-lg">Nenhuma imagem carregada para este slide</p>
+              <div className="text-center text-gray-400 bg-gray-900/50 rounded-xl p-8">
+                <ImageIcon className="h-20 w-20 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">Imagem não disponível</p>
+                <p className="text-sm mt-2">Criada em outro dispositivo</p>
               </div>
             )}
 
-            {/* Navigation buttons */}
             <Button
               variant="default"
               size="lg"
@@ -216,7 +232,6 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
     )
   }
 
-  // Normal dialog view
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[98vw] sm:max-w-[96vw] md:max-w-[94vw] h-[95vh] rounded-lg p-0 gap-0 flex flex-col bg-background">
@@ -232,11 +247,10 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
         </DialogHeader>
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Slide display area */}
           <div className="flex-1 overflow-hidden flex items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-background to-muted/20 relative transition-all duration-300">
             <div className="relative flex items-center justify-center w-full h-full max-w-5xl max-h-[60vh] transition-all duration-300">
               <div className="relative flex items-center justify-center w-full h-full border-2 border-border rounded-xl bg-background shadow-2xl overflow-hidden transition-all duration-300">
-                {currentSlide.imageUrl ? (
+                {isImageAvailable(currentSlide) ? (
                   <div className="flex items-center justify-center w-full h-full p-0 sm:p-2 md:p-4">
                     <img
                       src={currentSlide.imageUrl || "/placeholder.svg"}
@@ -249,9 +263,7 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                     />
                   </div>
                 ) : (
-                  <div className="text-center text-muted-foreground p-4">
-                    <p className="text-base sm:text-lg">Nenhuma imagem carregada para este slide</p>
-                  </div>
+                  <UnavailableImagePlaceholder />
                 )}
               </div>
             </div>
@@ -259,7 +271,6 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
 
           <div className="border-t px-3 sm:px-6 py-3 sm:py-4 flex-shrink-0 bg-background space-y-3 sm:space-y-4 transition-all duration-300">
             <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
-              {/* Zoom and fullscreen controls */}
               <div className="flex items-center gap-2 order-2 sm:order-1">
                 <Button
                   variant="outline"
@@ -297,14 +308,12 @@ export function PresentationViewer({ presentation, isOpen, onClose }: Presentati
                 </Button>
               </div>
 
-              {/* Slide counter */}
               <div className="flex items-center gap-2 order-1 sm:order-2">
                 <Badge variant="secondary" className="text-xs sm:text-sm px-2 sm:px-3 py-1 flex-shrink-0">
                   {currentSlideIndex + 1} de {presentation.slides.length}
                 </Badge>
               </div>
 
-              {/* Navigation buttons */}
               <div className="flex items-center gap-2 order-3">
                 <Button
                   variant="outline"

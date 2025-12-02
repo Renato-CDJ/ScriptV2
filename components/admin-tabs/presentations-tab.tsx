@@ -30,7 +30,19 @@ import {
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Presentation, PresentationSlide } from "@/lib/types"
-import { Plus, Trash2, Edit, Download, EyeIcon, ImageIcon, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react'
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Download,
+  EyeIcon,
+  ImageIcon,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -160,7 +172,7 @@ export function PresentationsTab() {
       return
     }
 
-    const slidesWithoutImages = slides.filter(s => !s.imageUrl || !s.imageData)
+    const slidesWithoutImages = slides.filter((s) => !s.imageUrl || !s.imageData)
     if (slidesWithoutImages.length > 0) {
       toast({
         title: "Erro",
@@ -289,6 +301,12 @@ export function PresentationsTab() {
     }
   }
 
+  const hasMissingImages = (presentation: Presentation): boolean => {
+    return presentation.slides.some(
+      (slide) => slide.imageData === "[IMAGE_STORED_LOCALLY]" || (!slide.imageData && !slide.imageUrl),
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -374,9 +392,7 @@ export function PresentationsTab() {
                     <Card className="h-full bg-muted/30">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base">Pré-visualização das Imagens</CardTitle>
-                        <CardDescription className="text-xs">
-                          Visualize todas as imagens dos slides
-                        </CardDescription>
+                        <CardDescription className="text-xs">Visualize todas as imagens dos slides</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <ScrollArea className="h-[600px]">
@@ -561,6 +577,12 @@ export function PresentationsTab() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      {hasMissingImages(presentation) && (
+                        <Badge variant="outline" className="text-orange-500 border-orange-500 gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span className="hidden sm:inline">Imagens locais</span>
+                        </Badge>
+                      )}
                       <Badge variant={presentation.isActive ? "default" : "secondary"}>
                         {presentation.isActive ? "Ativo" : "Inativo"}
                       </Badge>
