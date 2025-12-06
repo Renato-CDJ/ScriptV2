@@ -27,6 +27,7 @@ export interface User {
   lastLoginAt?: Date
   loginSessions?: LoginSession[]
   permissions?: AdminPermissions
+  password?: string // Added password field for individual user authentication
 }
 
 export interface LoginSession {
@@ -208,7 +209,7 @@ export interface Product {
   id: string
   name: string
   scriptId: string // Links to the first step of the script for this product
-  category: "habitacional" | "comercial" | "outros"
+  category: "habitacional" | "comercial" | "cartao" | "outros"
   isActive: boolean
   createdAt: Date
   attendanceTypes?: ("ativo" | "receptivo")[]

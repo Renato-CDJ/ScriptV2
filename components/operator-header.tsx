@@ -92,11 +92,12 @@ export const OperatorHeader = memo(function OperatorHeader({
     updateUnseenCount()
     updateUnreadChatCount()
     updateAvailablePresentationsCount()
+
     const interval = setInterval(() => {
       updateUnseenCount()
       updateUnreadChatCount()
       updateAvailablePresentationsCount()
-    }, 5000)
+    }, 15000)
 
     return () => clearInterval(interval)
   }, [user])

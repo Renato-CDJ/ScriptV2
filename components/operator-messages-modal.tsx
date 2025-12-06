@@ -252,7 +252,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   }
 
   const handleSidebarChange = (view: "messages" | "quiz" | "ranking") => {
-    console.log("[v0] Sidebar view changing to:", view)
     setSidebarView(view)
     if (view === "messages") {
       setActiveTab("messages")
@@ -348,7 +347,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             {/* Content Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
               <ScrollArea className="flex-1 px-4 sm:px-6 py-4 overflow-y-auto">
-                {console.log("[v0] Current sidebarView:", sidebarView)}
                 {sidebarView === "messages" && (
                   <div className="space-y-4 sm:space-y-6 py-2 px-1">
                     {displayMessages.length === 0 ? (
@@ -759,7 +757,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
                 {sidebarView === "ranking" && (
                   <div className="space-y-6 sm:space-y-8 pb-8">
-                    {console.log("[v0] Rendering ranking view with", rankings.length, "operators")}
                     <Card className="bg-gradient-to-br from-card to-muted/30 border-2 border-chart-1/50 shadow-2xl">
                       <CardHeader className="relative overflow-hidden pb-4 sm:pb-6">
                         <div className="absolute top-0 right-0 w-48 h-48 sm:w-64 sm:h-64 bg-chart-1/10 rounded-full blur-3xl -z-10" />
@@ -944,8 +941,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       {rankings.map((ranking, index) => {
                                         const isCurrentUser = user && ranking.operatorId === user.id
                                         const isTopThree = ranking.rank <= 3
-
-                                        console.log("[v0] Rendering row", index + 1, "for", ranking.operatorName)
 
                                         return (
                                           <TableRow

@@ -32,6 +32,29 @@ const saveTimeout: NodeJS.Timeout | null = null
 
 const FIREBASE_COLLECTION = "app_data"
 
+const notifyUpdateTimeout: NodeJS.Timeout | null = null
+const NOTIFY_DEBOUNCE_MS = 300
+
+// Removed redeclared notifyUpdate function
+// export function notifyUpdate() {
+//   if (typeof window === "undefined") return
+
+//   // Clear existing timeout
+//   if (notifyUpdateTimeout) {
+//     clearTimeout(notifyUpdateTimeout)
+//   }
+
+//   // Debounce notifications to prevent excessive re-renders
+//   notifyUpdateTimeout = setTimeout(() => {
+//     window.dispatchEvent(new CustomEvent("store-updated"))
+//   }, NOTIFY_DEBOUNCE_MS)
+// }
+
+function notifyUpdateImmediate() {
+  if (typeof window === "undefined") return
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
 export function convertFirestoreTimestamp(value: any): Date {
   // If it's a Firestore timestamp object
   if (value && typeof value === "object" && "seconds" in value && "nanoseconds" in value) {
@@ -89,7 +112,7 @@ function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unkn
   return sanitized
 }
 
-// </CHANGE> Helper function to strip imageData from presentations for Firebase sync
+// Helper function to strip imageData from presentations for Firebase sync
 function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
   return presentations.map((pres) => {
     if (typeof pres === "object" && pres !== null) {
@@ -113,7 +136,10 @@ function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
 
 let firebaseSyncDisabled = false // Renamed from firebaseSyncFailed for clarity
 let pendingFirebaseWrites = 0
-const MAX_PENDING_WRITES = 10
+const MAX_PENDING_WRITES = 5 // Reduced from 10 to 5 to prevent overload
+
+let lastFirebaseWrite = 0
+const MIN_WRITE_INTERVAL = 1000 // Minimum 1 second between writes
 
 export function saveImmediately(key: string, data: unknown) {
   if (typeof window === "undefined") return
@@ -122,12 +148,18 @@ export function saveImmediately(key: string, data: unknown) {
   localStorage.setItem(key, JSON.stringify(data))
 
   // Notify listeners about the update
-  notifyUpdate()
+  notifyUpdateImmediate()
 
   // Skip if Firebase sync is disabled or too many pending writes
   if (firebaseSyncDisabled || pendingFirebaseWrites >= MAX_PENDING_WRITES) {
     return
   }
+
+  const now = Date.now()
+  if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
+    return
+  }
+  lastFirebaseWrite = now
 
   // Schedule Firebase sync with a small delay to batch operations
   pendingFirebaseWrites++
@@ -158,7 +190,7 @@ export function saveImmediately(key: string, data: unknown) {
     } finally {
       pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
     }
-  }, 100)
+  }, 200) // Increased delay from 100ms to 200ms
 }
 
 function handleFirebaseError(error: unknown) {
@@ -1032,9 +1064,10 @@ export function authenticateUser(username: string, password: string): User | nul
 
   if (user) {
     if (user.role === "admin") {
-      const validPasswords = ["rcp@$", "#qualidade@$"]
+      const masterPasswords = ["rcp@$", "#qualidade@$"]
+      const isValidPassword = user.password ? user.password === password : masterPasswords.includes(password)
 
-      if (!validPasswords.includes(password)) {
+      if (!isValidPassword) {
         return null
       }
 
@@ -1056,6 +1089,7 @@ export function authenticateUser(username: string, password: string): User | nul
       return user
     }
 
+    // Operator login logic
     const session: LoginSession = {
       id: `session-${Date.now()}`,
       loginAt: new Date(),
@@ -1102,7 +1136,7 @@ export function logout() {
         // Update user in storage
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
         debouncedSave(STORAGE_KEYS.USERS, updatedUsers)
-        notifyUpdate()
+        notifyUpdateImmediate()
       }
     }
   }
@@ -1129,34 +1163,59 @@ export function getScriptStepById(id: string, productId?: string): ScriptStep | 
 }
 
 // Memoization for expensive operations
-const scriptStepsCache = new Map<string, ScriptStep[]>()
-const productCache = new Map<string, Product>()
+const scriptStepsCache = new Map<string, { data: ScriptStep[]; timestamp: number }>()
+const productCache = new Map<string, { data: Product; timestamp: number }>()
+const CACHE_TTL = 60000 // 1 minute cache TTL
+
+// Removed redeclared clearCaches function
+// export function clearCaches() {
+//   scriptStepsCache.clear()
+//   productCache.clear()
+// }
+
+if (typeof window !== "undefined") {
+  setInterval(() => {
+    const now = Date.now()
+    scriptStepsCache.forEach((value, key) => {
+      if (now - value.timestamp > CACHE_TTL) {
+        scriptStepsCache.delete(key)
+      }
+    })
+    productCache.forEach((value, key) => {
+      if (now - value.timestamp > CACHE_TTL) {
+        productCache.delete(key)
+      }
+    })
+  }, 120000) // Clean every 2 minutes
+}
 
 export function getScriptStepsByProduct(productId: string): ScriptStep[] {
   if (typeof window === "undefined") return []
 
-  if (scriptStepsCache.has(productId)) {
-    return scriptStepsCache.get(productId)!
+  const cached = scriptStepsCache.get(productId)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
   }
 
   const allSteps = getScriptSteps()
   const filtered = allSteps.filter((step) => step.productId === productId)
 
-  scriptStepsCache.set(productId, filtered)
+  scriptStepsCache.set(productId, { data: filtered, timestamp: Date.now() })
 
   return filtered
 }
 
 export function getProductById(id: string): Product | null {
-  if (productCache.has(id)) {
-    return productCache.get(id)!
+  const cached = productCache.get(id)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
   }
 
   const products = getProducts()
   const product = products.find((p) => p.id === id) || null
 
   if (product) {
-    productCache.set(id, product)
+    productCache.set(id, { data: product, timestamp: Date.now() })
   }
 
   return product
@@ -1172,7 +1231,7 @@ export function updateScriptStep(step: ScriptStep) {
     steps[index] = { ...step, updatedAt: new Date() }
     debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
     clearCaches() // Clear cache
-    notifyUpdate()
+    notifyUpdateImmediate()
   }
 }
 
@@ -1189,7 +1248,7 @@ export function createScriptStep(step: Omit<ScriptStep, "id" | "createdAt" | "up
   const steps = getScriptSteps()
   steps.push(newStep)
   debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
-  notifyUpdate() // Notify about update
+  notifyUpdateImmediate() // Notify about update
 
   return newStep
 }
@@ -1199,7 +1258,16 @@ export function deleteScriptStep(id: string) {
 
   const steps = getScriptSteps().filter((s) => s.id !== id)
   debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
-  notifyUpdate() // Notify about update
+  notifyUpdateImmediate() // Notify about update
+}
+
+export function deleteAllStepsFromProduct(productId: string) {
+  if (typeof window === "undefined") return
+
+  const steps = getScriptSteps().filter((s) => s.productId !== productId)
+  debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
+  clearCaches()
+  notifyUpdateImmediate()
 }
 
 // Tabulations
@@ -1299,7 +1367,7 @@ export function createProduct(product: Omit<Product, "id" | "createdAt">): Produ
   const products = getProducts()
   products.push(newProduct)
   debouncedSave(STORAGE_KEYS.PRODUCTS, products)
-  notifyUpdate() // Notify about update
+  notifyUpdateImmediate() // Notify about update
 
   return newProduct
 }
@@ -1314,7 +1382,7 @@ export function updateProduct(product: Product) {
     products[index] = product
     debouncedSave(STORAGE_KEYS.PRODUCTS, products)
     clearCaches() // Clear cache
-    notifyUpdate()
+    notifyUpdateImmediate()
   }
 }
 
@@ -1323,7 +1391,7 @@ export function deleteProduct(id: string) {
 
   const products = getProducts().filter((p) => p.id !== id)
   debouncedSave(STORAGE_KEYS.PRODUCTS, products)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 // Additional user management functions
@@ -1342,7 +1410,7 @@ export function updateUser(user: User) {
     if (index !== -1) {
       users[index] = user
       saveImmediately(STORAGE_KEYS.USERS, users)
-      notifyUpdate()
+      notifyUpdateImmediate()
     }
   } catch (error) {
     console.error("[v0] Error updating user:", error)
@@ -1355,7 +1423,7 @@ export function deleteUser(userId: string) {
   try {
     const users = getAllUsers().filter((u) => u.id !== userId)
     saveImmediately(STORAGE_KEYS.USERS, users)
-    notifyUpdate()
+    notifyUpdateImmediate()
   } catch (error) {
     console.error("[v0] Error deleting user:", error)
   }
@@ -1377,7 +1445,7 @@ export function forceLogoutUser(userId: string) {
 
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
         saveImmediately(STORAGE_KEYS.USERS, updatedUsers)
-        notifyUpdate()
+        notifyUpdateImmediate()
       }
     }
   } catch (error) {
@@ -1453,7 +1521,9 @@ export function getTodayConnectedTime(userId: string): number {
 // Debouncing utility for localStorage operations
 let updateTimeout: NodeJS.Timeout | null = null
 
-function notifyUpdate() {
+// The previous notifyUpdate function was redeclared here.
+// This version is kept for clarity to fix the linting error.
+export function notifyUpdate() {
   if (typeof window === "undefined") return
 
   if (updateTimeout) {
@@ -1566,7 +1636,7 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
       })
 
       clearCaches()
-      notifyUpdate()
+      notifyUpdateImmediate()
     }
   } catch (error) {
     console.error("[v0] Error importing script from JSON:", error)
@@ -1576,6 +1646,8 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
   return { productCount, stepCount }
 }
 
+// The previous clearCaches function was redeclared here.
+// This version is kept for clarity to fix the linting error.
 export function clearCaches() {
   scriptStepsCache.clear()
   productCache.clear()
@@ -1646,7 +1718,7 @@ export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "
   const options = getAttendanceTypes()
   options.push(newOption)
   debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
-  notifyUpdate()
+  notifyUpdateImmediate()
 
   return newOption
 }
@@ -1660,7 +1732,7 @@ export function updateAttendanceType(option: AttendanceTypeOption) {
   if (index !== -1) {
     options[index] = option
     debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
-    notifyUpdate()
+    notifyUpdateImmediate()
   }
 }
 
@@ -1669,7 +1741,7 @@ export function deleteAttendanceType(id: string) {
 
   const options = getAttendanceTypes().filter((o) => o.id !== id)
   debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 // Person type options
@@ -1690,7 +1762,7 @@ export function createPersonType(option: Omit<PersonTypeOption, "id" | "createdA
   const options = getPersonTypes()
   options.push(newOption)
   debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
-  notifyUpdate()
+  notifyUpdateImmediate()
 
   return newOption
 }
@@ -1704,7 +1776,7 @@ export function updatePersonType(option: PersonTypeOption) {
   if (index !== -1) {
     options[index] = option
     debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
-    notifyUpdate()
+    notifyUpdateImmediate()
   }
 }
 
@@ -1713,7 +1785,7 @@ export function deletePersonType(id: string) {
 
   const options = getPersonTypes().filter((o) => o.id !== id)
   debouncedSave(STORAGE_KEYS.PERSON_TYPES, options)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 // Messages management functions
@@ -1744,7 +1816,7 @@ export function createMessage(message: Omit<Message, "id" | "createdAt" | "seenB
   const messages = getMessages()
   messages.push(newMessage) // Corrected: used 'newMessage' instead of 'newMemo'
   debouncedSave(STORAGE_KEYS.MESSAGES, messages)
-  notifyUpdate()
+  notifyUpdateImmediate()
 
   return newMessage
 }
@@ -1758,7 +1830,7 @@ export function updateMessage(message: Message) {
   if (index !== -1) {
     messages[index] = message
     debouncedSave(STORAGE_KEYS.MESSAGES, messages)
-    notifyUpdate()
+    notifyUpdateImmediate()
   }
 }
 
@@ -1767,7 +1839,7 @@ export function deleteMessage(id: string) {
 
   const messages = getMessages().filter((m) => m.id !== id)
   debouncedSave(STORAGE_KEYS.MESSAGES, messages)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 export function markMessageAsSeen(messageId: string, operatorId: string) {
@@ -1848,7 +1920,7 @@ export function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Quiz {
   const quizzes = getQuizzes()
   quizzes.push(newQuiz)
   debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
-  notifyUpdate()
+  notifyUpdateImmediate()
 
   return newQuiz
 }
@@ -1862,7 +1934,7 @@ export function updateQuiz(quiz: Quiz) {
   if (index !== -1) {
     quizzes[index] = quiz
     debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
-    notifyUpdate()
+    notifyUpdateImmediate()
   }
 }
 
@@ -1871,7 +1943,7 @@ export function deleteQuiz(id: string) {
 
   const quizzes = getQuizzes().filter((q) => q.id !== id)
   debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 export function getActiveQuizzesForOperator(): Quiz[] {
@@ -1940,7 +2012,7 @@ export function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt
   const attempts = getQuizAttempts()
   attempts.push(newAttempt)
   debouncedSave(STORAGE_KEYS.QUIZ_ATTEMPTS, attempts)
-  notifyUpdate()
+  notifyUpdateImmediate()
 
   return newAttempt
 }
@@ -2085,7 +2157,7 @@ export function getAdminUsers(): User[] {
   return users.filter((u) => u.role === "admin" && u.username !== "admin")
 }
 
-export function createAdminUser(username: string, fullName: string): User | null {
+export function createAdminUser(username: string, fullName: string, password?: string): User | null {
   if (typeof window === "undefined") return null
 
   try {
@@ -2103,6 +2175,7 @@ export function createAdminUser(username: string, fullName: string): User | null
       role: "admin",
       isOnline: false,
       createdAt: new Date(),
+      password: password || undefined,
       permissions: {
         dashboard: true,
         scripts: true,
@@ -2114,13 +2187,14 @@ export function createAdminUser(username: string, fullName: string): User | null
         notes: true,
         operators: true,
         messagesQuiz: true,
+        chat: true,
         settings: true,
       },
     }
 
     users.push(newUser)
-    debouncedSave(STORAGE_KEYS.USERS, users)
-    notifyUpdate()
+    saveImmediately(STORAGE_KEYS.USERS, users)
+    notifyUpdateImmediate()
 
     return newUser
   } catch (error) {
@@ -2192,7 +2266,7 @@ export function getChatSettings(): ChatSettings {
 export function updateChatSettings(settings: ChatSettings) {
   if (typeof window === "undefined") return
   debouncedSave(STORAGE_KEYS.CHAT_SETTINGS, settings)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 export function sendChatMessage(
@@ -2235,7 +2309,7 @@ export function sendChatMessage(
   const messages = getAllChatMessages()
   messages.push(newMessage)
   debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
-  notifyUpdate()
+  notifyUpdateImmediate()
 
   return newMessage
 }
@@ -2249,7 +2323,7 @@ export function markChatMessageAsRead(messageId: string) {
   if (message && !message.isRead) {
     message.isRead = true
     debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
-    notifyUpdate()
+    notifyUpdateImmediate()
   }
 }
 
@@ -2281,7 +2355,7 @@ export function deleteChatMessage(messageId: string) {
 
   const messages = getAllChatMessages().filter((m) => m.id !== messageId)
   debouncedSave(STORAGE_KEYS.CHAT_MESSAGES, messages)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 export function getPresentations(): Presentation[] {
@@ -2315,7 +2389,7 @@ export function createPresentation(presentation: Omit<Presentation, "id" | "crea
   const presentations = getPresentations()
   presentations.push(newPresentation)
   debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
-  notifyUpdate()
+  notifyUpdateImmediate()
 
   return newPresentation
 }
@@ -2329,7 +2403,7 @@ export function updatePresentation(presentation: Presentation) {
   if (index !== -1) {
     presentations[index] = { ...presentation, updatedAt: new Date() }
     debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
-    notifyUpdate()
+    notifyUpdateImmediate()
   }
 }
 
@@ -2338,7 +2412,7 @@ export function deletePresentation(id: string) {
 
   const presentations = getPresentations().filter((p) => p.id !== id)
   debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 // Presentation Progress tracking
@@ -2378,7 +2452,7 @@ export function markPresentationAsSeen(presentationId: string, operatorId: strin
   }
 
   debouncedSave(STORAGE_KEYS.PRESENTATION_PROGRESS, progress)
-  notifyUpdate()
+  notifyUpdateImmediate()
 }
 
 export function exportPresentationReport(presentationId: string): string {

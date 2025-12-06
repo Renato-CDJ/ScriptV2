@@ -15,6 +15,7 @@ import { PromiseCalendarInline } from "@/components/promise-calendar"
 
 interface OperatorSidebarProps {
   isOpen: boolean
+  productCategory?: "habitacional" | "comercial" | "cartao" | "outros"
 }
 
 const FilteredList = memo(function FilteredList({
@@ -36,7 +37,7 @@ const FilteredList = memo(function FilteredList({
   return <div className="space-y-3">{filteredItems.map((item) => renderItem(item, () => onItemClick(item)))}</div>
 })
 
-export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: OperatorSidebarProps) {
+export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCategory }: OperatorSidebarProps) {
   const [activeSection, setActiveSection] = useState<"notes" | "tabulation" | "situation" | "channel" | "calendar">(
     "calendar",
   )
@@ -329,7 +330,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
           </Card>
         )}
 
-        {activeSection === "calendar" && <PromiseCalendarInline />}
+        {activeSection === "calendar" && <PromiseCalendarInline productCategory={productCategory} />}
       </div>
 
       <Dialog open={showTabulationFullView} onOpenChange={setShowTabulationFullView}>
@@ -471,17 +472,13 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
       </Dialog>
 
       <Dialog open={showTabulationModal} onOpenChange={setShowTabulationModal}>
-        <DialogContent className="max-w-3xl bg-card border-border">
+        <DialogContent className="max-w-4xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-primary text-2xl font-bold">{selectedTabulationForModal?.name}</DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold text-center">
+              {selectedTabulationForModal?.name}
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-6">
-            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
-              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
-                {selectedTabulationForModal?.description}
-              </p>
-            </div>
-          </div>
+          <div className="py-6 text-lg text-foreground leading-relaxed">{selectedTabulationForModal?.description}</div>
           <Button
             onClick={() => setShowTabulationModal(false)}
             className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
@@ -492,17 +489,13 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
       </Dialog>
 
       <Dialog open={showSituationModal} onOpenChange={setShowSituationModal}>
-        <DialogContent className="max-w-3xl bg-card border-border">
+        <DialogContent className="max-w-4xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-primary text-2xl font-bold">{selectedSituationForModal?.name}</DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold text-center">
+              {selectedSituationForModal?.name}
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-6">
-            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
-              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
-                {selectedSituationForModal?.description}
-              </p>
-            </div>
-          </div>
+          <div className="py-6 text-lg text-foreground leading-relaxed">{selectedSituationForModal?.description}</div>
           <Button
             onClick={() => setShowSituationModal(false)}
             className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
@@ -513,16 +506,14 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
       </Dialog>
 
       <Dialog open={showChannelModal} onOpenChange={setShowChannelModal}>
-        <DialogContent className="max-w-3xl bg-card border-border">
+        <DialogContent className="max-w-4xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-primary text-2xl font-bold">{selectedChannelForModal?.name}</DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold text-center">
+              {selectedChannelForModal?.name}
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-6">
-            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
-              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
-                {selectedChannelForModal?.contact}
-              </p>
-            </div>
+          <div className="py-6 text-lg text-foreground leading-relaxed whitespace-pre-wrap">
+            {selectedChannelForModal?.contact}
           </div>
           <Button
             onClick={() => setShowChannelModal(false)}
@@ -535,17 +526,13 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
 
       {/* Original situation dialog (from sidebar buttons) */}
       <Dialog open={showSituationDialog} onOpenChange={setShowSituationDialog}>
-        <DialogContent className="max-w-3xl bg-card border-border">
+        <DialogContent className="max-w-4xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-primary text-2xl font-bold">{selectedSituationData?.name}</DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold text-center">
+              {selectedSituationData?.name}
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-6">
-            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
-              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
-                {selectedSituationData?.description}
-              </p>
-            </div>
-          </div>
+          <div className="py-6 text-lg text-foreground leading-relaxed">{selectedSituationData?.description}</div>
           <Button
             onClick={() => setShowSituationDialog(false)}
             className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
@@ -557,16 +544,14 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen }: Operato
 
       {/* Original channel dialog (from sidebar buttons) */}
       <Dialog open={showChannelDialog} onOpenChange={setShowChannelDialog}>
-        <DialogContent className="max-w-3xl bg-card border-border">
+        <DialogContent className="max-w-4xl bg-card border-border">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-primary text-2xl font-bold">{selectedChannelData?.name}</DialogTitle>
+            <DialogTitle className="text-primary text-2xl font-bold text-center">
+              {selectedChannelData?.name}
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-6">
-            <div className="p-6 rounded-xl bg-muted/50 border-2 border-border">
-              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
-                {selectedChannelData?.contact}
-              </p>
-            </div>
+          <div className="py-6 text-lg text-foreground leading-relaxed whitespace-pre-wrap">
+            {selectedChannelData?.contact}
           </div>
           <Button
             onClick={() => setShowChannelDialog(false)}

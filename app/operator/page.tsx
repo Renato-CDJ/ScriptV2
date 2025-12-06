@@ -24,7 +24,11 @@ const OperatorContent = memo(function OperatorContent() {
   const [attendanceConfig, setAttendanceConfig] = useState<AttendanceConfigType | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [currentProductId, setCurrentProductId] = useState<string | null>(null)
-  const [showChatModal, setShowChatModal] = useState(false)
+  const [currentProductName, setCurrentProductName] = useState<string>("")
+  const [currentProductCategory, setCurrentProductCategory] = useState<
+    "habitacional" | "comercial" | "cartao" | "outros" | undefined
+  >(undefined)
+  const [showChatModal, setShowChatModal] = useState(false) // Declared showChatModal variable
 
   const handleBackToStart = useCallback(() => {
     setIsSessionActive(false)
@@ -34,6 +38,9 @@ const OperatorContent = memo(function OperatorContent() {
     setSearchQuery("")
     setStepHistory([])
     setCurrentProductId(null)
+    setCurrentProductName("")
+    setCurrentProductCategory(undefined)
+    setShowChatModal(false) // Reset showChatModal on back to start
   }, [])
 
   useEffect(() => {
@@ -100,6 +107,8 @@ const OperatorContent = memo(function OperatorContent() {
 
     if (product) {
       setCurrentProductId(product.id)
+      setCurrentProductName(product.name)
+      setCurrentProductCategory(product.category)
       const firstStep = getScriptStepById(product.scriptId, product.id)
 
       if (firstStep) {
@@ -117,13 +126,7 @@ const OperatorContent = memo(function OperatorContent() {
 
   const handleButtonClick = useCallback(
     (nextStepId: string | null, buttonLabel?: string) => {
-      console.log("[v0] Button clicked with nextStepId:", nextStepId)
-      console.log("[v0] Button label:", buttonLabel)
-      console.log("[v0] Current productId:", currentProductId)
-
       if (buttonLabel && buttonLabel.toUpperCase().includes("FINALIZAR")) {
-        console.log("[v0] FINALIZAR button clicked - returning to product approach")
-
         if (currentProductId) {
           const product = getProductById(currentProductId)
           if (product) {
@@ -132,7 +135,6 @@ const OperatorContent = memo(function OperatorContent() {
               setCurrentStep(firstStep)
               setStepHistory([firstStep.id])
               setSearchQuery("")
-              console.log("[v0] Returned to first step:", firstStep.title)
               return
             }
           }
@@ -143,7 +145,6 @@ const OperatorContent = memo(function OperatorContent() {
       }
 
       if (!currentProductId) {
-        console.error("[v0] Missing productId - cannot navigate")
         alert("Erro: Produto não identificado. Por favor, reinicie o atendimento.")
         handleBackToStart()
         return
@@ -151,18 +152,15 @@ const OperatorContent = memo(function OperatorContent() {
 
       if (nextStepId) {
         const nextStep = getScriptStepById(nextStepId, currentProductId)
-        console.log("[v0] Next step found:", nextStep?.title || "Not found")
 
         if (nextStep) {
           setStepHistory((prev) => [...prev, nextStep.id])
           setCurrentStep(nextStep)
           setSearchQuery("")
         } else {
-          console.log("[v0] Next step not found for ID:", nextStepId)
           alert(`Próxima tela não encontrada. ID: ${nextStepId}. Por favor, contate o administrador.`)
         }
       } else {
-        console.log("[v0] No nextStepId provided - end of script flow")
         alert(
           "Fim do roteiro atingido. Clique em 'Voltar ao Início' para iniciar um novo atendimento ou contate o administrador para configurar o próximo passo.",
         )
@@ -196,6 +194,8 @@ const OperatorContent = memo(function OperatorContent() {
 
     if (product) {
       setCurrentProductId(product.id)
+      setCurrentProductName(product.name)
+      setCurrentProductCategory(product.category)
       const firstStep = getScriptStepById(product.scriptId, product.id)
 
       if (firstStep) {
@@ -256,13 +256,14 @@ const OperatorContent = memo(function OperatorContent() {
                   customerFirstName="[Primeiro nome do cliente]"
                   searchQuery={searchQuery}
                   showControls={showControls}
+                  productName={currentProductName}
                 />
               </div>
             ) : null}
           </div>
         </main>
 
-        {isSessionActive && <OperatorSidebar isOpen={isSidebarOpen} />}
+        {isSessionActive && <OperatorSidebar isOpen={isSidebarOpen} productCategory={currentProductCategory} />}
       </div>
 
       <OperatorChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />

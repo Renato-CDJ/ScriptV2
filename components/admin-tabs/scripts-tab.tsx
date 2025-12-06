@@ -29,6 +29,7 @@ import {
   updateScriptStep,
   createScriptStep,
   deleteScriptStep,
+  deleteAllStepsFromProduct,
   importScriptFromJson,
   getProducts,
 } from "@/lib/store"
@@ -283,6 +284,21 @@ export function ScriptsTab() {
       toast({
         title: "Roteiro excluído",
         description: "O roteiro foi removido com sucesso.",
+      })
+    }
+  }
+
+  const handleDeleteAllSteps = (productId: string, productName: string, stepsCount: number) => {
+    if (
+      confirm(
+        `Tem certeza que deseja excluir TODAS as ${stepsCount} telas do produto "${productName}"?\n\nEsta ação não pode ser desfeita!`,
+      )
+    ) {
+      deleteAllStepsFromProduct(productId)
+      refreshSteps()
+      toast({
+        title: "Telas excluídas",
+        description: `Todas as ${stepsCount} telas do produto "${productName}" foram removidas.`,
       })
     }
   }
@@ -698,8 +714,24 @@ export function ScriptsTab() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-xs font-mono text-muted-foreground">
-                    {isStandalone ? "Sem produto" : product?.id || groupKey}
+                  <div className="flex items-center gap-3">
+                    {!isStandalone && sortedSteps.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteAllSteps(groupKey, product?.name || groupKey, sortedSteps.length)
+                        }}
+                        title="Remover todas as telas"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Remover Todas
+                      </Button>
+                    )}
+                    <div className="text-xs font-mono text-muted-foreground">
+                      {isStandalone ? "Sem produto" : product?.id || groupKey}
+                    </div>
                   </div>
                 </div>
 
@@ -766,6 +798,15 @@ export function ScriptsTab() {
                         )}
                       </Card>
                     ))}
+                    {!isStandalone && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleDeleteAllSteps(groupKey, product?.name || "", sortedSteps.length)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir Todas as Telas
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

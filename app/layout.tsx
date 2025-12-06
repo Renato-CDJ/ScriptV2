@@ -1,12 +1,14 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
+import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/lib/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 import "./globals.css"
+
+const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" })
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
   title: "Sistema de Roteiro de Atendimento",
@@ -46,7 +48,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} relative`}>
+      <body className={`font-sans ${geistSans.variable} ${geistMono.variable} relative`}>
         <div className="fixed inset-0 -z-10 dark:block hidden overflow-hidden">
           {/* Animated gradient mesh */}
           <div className="absolute inset-0 animate-mesh-gradient bg-gradient-to-br from-zinc-800/30 via-slate-800/20 to-zinc-900/30" />

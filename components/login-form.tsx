@@ -1,15 +1,16 @@
 "use client"
 
 import type React from "react"
-import { useState, useCallback, useMemo, memo } from "react"
+import { useState, useCallback, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { authenticateUser } from "@/lib/store"
+import { authenticateUser, getAllUsers } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
+import Image from "next/image"
 
 export const LoginForm = memo(function LoginForm() {
   const [username, setUsername] = useState("")
@@ -20,15 +21,19 @@ export const LoginForm = memo(function LoginForm() {
   const { theme, setTheme } = useTheme()
   const { refreshUser } = useAuth()
 
-  const validUsers = useMemo(() => ["admin", "monitoria1", "monitoria2", "monitoria3", "monitoria4"], [])
+  const checkIfAdminUser = useCallback((inputUsername: string) => {
+    const users = getAllUsers()
+    const user = users.find((u) => u.username.toLowerCase() === inputUsername.toLowerCase())
+    return user?.role === "admin"
+  }, [])
 
   const handleUsernameChange = useCallback(
     (value: string) => {
       setUsername(value)
-      setShowPasswordField(validUsers.includes(value.toLowerCase()))
+      setShowPasswordField(checkIfAdminUser(value))
       setError("")
     },
-    [validUsers],
+    [checkIfAdminUser],
   )
 
   const handleSubmit = useCallback(
@@ -82,8 +87,15 @@ export const LoginForm = memo(function LoginForm() {
 
       <CardContent className="pt-10 pb-10 px-10 relative z-10">
         <div className="flex justify-center mb-8">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-            <User className="h-10 w-10 text-white" />
+          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg">
+            <Image
+              src="/images/grupo_roveri_logo.jpg"
+              alt="Grupo Roveri"
+              width={80}
+              height={80}
+              className="w-full h-full object-cover"
+              priority
+            />
           </div>
         </div>
 

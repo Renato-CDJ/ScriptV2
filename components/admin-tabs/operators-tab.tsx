@@ -53,7 +53,7 @@ export function OperatorsTab() {
 
     loadOperators()
 
-    const interval = setInterval(loadOperators, 5000)
+    const interval = setInterval(loadOperators, 30000)
 
     const handleStoreUpdate = () => {
       loadOperators()

@@ -19,6 +19,7 @@ interface ScriptCardProps {
   customerFirstName?: string
   searchQuery?: string
   showControls?: boolean
+  productName?: string
 }
 
 const ACCESSIBILITY_STORAGE_KEY = "callcenter_accessibility_settings"
@@ -155,6 +156,7 @@ export const ScriptCard = memo(function ScriptCard({
   customerFirstName = "Cliente",
   searchQuery = "",
   showControls = true,
+  productName = "",
 }: ScriptCardProps) {
   const [textSize, setTextSize] = useState<number[]>(() => {
     const settings = loadAccessibilitySettings()
@@ -333,6 +335,14 @@ export const ScriptCard = memo(function ScriptCard({
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {productName && (
+        <div className="flex items-center justify-center py-2 px-2 md:px-4 border-t border-border/30">
+          <span className="inline-flex items-center px-4 py-1.5 bg-primary/10 text-primary rounded-md text-xs font-semibold border border-primary/20">
+            {productName}
+          </span>
         </div>
       )}
 

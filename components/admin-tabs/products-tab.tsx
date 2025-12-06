@@ -29,7 +29,7 @@ export function ProductsTab() {
   const [formData, setFormData] = useState({
     name: "",
     scriptId: "",
-    category: "habitacional" as "habitacional" | "comercial" | "outros",
+    category: "habitacional" as "habitacional" | "comercial" | "cartao" | "outros",
     attendanceTypes: [] as ("ativo" | "receptivo")[],
     personTypes: [] as ("fisica" | "juridica")[],
   })
@@ -291,6 +291,7 @@ export function ProductsTab() {
                 <SelectContent>
                   <SelectItem value="habitacional">Habitacional</SelectItem>
                   <SelectItem value="comercial">Comercial</SelectItem>
+                  <SelectItem value="cartao">Cartão</SelectItem>
                   <SelectItem value="outros">Outros</SelectItem>
                 </SelectContent>
               </Select>

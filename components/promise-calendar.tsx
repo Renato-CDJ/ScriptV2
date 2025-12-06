@@ -1,24 +1,47 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CalendarIcon, CheckCircle2, Info, CreditCard, Building2, Home } from "lucide-react"
+import { CalendarIcon, CheckCircle2, Info, CreditCard, Building2, Home, AlertTriangle } from "lucide-react"
 import { getMaxPromiseDate, isBusinessDay } from "@/lib/business-days"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ProductType = "cartao" | "comercial" | "habitacional"
+type ProductCategory = "habitacional" | "comercial" | "cartao" | "outros"
 
-export function PromiseCalendarInline() {
+interface PromiseCalendarInlineProps {
+  productCategory?: ProductCategory
+}
+
+export function PromiseCalendarInline({ productCategory }: PromiseCalendarInlineProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductType | "">("")
   const [selectedDate, setSelectedDate] = useState<Date>()
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
+  useEffect(() => {
+    if (productCategory === "comercial") {
+      setSelectedProduct("comercial")
+      setSelectedDate(undefined)
+    } else if (productCategory === "habitacional") {
+      setSelectedProduct("habitacional")
+      setSelectedDate(undefined)
+    } else if (productCategory === "cartao") {
+      setSelectedProduct("cartao")
+      setSelectedDate(undefined)
+    } else if (productCategory === "outros") {
+      setSelectedProduct("")
+      setSelectedDate(undefined)
+    }
+  }, [productCategory])
+
   const handleProductSelect = (value: ProductType) => {
-    setSelectedProduct(value)
-    setSelectedDate(undefined)
+    if (!productCategory || productCategory === "outros") {
+      setSelectedProduct(value)
+      setSelectedDate(undefined)
+    }
   }
 
   const maxDate = selectedProduct ? getMaxPromiseDate(selectedProduct) : undefined
@@ -45,7 +68,7 @@ export function PromiseCalendarInline() {
   const productOptions = [
     {
       value: "cartao" as ProductType,
-      name: "Cartão fase 1",
+      name: "Cartão",
       deadline: "7 dias úteis",
       icon: CreditCard,
     },
@@ -63,6 +86,30 @@ export function PromiseCalendarInline() {
     },
   ]
 
+  if (productCategory === "outros") {
+    return (
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+            Calendário de Promessas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+            <AlertTriangle className="h-10 w-10 text-amber-500" />
+            <p className="text-sm font-medium text-muted-foreground">
+              O produto selecionado não possui datas de promessa disponíveis.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Categoria: <span className="font-semibold">Outros</span>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="border-border bg-card">
       <CardHeader className="pb-3">
@@ -70,48 +117,65 @@ export function PromiseCalendarInline() {
           <CalendarIcon className="h-4 w-4 text-primary" />
           Calendário de Promessas
         </CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">Selecione o tipo de produto e escolha uma data disponível</p>
+        {productCategory && productCategory !== "outros" && (
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" />
+            Tipo selecionado automaticamente:{" "}
+            {productCategory === "comercial"
+              ? "Comercial"
+              : productCategory === "habitacional"
+                ? "Habitacional"
+                : "Cartão"}
+          </p>
+        )}
+        {!productCategory && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Selecione o tipo de produto e escolha uma data disponível
+          </p>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <CheckCircle2 className="h-3 w-3 text-primary" />
-            Tipo de Produto
-          </label>
-          <TooltipProvider delayDuration={200}>
-            <div className="flex gap-3 justify-center">
-              {productOptions.map((product) => {
-                const Icon = product.icon
-                const isSelected = selectedProduct === product.value
-                return (
-                  <Tooltip key={product.value}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => handleProductSelect(product.value)}
-                        className={`w-20 h-20 p-2 rounded-xl transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
-                          isSelected
-                            ? "bg-orange-500 dark:bg-gradient-to-br dark:from-orange-500 dark:to-amber-500 shadow-lg scale-105"
-                            : "bg-muted/30 hover:bg-muted/50 hover:scale-102"
-                        }`}
-                      >
-                        <Icon className={`h-7 w-7 ${isSelected ? "text-white" : "text-muted-foreground"}`} />
-                        <p
-                          className={`font-semibold text-[10px] text-center leading-tight ${isSelected ? "text-white" : "text-foreground"}`}
+        {!productCategory && (
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <CheckCircle2 className="h-3 w-3 text-primary" />
+              Tipo de Produto
+            </label>
+            <TooltipProvider delayDuration={200}>
+              <div className="flex gap-3 justify-center">
+                {productOptions.map((product) => {
+                  const Icon = product.icon
+                  const isSelected = selectedProduct === product.value
+                  return (
+                    <Tooltip key={product.value}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleProductSelect(product.value)}
+                          className={`w-20 h-20 p-2 rounded-xl transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
+                            isSelected
+                              ? "bg-orange-500 dark:bg-gradient-to-br dark:from-orange-500 dark:to-amber-500 shadow-lg scale-105"
+                              : "bg-muted/30 hover:bg-muted/50 hover:scale-102"
+                          }`}
                         >
-                          {product.name}
-                        </p>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="bg-orange-500 text-white border-orange-600">
-                      <p className="text-xs font-semibold">Prazo: {product.deadline}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )
-              })}
-            </div>
-          </TooltipProvider>
-        </div>
+                          <Icon className={`h-7 w-7 ${isSelected ? "text-white" : "text-muted-foreground"}`} />
+                          <p
+                            className={`font-semibold text-[10px] text-center leading-tight ${isSelected ? "text-white" : "text-foreground"}`}
+                          >
+                            {product.name}
+                          </p>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="bg-orange-500 text-white border-orange-600">
+                        <p className="text-xs font-semibold">Prazo: {product.deadline}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </div>
+            </TooltipProvider>
+          </div>
+        )}
 
         {!selectedProduct ? (
           <div className="space-y-3">
