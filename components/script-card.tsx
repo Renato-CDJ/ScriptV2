@@ -5,7 +5,7 @@ import type React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { CheckCircle2, AlertCircle, ArrowLeft, AlertTriangle } from "lucide-react"
+import { CheckCircle2, AlertCircle, ArrowLeft, AlertTriangle, Badge } from "lucide-react"
 import type { ScriptStep, ContentSegment } from "@/lib/types"
 import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -169,6 +169,8 @@ export const ScriptCard = memo(function ScriptCard({
   const [showTabulation, setShowTabulation] = useState(false)
   const [showTabulationPulse, setShowTabulationPulse] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
+  const [pptPage, setPptPage] = useState(1)
+  const isPptStep = Boolean(step.pptUrl)
 
   const hasTabulations = step.tabulations && step.tabulations.length > 0
   const hasAlert = step.alert && step.alert.message
@@ -338,82 +340,112 @@ export const ScriptCard = memo(function ScriptCard({
         </div>
       )}
 
-      {productName && (
-        <div className="flex items-center justify-center py-2 px-2 md:px-4 border-t border-border/30">
-          <span className="inline-flex items-center px-4 py-1.5 bg-primary/10 text-primary rounded-md text-xs font-semibold border border-primary/20">
-            {productName}
-          </span>
-        </div>
-      )}
+      <Card className="shadow-xl border-2 border-primary/20">
+        <CardHeader className="pb-4 bg-gradient-to-r from-primary/10 to-primary/5">
+          <div className="flex items-center gap-3">
+            {canGoBack && onGoBack && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onGoBack}
+                className="hover:bg-primary/20"
+                aria-label="Voltar"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
+            <div className="flex-1">
+              <CardTitle
+                className="text-xl md:text-2xl lg:text-3xl font-bold"
+                dangerouslySetInnerHTML={{ __html: highlightedTitle }}
+              />
+              {productName && (
+                <Badge variant="secondary" className="mt-2">
+                  {productName}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {hasAlert && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAlertOpen}
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm animate-pulse"
+                >
+                  <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 md:mr-2 animate-bounce" />
+                  <span className="hidden md:inline">{alertTitle}</span>
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                </Button>
+              )}
 
-      {canGoBack && onGoBack && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onGoBack}
-          className="fixed left-2 md:left-4 top-1/2 -translate-y-1/2 z-50 shadow-2xl hover:shadow-3xl bg-gradient-to-r from-zinc-700 to-zinc-800 hover:from-zinc-800 hover:to-zinc-900 text-white border-0 h-10 w-10 md:h-12 md:w-12 p-0 rounded-full transition-all duration-200 hover:scale-110"
-        >
-          <ArrowLeft className="h-5 w-5 md:h-6 md:w-6" />
-        </Button>
-      )}
-
-      <Card className="relative shadow-2xl border-2 border-orange-200/80 dark:border-orange-500/60 w-full overflow-hidden backdrop-blur-sm">
-        {hasAlert && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAlertOpen}
-            className="absolute top-3 left-3 md:top-4 md:left-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm animate-pulse"
-          >
-            <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 md:mr-2 animate-bounce" />
-            <span className="hidden md:inline">{alertTitle}</span>
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-            </span>
-          </Button>
-        )}
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleTabulationOpen}
-          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
-            showTabulationPulse ? "animate-bounce" : ""
-          }`}
-        >
-          {hasTabulations ? (
-            <AlertCircle className="h-4 w-4 md:h-5 md:w-5 md:mr-2 animate-pulse" />
-          ) : (
-            <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 md:mr-2" />
-          )}
-          <span className="hidden md:inline">Verificar Tabulação</span>
-          {hasTabulations && showTabulationPulse && (
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-            </span>
-          )}
-        </Button>
-
-        <CardHeader className="pb-5 pt-7 px-4 md:px-8">
-          <CardTitle
-            className="text-2xl md:text-3xl lg:text-4xl text-center font-bold text-balance leading-tight text-orange-900 dark:text-white drop-shadow-sm"
-            dangerouslySetInnerHTML={{ __html: highlightedTitle }}
-          />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTabulationOpen}
+                className={`bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
+                  showTabulationPulse ? "animate-bounce" : ""
+                }`}
+              >
+                {hasTabulations ? (
+                  <AlertCircle className="h-4 w-4 md:h-5 md:w-5 md:mr-2 animate-pulse" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 md:mr-2" />
+                )}
+                <span className="hidden md:inline">Verificar Tabulação</span>
+                {hasTabulations && showTabulationPulse && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
 
-        <CardContent className="space-y-6 pb-8 px-4 md:px-8">
-          <div
-            className="bg-gradient-to-br from-orange-50/60 via-amber-50/40 to-orange-50/60 dark:from-gray-600/40 dark:via-gray-600/40 dark:to-gray-600/40 rounded-2xl p-6 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-orange-500/40 shadow-inner backdrop-blur-sm"
-            style={contentStyles}
-          >
-            {typeof renderedContent === "string" ? (
-              <div dangerouslySetInnerHTML={{ __html: renderedContent }} />
-            ) : (
-              renderedContent
-            )}
-          </div>
+        <CardContent className="pt-6 pb-8 space-y-4">
+          {isPptStep && step.pptUrl ? (
+            <div className="space-y-4">
+              <div className="relative w-full bg-muted rounded-lg overflow-hidden" style={{ height: "70vh" }}>
+                <iframe
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(
+                    window.location.origin + step.pptUrl,
+                  )}&embedded=true&rm=minimal`}
+                  className="w-full h-full border-0"
+                  title={step.title}
+                  allowFullScreen
+                />
+              </div>
+
+              {step.content && (
+                <div
+                  className="prose dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed"
+                  style={contentStyles}
+                >
+                  {typeof renderedContent === "string" ? (
+                    <div dangerouslySetInnerHTML={{ __html: renderedContent }} />
+                  ) : (
+                    renderedContent
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className="prose dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed"
+              style={contentStyles}
+            >
+              {typeof renderedContent === "string" ? (
+                <div dangerouslySetInnerHTML={{ __html: renderedContent }} />
+              ) : (
+                renderedContent
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

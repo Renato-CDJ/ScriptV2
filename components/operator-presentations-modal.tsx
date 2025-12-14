@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { getActivePresentationsForOperator, getPresentationProgressByOperator } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
+import { PPTViewer } from "@/components/ppt-viewer"
 import type { Presentation } from "@/lib/types"
-import { BookOpen, Play, Download, FileText } from "lucide-react"
+import { BookOpen, Play, Eye, FileText } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
 interface OperatorPresentationsModalProps {
@@ -32,6 +33,8 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [pptFiles, setPptFiles] = useState<PPTFile[]>([])
   const [loadingFiles, setLoadingFiles] = useState(true)
+  const [selectedPPTFile, setSelectedPPTFile] = useState<PPTFile | null>(null)
+  const [showPPTViewer, setShowPPTViewer] = useState(false)
 
   const loadData = useCallback(() => {
     if (user) {
@@ -97,6 +100,16 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
     window.open(file.path, "_blank")
   }
 
+  const handleViewPPT = (file: PPTFile) => {
+    setSelectedPPTFile(file)
+    setShowPPTViewer(true)
+  }
+
+  const handleClosePPTViewer = () => {
+    setShowPPTViewer(false)
+    setSelectedPPTFile(null)
+  }
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -132,13 +145,22 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <Button
-                            onClick={() => handleDownloadPPT(file)}
-                            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Baixar Apresentação
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => handleViewPPT(file)}
+                              className="flex-1 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Visualizar
+                            </Button>
+                            <Button
+                              onClick={() => handleDownloadPPT(file)}
+                              className="flex-1 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Baixar Apresentação
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
@@ -148,7 +170,6 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
               </>
             )}
 
-            {/* Original presentations section */}
             {presentations.length > 0 && (
               <>
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -200,7 +221,6 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
               </>
             )}
 
-            {/* Empty state */}
             {presentations.length === 0 && pptFiles.length === 0 && !loadingFiles && (
               <div className="py-12 text-center">
                 <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
@@ -214,6 +234,8 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
       {selectedPresentation && (
         <PresentationViewer presentation={selectedPresentation} isOpen={showViewer} onClose={handleCloseViewer} />
       )}
+
+      {selectedPPTFile && <PPTViewer file={selectedPPTFile} isOpen={showPPTViewer} onClose={handleClosePPTViewer} />}
     </>
   )
 }
