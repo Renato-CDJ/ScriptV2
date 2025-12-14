@@ -10,7 +10,8 @@ import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
 import Image from "next/image"
-import { authenticateUser as serverAuthenticateUser } from "@/app/actions/auth"
+import { getAllUsers } from "@/lib/store"
+import type { LoginSession } from "@/lib/types"
 
 export const LoginForm = memo(function LoginForm() {
   const [username, setUsername] = useState("")
@@ -43,23 +44,58 @@ export const LoginForm = memo(function LoginForm() {
       setIsLoading(true)
 
       try {
-        const result = await serverAuthenticateUser(username, showPasswordField ? password : undefined)
+        const users = getAllUsers()
+        const normalizedUsername = username.toLowerCase().trim()
+        const user = users.find((u) => u.username.toLowerCase() === normalizedUsername)
 
-        if (result.success && result.user) {
-          // Store user in localStorage after successful server auth
-          localStorage.setItem("callcenter_current_user", JSON.stringify(result.user))
-          refreshUser()
-        } else {
-          setError(result.error || "Erro ao fazer login")
+        if (!user) {
+          setError("Usuário não encontrado")
+          setIsLoading(false)
+          return
         }
+
+        // Check password for admin users
+        if (user.role === "admin") {
+          if (!password) {
+            setError("Senha obrigatória para administradores")
+            setIsLoading(false)
+            return
+          }
+
+          const ADMIN_DEFAULT_PASSWORDS = ["rcp@$", "#qualidade@$"]
+          const validPassword = user.password ? password === user.password : ADMIN_DEFAULT_PASSWORDS.includes(password)
+
+          if (!validPassword) {
+            setError("Senha incorreta")
+            setIsLoading(false)
+            return
+          }
+        }
+
+        // Create session
+        const session: LoginSession = {
+          id: `session-${Date.now()}`,
+          loginAt: new Date(),
+        }
+
+        const updatedUser = {
+          ...user,
+          lastLoginAt: new Date(),
+          isOnline: true,
+          loginSessions: [...(user.loginSessions || []), session],
+        }
+
+        // Store user in localStorage
+        localStorage.setItem("callcenter_current_user", JSON.stringify(updatedUser))
+        refreshUser()
       } catch (err) {
         console.error("Login error:", err)
-        setError("Erro ao conectar com o servidor")
+        setError("Erro ao fazer login")
       } finally {
         setIsLoading(false)
       }
     },
-    [username, password, showPasswordField, refreshUser],
+    [username, password, refreshUser],
   )
 
   const toggleTheme = useCallback(() => {

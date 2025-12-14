@@ -9,11 +9,19 @@ import { getActivePresentationsForOperator, getPresentationProgressByOperator } 
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
 import type { Presentation } from "@/lib/types"
-import { BookOpen, Play } from "lucide-react"
+import { BookOpen, Play, Download, FileText } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
 
 interface OperatorPresentationsModalProps {
   isOpen: boolean
   onClose: () => void
+}
+
+interface PPTFile {
+  name: string
+  path: string
+  extension: string
+  displayName: string
 }
 
 export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresentationsModalProps) {
@@ -22,6 +30,8 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const [selectedPresentation, setSelectedPresentation] = useState<Presentation | null>(null)
   const [showViewer, setShowViewer] = useState(false)
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
+  const [pptFiles, setPptFiles] = useState<PPTFile[]>([])
+  const [loadingFiles, setLoadingFiles] = useState(true)
 
   const loadData = useCallback(() => {
     if (user) {
@@ -34,11 +44,26 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
     }
   }, [user])
 
+  const loadPPTFiles = useCallback(async () => {
+    try {
+      setLoadingFiles(true)
+      const response = await fetch("/api/presentations/files")
+      const data = await response.json()
+      setPptFiles(data.files || [])
+    } catch (error) {
+      console.error("Error loading PPT files:", error)
+      setPptFiles([])
+    } finally {
+      setLoadingFiles(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (isOpen) {
       loadData()
+      loadPPTFiles()
     }
-  }, [isOpen, loadData])
+  }, [isOpen, loadData, loadPPTFiles])
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
@@ -65,8 +90,11 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const handleCloseViewer = () => {
     setShowViewer(false)
     setSelectedPresentation(null)
-    // Reload data to check if marked as seen
     loadData()
+  }
+
+  const handleDownloadPPT = (file: PPTFile) => {
+    window.open(file.path, "_blank")
   }
 
   return (
@@ -84,53 +112,99 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
           </div>
 
           <ScrollArea className="h-[calc(90vh-180px)] px-6 pr-4">
-            {presentations.length === 0 ? (
+            {!loadingFiles && pptFiles.length > 0 && (
+              <>
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Apresentações PowerPoint
+                  </h3>
+                  <div className="space-y-3">
+                    {pptFiles.map((file) => (
+                      <Card key={file.name} className="overflow-hidden hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">{file.displayName}</CardTitle>
+                              <CardDescription className="mt-1">Arquivo {file.extension.toUpperCase()}</CardDescription>
+                            </div>
+                            <Badge variant="secondary">PowerPoint</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <Button
+                            onClick={() => handleDownloadPPT(file)}
+                            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Baixar Apresentação
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+                <Separator className="my-6" />
+              </>
+            )}
+
+            {/* Original presentations section */}
+            {presentations.length > 0 && (
+              <>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <Play className="h-5 w-5" />
+                  Apresentações Interativas
+                </h3>
+                <div className="space-y-3">
+                  {presentations.map((presentation) => {
+                    const isCompleted = completedIds.has(presentation.id)
+
+                    return (
+                      <Card key={presentation.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">{presentation.title}</CardTitle>
+                              {presentation.description && (
+                                <CardDescription className="mt-1">{presentation.description}</CardDescription>
+                              )}
+                              <CardDescription className="mt-2">
+                                {presentation.slides.length} slides • Criada por {presentation.createdByName}
+                              </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isCompleted && (
+                                <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                                  Concluído
+                                </Badge>
+                              )}
+                              <Badge variant={isCompleted ? "secondary" : "default"}>
+                                {isCompleted ? "Visto" : "Novo"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <Button
+                            onClick={() => handleViewPresentation(presentation)}
+                            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Iniciar
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Empty state */}
+            {presentations.length === 0 && pptFiles.length === 0 && !loadingFiles && (
               <div className="py-12 text-center">
                 <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                 <p className="text-muted-foreground">Nenhuma apresentação disponível no momento.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {presentations.map((presentation) => {
-                  const isCompleted = completedIds.has(presentation.id)
-
-                  return (
-                    <Card key={presentation.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <CardTitle className="text-lg">{presentation.title}</CardTitle>
-                            {presentation.description && (
-                              <CardDescription className="mt-1">{presentation.description}</CardDescription>
-                            )}
-                            <CardDescription className="mt-2">
-                              {presentation.slides.length} slides • Criada por {presentation.createdByName}
-                            </CardDescription>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {isCompleted && (
-                              <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-                                Concluído
-                              </Badge>
-                            )}
-                            <Badge variant={isCompleted ? "secondary" : "default"}>
-                              {isCompleted ? "Visto" : "Novo"}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <Button
-                          onClick={() => handleViewPresentation(presentation)}
-                          className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          Iniciar
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
               </div>
             )}
           </ScrollArea>
