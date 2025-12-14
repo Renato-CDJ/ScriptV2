@@ -40,14 +40,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { validateScriptJson } from "@/lib/scripts-loader"
 import { getAutoLoadScripts } from "@/lib/auto-load-scripts"
 
+interface AvailableScript {
+  name: string
+  path: string
+  productName?: string
+}
+
 export function ScriptsTab() {
+  const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [steps, setSteps] = useState<ScriptStep[]>(getScriptSteps())
   const [products, setProducts] = useState<Product[]>(getProducts())
   const [editingStep, setEditingStep] = useState<ScriptStep | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [previewStep, setPreviewStep] = useState<ScriptStep | null>(null)
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
-  const [availableScripts, setAvailableScripts] = useState<any[]>([])
+  const [availableScripts, setAvailableScripts] = useState<AvailableScript[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
