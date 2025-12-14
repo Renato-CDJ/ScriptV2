@@ -55,7 +55,6 @@ export function ScriptsTab() {
   const [previewStep, setPreviewStep] = useState<ScriptStep | null>(null)
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
   const [availableScripts, setAvailableScripts] = useState<AvailableScript[]>([])
-  const [pptFiles, setPptFiles] = useState<string[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
@@ -65,21 +64,8 @@ export function ScriptsTab() {
 
     window.addEventListener("store-updated", handleStoreUpdate)
     loadAvailableScripts()
-    fetchPptFiles()
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
-
-  const fetchPptFiles = async () => {
-    try {
-      const response = await fetch("/api/presentations/files")
-      if (response.ok) {
-        const files = await response.json()
-        setPptFiles(files)
-      }
-    } catch (error) {
-      console.error("Failed to fetch PPT files:", error)
-    }
-  }
 
   const loadAvailableScripts = () => {
     try {
@@ -456,7 +442,6 @@ export function ScriptsTab() {
                 <TabsTrigger value="buttons">Botões ({editingStep.buttons.length})</TabsTrigger>
                 <TabsTrigger value="tabulation">Tabulações</TabsTrigger>
                 <TabsTrigger value="preview">Pré-visualização</TabsTrigger>
-                <TabsTrigger value="ppt">Apresentação PPT</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-6 mt-6">
@@ -695,32 +680,6 @@ export function ScriptsTab() {
               <TabsContent value="preview" className="mt-6">
                 <div className="rounded-lg border-2 border-dashed p-6">
                   <AdminScriptPreview step={editingStep} />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="ppt" className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Arquivo de Apresentação (Opcional)</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Selecione um arquivo PPT da pasta presentations/ para exibir nesta tela
-                  </p>
-                  <select
-                    className="w-full border rounded-md p-2"
-                    value={editingStep.pptUrl || ""}
-                    onChange={(e) => setEditingStep({ ...editingStep, pptUrl: e.target.value || undefined })}
-                  >
-                    <option value="">Nenhuma apresentação</option>
-                    {pptFiles.map((file) => (
-                      <option key={file} value={file}>
-                        {file.replace("/presentations/", "")}
-                      </option>
-                    ))}
-                  </select>
-                  {editingStep.pptUrl && (
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                      ✓ A apresentação será exibida diretamente nesta tela do roteiro
-                    </p>
-                  )}
                 </div>
               </TabsContent>
             </Tabs>

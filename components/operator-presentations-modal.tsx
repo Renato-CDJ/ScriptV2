@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,9 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { getActivePresentationsForOperator, getPresentationProgressByOperator } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
-import { PPTViewer } from "@/components/ppt-viewer"
 import type { Presentation } from "@/lib/types"
-import { BookOpen, Play, Eye, FileText } from "lucide-react"
+import { BookOpen, Play, PresentationIcon, FileText } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
 interface OperatorPresentationsModalProps {
@@ -27,14 +27,13 @@ interface PPTFile {
 
 export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresentationsModalProps) {
   const { user } = useAuth()
+  const router = useRouter()
   const [presentations, setPresentations] = useState<Presentation[]>([])
   const [selectedPresentation, setSelectedPresentation] = useState<Presentation | null>(null)
   const [showViewer, setShowViewer] = useState(false)
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [pptFiles, setPptFiles] = useState<PPTFile[]>([])
   const [loadingFiles, setLoadingFiles] = useState(true)
-  const [selectedPPTFile, setSelectedPPTFile] = useState<PPTFile | null>(null)
-  const [showPPTViewer, setShowPPTViewer] = useState(false)
 
   const loadData = useCallback(() => {
     if (user) {
@@ -96,18 +95,8 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
     loadData()
   }
 
-  const handleDownloadPPT = (file: PPTFile) => {
-    window.open(file.path, "_blank")
-  }
-
   const handleViewPPT = (file: PPTFile) => {
-    setSelectedPPTFile(file)
-    setShowPPTViewer(true)
-  }
-
-  const handleClosePPTViewer = () => {
-    setShowPPTViewer(false)
-    setSelectedPPTFile(null)
+    router.push(`/presentation/${encodeURIComponent(file.name)}`)
   }
 
   return (
@@ -149,8 +138,8 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                             onClick={() => handleViewPPT(file)}
                             className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
                           >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Visualizar
+                            <PresentationIcon className="h-4 w-4 mr-2" />
+                            Iniciar Apresentação
                           </Button>
                         </CardContent>
                       </Card>
@@ -225,8 +214,6 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
       {selectedPresentation && (
         <PresentationViewer presentation={selectedPresentation} isOpen={showViewer} onClose={handleCloseViewer} />
       )}
-
-      {selectedPPTFile && <PPTViewer file={selectedPPTFile} isOpen={showPPTViewer} onClose={handleClosePPTViewer} />}
     </>
   )
 }

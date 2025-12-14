@@ -63,7 +63,6 @@ export interface ScriptStep {
     message: string
     createdAt: Date
   }
-  pptUrl?: string // URL to a PPT file in /presentations/ folder
 }
 
 export interface ContentSegment {
