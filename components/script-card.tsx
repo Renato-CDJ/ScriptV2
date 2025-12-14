@@ -5,7 +5,17 @@ import type React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { CheckCircle2, AlertCircle, ArrowLeft, AlertTriangle, Badge } from "lucide-react"
+import {
+  CheckCircle2,
+  AlertCircle,
+  ArrowLeft,
+  AlertTriangle,
+  Badge,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react"
 import type { ScriptStep, ContentSegment } from "@/lib/types"
 import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -170,6 +180,8 @@ export const ScriptCard = memo(function ScriptCard({
   const [showTabulationPulse, setShowTabulationPulse] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
   const [pptPage, setPptPage] = useState(1)
+  const [pptZoom, setPptZoom] = useState(100)
+  const [isPptFullscreen, setIsPptFullscreen] = useState(false)
   const isPptStep = Boolean(step.pptUrl)
 
   const hasTabulations = step.tabulations && step.tabulations.length > 0
@@ -190,6 +202,10 @@ export const ScriptCard = memo(function ScriptCard({
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
+      if (isPptFullscreen && event.key === "Escape") {
+        setIsPptFullscreen(false)
+        return
+      }
       if (event.key === "Escape" && canGoBack && onGoBack) {
         onGoBack()
       }
@@ -197,7 +213,7 @@ export const ScriptCard = memo(function ScriptCard({
 
     window.addEventListener("keydown", handleKeyPress)
     return () => window.removeEventListener("keydown", handleKeyPress)
-  }, [canGoBack, onGoBack])
+  }, [canGoBack, onGoBack, isPptFullscreen])
 
   const processedContent = useMemo(() => {
     const safeContent = step.content || ""
@@ -231,6 +247,15 @@ export const ScriptCard = memo(function ScriptCard({
   const handleTabulationClose = useCallback(() => setShowTabulation(false), [])
   const handleAlertOpen = useCallback(() => setShowAlert(true), [])
   const handleAlertClose = useCallback(() => setShowAlert(false), [])
+  const handlePptZoomIn = useCallback(() => {
+    setPptZoom((prev) => Math.min(prev + 10, 200))
+  }, [])
+  const handlePptZoomOut = useCallback(() => {
+    setPptZoom((prev) => Math.max(prev - 10, 50))
+  }, [])
+  const handleTogglePptFullscreen = useCallback(() => {
+    setIsPptFullscreen((prev) => !prev)
+  }, [])
 
   const contentStyles = useMemo(() => {
     const styles: React.CSSProperties = {
@@ -296,6 +321,72 @@ export const ScriptCard = memo(function ScriptCard({
         )
       })
   }, [step.buttons, step.id, navButtonFontSize, navButtonPadding, onButtonClick])
+
+  if (isPptFullscreen && isPptStep && step.pptUrl) {
+    return (
+      <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center">
+        <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative px-2 py-2">
+          <div className="relative w-full h-full max-w-full flex items-center justify-center">
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(
+                window.location.origin + step.pptUrl,
+              )}&embedded=true&rm=minimal`}
+              className="w-full h-full border-0 rounded-lg"
+              title={step.title}
+              allowFullScreen
+              style={{
+                transform: `scale(${pptZoom / 100})`,
+                transformOrigin: "center center",
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="w-full border-t border-white/20 px-4 py-3 flex items-center justify-between gap-4 flex-wrap bg-black/50">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePptZoomOut}
+              disabled={pptZoom <= 50}
+              title="Diminuir zoom"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2 bg-transparent"
+            >
+              <ZoomOut className="h-4 w-4" />
+              <span className="text-xs ml-1">-</span>
+            </Button>
+            <span className="text-sm font-semibold w-16 text-center px-2 py-1 bg-white/10 rounded text-white">
+              {pptZoom}%
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePptZoomIn}
+              disabled={pptZoom >= 200}
+              title="Aumentar zoom"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2"
+            >
+              <ZoomIn className="h-4 w-4" />
+              <span className="text-xs ml-1">+</span>
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTogglePptFullscreen}
+              title="Sair da tela cheia (ESC)"
+              className="hover:bg-white/10 text-white border-white/30 h-9 px-2 bg-transparent"
+            >
+              <Minimize2 className="h-4 w-4" />
+              <span className="text-xs ml-1 hidden sm:inline">Sair</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto">
@@ -410,7 +501,10 @@ export const ScriptCard = memo(function ScriptCard({
         <CardContent className="pt-6 pb-8 space-y-4">
           {isPptStep && step.pptUrl ? (
             <div className="space-y-4">
-              <div className="relative w-full bg-muted rounded-lg overflow-hidden" style={{ height: "70vh" }}>
+              <div
+                className="relative w-full bg-muted rounded-lg overflow-hidden border-2 border-border"
+                style={{ height: "70vh" }}
+              >
                 <iframe
                   src={`https://docs.google.com/viewer?url=${encodeURIComponent(
                     window.location.origin + step.pptUrl,
@@ -418,7 +512,50 @@ export const ScriptCard = memo(function ScriptCard({
                   className="w-full h-full border-0"
                   title={step.title}
                   allowFullScreen
+                  style={{
+                    transform: `scale(${pptZoom / 100})`,
+                    transformOrigin: "center center",
+                  }}
                 />
+              </div>
+
+              <div className="flex items-center justify-between gap-4 p-4 bg-muted rounded-lg border border-border">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePptZoomOut}
+                    disabled={pptZoom <= 50}
+                    title="Diminuir zoom"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                    <span className="text-xs ml-1 hidden sm:inline">-</span>
+                  </Button>
+                  <span className="text-sm font-semibold w-16 text-center px-2 py-1 bg-background rounded border">
+                    {pptZoom}%
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePptZoomIn}
+                    disabled={pptZoom >= 200}
+                    title="Aumentar zoom"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                    <span className="text-xs ml-1 hidden sm:inline">+</span>
+                  </Button>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTogglePptFullscreen}
+                  title="Modo tela cheia"
+                  className="gap-2 bg-transparent"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                  <span className="text-xs hidden sm:inline">Tela Cheia</span>
+                </Button>
               </div>
 
               {step.content && (
