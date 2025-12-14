@@ -145,22 +145,13 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => handleViewPPT(file)}
-                              className="flex-1 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Visualizar
-                            </Button>
-                            <Button
-                              onClick={() => handleDownloadPPT(file)}
-                              className="flex-1 bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              Baixar Apresentação
-                            </Button>
-                          </div>
+                          <Button
+                            onClick={() => handleViewPPT(file)}
+                            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Visualizar
+                          </Button>
                         </CardContent>
                       </Card>
                     ))}
