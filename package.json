@@ -48,7 +48,7 @@
     "fs": "0.0.1-security",
     "geist": "latest",
     "input-otp": "latest",
-    "lodash.debounce": "latest",
+    "lodash.debounce": "4.0.8",
     "lucide-react": "^0.454.0",
     "next": "15.3.6",
     "next-themes": "latest",

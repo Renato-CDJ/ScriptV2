@@ -5,12 +5,12 @@ import { useState, useCallback, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { authenticateUser, getAllUsers } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
 import Image from "next/image"
+import { authenticateUser as serverAuthenticateUser } from "@/app/actions/auth"
 
 export const LoginForm = memo(function LoginForm() {
   const [username, setUsername] = useState("")
@@ -22,9 +22,9 @@ export const LoginForm = memo(function LoginForm() {
   const { refreshUser } = useAuth()
 
   const checkIfAdminUser = useCallback((inputUsername: string) => {
-    const users = getAllUsers()
-    const user = users.find((u) => u.username.toLowerCase() === inputUsername.toLowerCase())
-    return user?.role === "admin"
+    const adminPrefixes = ["admin", "monitoria"]
+    const lowerUsername = inputUsername.toLowerCase()
+    return adminPrefixes.some((prefix) => lowerUsername.startsWith(prefix))
   }, [])
 
   const handleUsernameChange = useCallback(
@@ -42,21 +42,22 @@ export const LoginForm = memo(function LoginForm() {
       setError("")
       setIsLoading(true)
 
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      try {
+        const result = await serverAuthenticateUser(username, showPasswordField ? password : undefined)
 
-      const user = authenticateUser(username, password)
-
-      if (user) {
-        refreshUser()
-      } else {
-        if (showPasswordField) {
-          setError("Senha incorreta")
+        if (result.success && result.user) {
+          // Store user in localStorage after successful server auth
+          localStorage.setItem("callcenter_current_user", JSON.stringify(result.user))
+          refreshUser()
         } else {
-          setError("Usuário não encontrado")
+          setError(result.error || "Erro ao fazer login")
         }
+      } catch (err) {
+        console.error("Login error:", err)
+        setError("Erro ao conectar com o servidor")
+      } finally {
+        setIsLoading(false)
       }
-
-      setIsLoading(false)
     },
     [username, password, showPasswordField, refreshUser],
   )
