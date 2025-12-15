@@ -3,47 +3,55 @@
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Maximize, Minimize, X, Check } from "lucide-react"
+import { ChevronLeft, ChevronRight, Maximize, Minimize, X } from "lucide-react"
 import Image from "next/image"
-import { useAuth } from "@/lib/auth-context"
-import { markPresentationAsSeen } from "@/lib/store"
-import { useToast } from "@/hooks/use-toast"
 
 export default function PresentationPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
-  const { toast } = useToast()
   const filename = params.filename as string
   const [currentSlide, setCurrentSlide] = useState(0)
   const [slides, setSlides] = useState<string[]>([])
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false)
 
   useEffect(() => {
     const loadSlides = async () => {
       try {
-        const folderName = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
-        const detectedSlides: string[] = []
+        const baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
+        const slideUrls: string[] = []
 
+        // Try to load up to 100 slides
         for (let i = 1; i <= 100; i++) {
-          const slideNumber = i.toString().padStart(3, "0")
-          const slidePath = `/presentations/slides/${folderName}/slide-${slideNumber}.png`
+          const paddedNum = String(i).padStart(3, "0")
+          const slideUrl = `/presentations/slides/${baseFilename}/slide-${paddedNum}.png`
 
           try {
-            const response = await fetch(slidePath, { method: "HEAD" })
+            const response = await fetch(slideUrl, { method: "HEAD" })
             if (response.ok) {
-              detectedSlides.push(slidePath)
+              slideUrls.push(slideUrl)
             } else {
-              break
+              // Try alternative naming: 001.png, 002.png
+              const altUrl = `/presentations/slides/${baseFilename}/${paddedNum}.png`
+              const altResponse = await fetch(altUrl, { method: "HEAD" })
+              if (altResponse.ok) {
+                slideUrls.push(altUrl)
+              } else {
+                // No more slides found
+                break
+              }
             }
           } catch {
             break
           }
         }
 
-        setSlides(detectedSlides)
+        if (slideUrls.length > 0) {
+          setSlides(slideUrls)
+        } else {
+          // Fallback: use iframe viewer
+          setSlides([])
+        }
       } catch (error) {
         console.error("Error loading slides:", error)
         setSlides([])
@@ -117,27 +125,6 @@ export default function PresentationPage() {
     typeof window !== "undefined" ? window.location.origin + presentationUrl : presentationUrl,
   )}&embedded=true`
 
-  const handleMarkAsRead = () => {
-    if (!user) {
-      toast({
-        title: "Erro",
-        description: "Você precisa estar logado para marcar como lido.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const presentationId = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
-
-    markPresentationAsSeen(presentationId, user.id, user.fullName)
-    setHasMarkedAsRead(true)
-
-    toast({
-      title: "Marcado como lido",
-      description: "A apresentação foi marcada como lida com sucesso.",
-    })
-  }
-
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-background z-[9999] flex items-center justify-center">
@@ -152,6 +139,7 @@ export default function PresentationPage() {
   if (slides.length > 0) {
     return (
       <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
+        {/* Header */}
         <div className="h-14 bg-black/80 backdrop-blur flex items-center justify-between px-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-white/10">
@@ -173,6 +161,7 @@ export default function PresentationPage() {
           </div>
         </div>
 
+        {/* Slide display - 95% of screen */}
         <div className="flex-1 flex items-center justify-center p-4" style={{ height: "calc(95vh - 3.5rem - 4rem)" }}>
           <div className="relative w-full h-full flex items-center justify-center">
             <Image
@@ -186,6 +175,7 @@ export default function PresentationPage() {
           </div>
         </div>
 
+        {/* Navigation controls */}
         <div className="h-16 bg-black/80 backdrop-blur flex items-center justify-center gap-4 px-4 border-t border-white/10">
           <Button
             variant="outline"
@@ -212,21 +202,9 @@ export default function PresentationPage() {
             Próximo
             <ChevronRight className="h-5 w-5 ml-2" />
           </Button>
-
-          {currentSlide === slides.length - 1 && (
-            <Button
-              variant="default"
-              size="lg"
-              onClick={handleMarkAsRead}
-              disabled={hasMarkedAsRead}
-              className="bg-green-600 hover:bg-green-700 text-white ml-4"
-            >
-              <Check className="h-5 w-5 mr-2" />
-              {hasMarkedAsRead ? "Marcado como Lido" : "Marcar como Lido"}
-            </Button>
-          )}
         </div>
 
+        {/* Keyboard shortcuts hint */}
         <div className="absolute bottom-20 right-4 text-xs text-white/60 bg-black/60 backdrop-blur px-3 py-2 rounded-md border border-white/10">
           ← → Navegar • Space Próximo • F Tela cheia • ESC Sair
         </div>
@@ -261,19 +239,6 @@ export default function PresentationPage() {
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
           />
         </div>
-      </div>
-
-      <div className="absolute bottom-20 left-1/2 -translate-x-1/2">
-        <Button
-          variant="default"
-          size="lg"
-          onClick={handleMarkAsRead}
-          disabled={hasMarkedAsRead}
-          className="bg-green-600 hover:bg-green-700 text-white"
-        >
-          <Check className="h-5 w-5 mr-2" />
-          {hasMarkedAsRead ? "Marcado como Lido" : "Marcar como Lido"}
-        </Button>
       </div>
 
       <div className="absolute bottom-4 right-4 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-2 rounded-md border">

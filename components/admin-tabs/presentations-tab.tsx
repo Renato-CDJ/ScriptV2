@@ -26,10 +26,23 @@ import {
   deletePresentation,
   getAllUsers,
   getPresentationProgressByPresentation,
+  exportPresentationReport,
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Presentation, PresentationSlide } from "@/lib/types"
-import { Plus, Trash2, Edit, Download, EyeIcon, ImageIcon, ChevronDown, ChevronRight, Eye, EyeOff } from "lucide-react"
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Download,
+  EyeIcon,
+  ImageIcon,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -42,7 +55,6 @@ export function PresentationsTab() {
   const [editingPresentation, setEditingPresentation] = useState<Presentation | null>(null)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [showImagePreview, setShowImagePreview] = useState(false)
-  const [selectedPresentationForReport, setSelectedPresentationForReport] = useState<string | null>(null)
 
   // Form state
   const [title, setTitle] = useState("")
@@ -233,76 +245,28 @@ export function PresentationsTab() {
     }
   }
 
-  const getPresentationReport = (presentationId: string) => {
-    const progress = getPresentationProgressByPresentation(presentationId)
-    const presentation = presentations.find((p) => p.id === presentationId)
+  const handleExportReport = (presentationId: string) => {
+    const csvContent = exportPresentationReport(presentationId)
+    if (!csvContent) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o relatório.",
+        variant: "destructive",
+      })
+      return
+    }
 
-    if (!presentation) return []
-
-    // Get all operators who should see this presentation
-    const targetOperators =
-      presentation.recipients && presentation.recipients.length > 0
-        ? operators.filter((op) => presentation.recipients.includes(op.id))
-        : operators
-
-    // Create report with all operators
-    return targetOperators.map((op) => {
-      const opProgress = progress.find((p) => p.operatorId === op.id)
-      return {
-        operatorId: op.id,
-        operatorName: op.fullName,
-        hasViewed: !!opProgress,
-        markedAsRead: opProgress?.marked_as_seen || false,
-        viewedAt: opProgress?.viewedAt,
-        completionDate: opProgress?.completion_date,
-      }
-    })
-  }
-
-  const handleExportExcel = (presentationId: string) => {
-    const presentation = presentations.find((p) => p.id === presentationId)
-    if (!presentation) return
-
-    const report = getPresentationReport(presentationId)
-
-    // Create CSV content
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"
-
-    // Header
-    csvContent += "RELATÓRIO DE VISUALIZAÇÃO DE APRESENTAÇÃO\n\n"
-    csvContent += `Título:,${presentation.title.replace(/,/g, ";")}\n`
-    csvContent += `Descrição:,${presentation.description.replace(/,/g, ";")}\n`
-    csvContent += `Total de Slides:,${presentation.slides.length}\n`
-    csvContent += `Criada por:,${presentation.createdByName}\n`
-    csvContent += `Data de Criação:,${new Date(presentation.createdAt).toLocaleDateString("pt-BR")}\n`
-    csvContent += `Total de Operadores:,${report.length}\n`
-    csvContent += `Visualizaram:,${report.filter((r) => r.hasViewed).length}\n`
-    csvContent += `Marcaram como Lido:,${report.filter((r) => r.markedAsRead).length}\n\n`
-
-    // Table header
-    csvContent += "Operador,Visualizou,Marcou como Lido,Data de Visualização,Data de Conclusão\n"
-
-    // Table rows
-    report.forEach((r) => {
-      csvContent += `${r.operatorName},`
-      csvContent += `${r.hasViewed ? "Sim" : "Não"},`
-      csvContent += `${r.markedAsRead ? "Sim" : "Não"},`
-      csvContent += `${r.viewedAt ? new Date(r.viewedAt).toLocaleString("pt-BR") : "-"},`
-      csvContent += `${r.completionDate ? new Date(r.completionDate).toLocaleString("pt-BR") : "-"}\n`
-    })
-
-    // Download
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
-    link.setAttribute("download", `relatorio_${presentation.title.replace(/[^a-z0-9]/gi, "_")}_${Date.now()}.csv`)
+    link.setAttribute("download", `apresentacao_relatorio_${presentationId}_${Date.now()}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
 
     toast({
       title: "Relatório exportado",
-      description: "O relatório foi exportado com sucesso em formato CSV (compatível com Excel).",
+      description: "O relatório foi exportado com sucesso.",
     })
   }
 
@@ -589,117 +553,76 @@ export function PresentationsTab() {
         ) : (
           presentations.map((presentation) => {
             const isExpanded = expandedIds.has(presentation.id)
-            const report = getPresentationReport(presentation.id)
-            const viewedCount = report.filter((r) => r.hasViewed).length
-            const readCount = report.filter((r) => r.markedAsRead).length
+            const progressList = getPresentationProgressByPresentation(presentation.id)
+            const viewedCount = progressList.filter((p) => p.marked_as_seen).length
 
             return (
-              <Card key={presentation.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <CardTitle className="text-xl">{presentation.title}</CardTitle>
-                        <Badge variant={presentation.isActive ? "default" : "secondary"}>
-                          {presentation.isActive ? "Ativo" : "Inativo"}
-                        </Badge>
-                        <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950">
-                          {viewedCount}/{report.length} Visualizaram
-                        </Badge>
-                        <Badge variant="outline" className="bg-green-50 dark:bg-green-950">
-                          {readCount}/{report.length} Leram
-                        </Badge>
-                      </div>
-                      <CardDescription>{presentation.description}</CardDescription>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-                        <span>{presentation.slides.length} slides</span>
-                        <span>•</span>
-                        <span>Criada por {presentation.createdByName}</span>
-                        <span>•</span>
-                        <span>{new Date(presentation.createdAt).toLocaleDateString("pt-BR")}</span>
-                        <span>•</span>
-                        <span className="text-xs">{getRecipientNames(presentation.recipients)}</span>
+              <Card key={presentation.id} className="overflow-hidden">
+                <CardHeader
+                  className="cursor-pointer hover:bg-muted/50 pb-3"
+                  onClick={() => toggleExpanded(presentation.id)}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      {isExpanded ? (
+                        <ChevronDown className="h-5 w-5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base break-words">{presentation.title}</CardTitle>
+                        <CardDescription className="mt-1 break-words">
+                          {presentation.slides.length} slides • Por {presentation.createdByName}
+                        </CardDescription>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleExportExcel(presentation.id)}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Exportar Relatório
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => toggleExpanded(presentation.id)}>
-                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(presentation)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(presentation.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                    <div className="flex items-center gap-2">
+                      {hasMissingImages(presentation) && (
+                        <Badge variant="outline" className="text-orange-500 border-orange-500 gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span className="hidden sm:inline">Imagens locais</span>
+                        </Badge>
+                      )}
+                      <Badge variant={presentation.isActive ? "default" : "secondary"}>
+                        {presentation.isActive ? "Ativo" : "Inativo"}
+                      </Badge>
+                      <Badge variant="outline">
+                        <EyeIcon className="h-3 w-3 mr-1" />
+                        {viewedCount}
+                      </Badge>
                     </div>
                   </div>
                 </CardHeader>
 
                 {isExpanded && (
-                  <CardContent>
-                    <Separator className="mb-4" />
-                    <div className="space-y-4">
-                      <h4 className="font-semibold">Relatório de Visualização</h4>
-                      <ScrollArea className="h-[400px] border rounded-lg">
-                        <div className="p-4">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="border-b">
-                                <th className="text-left p-2">Operador</th>
-                                <th className="text-center p-2">Visualizou</th>
-                                <th className="text-center p-2">Marcou como Lido</th>
-                                <th className="text-center p-2">Data de Visualização</th>
-                                <th className="text-center p-2">Data de Conclusão</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {report.map((r) => (
-                                <tr key={r.operatorId} className="border-b">
-                                  <td className="p-2">{r.operatorName}</td>
-                                  <td className="text-center p-2">
-                                    {r.hasViewed ? (
-                                      <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950">
-                                        Sim
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="bg-gray-50 dark:bg-gray-950">
-                                        Não
-                                      </Badge>
-                                    )}
-                                  </td>
-                                  <td className="text-center p-2">
-                                    {r.markedAsRead ? (
-                                      <Badge variant="outline" className="bg-green-50 dark:bg-green-950">
-                                        Sim
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="bg-gray-50 dark:bg-gray-950">
-                                        Não
-                                      </Badge>
-                                    )}
-                                  </td>
-                                  <td className="text-center p-2 text-sm">
-                                    {r.viewedAt ? new Date(r.viewedAt).toLocaleString("pt-BR") : "-"}
-                                  </td>
-                                  <td className="text-center p-2 text-sm">
-                                    {r.completionDate ? new Date(r.completionDate).toLocaleString("pt-BR") : "-"}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </ScrollArea>
+                  <CardContent className="space-y-4">
+                    {presentation.description && (
+                      <p className="text-sm text-muted-foreground">{presentation.description}</p>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(presentation)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleExportReport(presentation.id)}
+                        disabled={viewedCount === 0}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar Relatório
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(presentation.id)}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </Button>
                     </div>
+
+                    {viewedCount > 0 && (
+                      <div className="text-xs text-muted-foreground">{viewedCount} operador(es) marcou como visto</div>
+                    )}
                   </CardContent>
                 )}
               </Card>
