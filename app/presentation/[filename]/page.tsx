@@ -18,36 +18,15 @@ export default function PresentationPage() {
   useEffect(() => {
     const loadSlides = async () => {
       try {
-        const baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
-        const slideUrls: string[] = []
+        const response = await fetch("/api/presentations/convert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: decodeURIComponent(filename) }),
+        })
+        const data = await response.json()
 
-        // Try to load up to 100 slides
-        for (let i = 1; i <= 100; i++) {
-          const paddedNum = String(i).padStart(3, "0")
-          const slideUrl = `/presentations/slides/${baseFilename}/slide-${paddedNum}.png`
-
-          try {
-            const response = await fetch(slideUrl, { method: "HEAD" })
-            if (response.ok) {
-              slideUrls.push(slideUrl)
-            } else {
-              // Try alternative naming: 001.png, 002.png
-              const altUrl = `/presentations/slides/${baseFilename}/${paddedNum}.png`
-              const altResponse = await fetch(altUrl, { method: "HEAD" })
-              if (altResponse.ok) {
-                slideUrls.push(altUrl)
-              } else {
-                // No more slides found
-                break
-              }
-            }
-          } catch {
-            break
-          }
-        }
-
-        if (slideUrls.length > 0) {
-          setSlides(slideUrls)
+        if (data.slides && data.slides.length > 0) {
+          setSlides(data.slides)
         } else {
           // Fallback: use iframe viewer
           setSlides([])
