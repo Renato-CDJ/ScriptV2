@@ -216,7 +216,7 @@ export default function PresentationPage() {
         </div>
 
         <div
-          className="flex-1 flex items-center justify-center"
+          className="flex-1 flex items-center justify-center bg-black"
           style={{
             height: isFullscreen ? "100vh" : "calc(100vh - 3rem - 3.5rem)",
             width: "100vw",
@@ -227,6 +227,8 @@ export default function PresentationPage() {
             style={{
               width: isFullscreen ? "100vw" : "95vw",
               height: isFullscreen ? "100vh" : "95%",
+              maxWidth: "100%",
+              maxHeight: "100%",
             }}
           >
             <Image
@@ -235,7 +237,8 @@ export default function PresentationPage() {
               fill
               className="object-contain"
               priority={currentSlide < 3}
-              sizes="(max-width: 768px) 95vw, 95vw"
+              sizes="(max-width: 768px) 100vw, 95vw"
+              style={{ objectFit: "contain" }}
             />
           </div>
         </div>
