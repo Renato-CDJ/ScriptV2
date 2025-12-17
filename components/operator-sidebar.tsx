@@ -481,7 +481,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           <div className="py-6 text-lg text-foreground leading-relaxed">{selectedTabulationForModal?.description}</div>
           <Button
             onClick={() => setShowTabulationModal(false)}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -498,7 +498,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           <div className="py-6 text-lg text-foreground leading-relaxed">{selectedSituationForModal?.description}</div>
           <Button
             onClick={() => setShowSituationModal(false)}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -517,7 +517,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           </div>
           <Button
             onClick={() => setShowChannelModal(false)}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -535,7 +535,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           <div className="py-6 text-lg text-foreground leading-relaxed">{selectedSituationData?.description}</div>
           <Button
             onClick={() => setShowSituationDialog(false)}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>
@@ -555,7 +555,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           </div>
           <Button
             onClick={() => setShowChannelDialog(false)}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all"
           >
             Fechar
           </Button>

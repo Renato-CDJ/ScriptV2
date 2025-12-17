@@ -10,13 +10,13 @@ Esta pasta é destinada ao armazenamento de arquivos de apresentação PowerPoin
 
 ## Estrutura recomendada:
 
-\`\`\`
+```
 public/presentations/
 ├── treinamento-produto-habitacional.pptx
 ├── treinamento-produto-comercial.pptx
 ├── treinamento-vendas.pptx
 └── onboarding-novos-operadores.pptx
-\`\`\`
+```
 
 ## Observações:
 

@@ -38,6 +38,9 @@ const AccessControlTab = lazy(() =>
 const PresentationsTab = lazy(() =>
   import("@/components/admin-tabs/presentations-tab").then((m) => ({ default: m.PresentationsTab })),
 )
+const InitialGuideTab = lazy(() =>
+  import("@/components/admin-tabs/initial-guide-tab").then((m) => ({ default: m.InitialGuideTab })),
+)
 
 const LoadingFallback = memo(function LoadingFallback() {
   return (
@@ -144,6 +147,12 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <PresentationsTab />
+          </Suspense>
+        )
+      case "initial-guide":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <InitialGuideTab />
           </Suspense>
         )
       default:

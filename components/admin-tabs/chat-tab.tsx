@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, memo } from "react"
+import { useState, useEffect, useRef, memo, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -90,15 +90,18 @@ export const ChatTab = memo(function ChatTab() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const filteredMessages = selectedOperatorId
-    ? allMessages.filter((msg) => msg.senderId === selectedOperatorId || msg.recipientId === selectedOperatorId)
-    : []
+  const filteredMessages = useMemo(() => {
+    if (!selectedOperatorId) return []
+    return allMessages.filter((msg) => msg.senderId === selectedOperatorId || msg.recipientId === selectedOperatorId)
+  }, [allMessages, selectedOperatorId])
 
-  const filteredOperators = operators.filter(
-    (op) =>
-      op.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      op.username.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const filteredOperators = useMemo(() => {
+    return operators.filter(
+      (op) =>
+        op.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        op.username.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
+  }, [operators, searchQuery])
 
   useEffect(() => {
     if (user) {
@@ -109,16 +112,24 @@ export const ChatTab = memo(function ChatTab() {
   }, [user])
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
     const handleStoreUpdate = () => {
-      if (user) {
-        loadAllMessages()
-        loadSettings()
-        loadOperators()
-      }
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        if (user) {
+          loadAllMessages()
+          loadSettings()
+          loadOperators()
+        }
+      }, 150)
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      window.removeEventListener("store-updated", handleStoreUpdate)
+      clearTimeout(timeoutId)
+    }
   }, [user])
 
   useEffect(() => {
@@ -203,9 +214,11 @@ export const ChatTab = memo(function ChatTab() {
     }
   }
 
-  const getUnreadCount = (operatorId: string) => {
-    return allMessages.filter((m) => !m.isRead && m.senderId === operatorId && m.recipientId !== operatorId).length
-  }
+  const getUnreadCount = useMemo(() => {
+    return (operatorId: string) => {
+      return allMessages.filter((m) => !m.isRead && m.senderId === operatorId && m.recipientId !== operatorId).length
+    }
+  }, [allMessages])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

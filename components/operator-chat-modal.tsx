@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, memo } from "react"
+import { useState, useEffect, useRef, memo, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -24,6 +24,11 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const unreadCount = useMemo(() => {
+    if (!user) return 0
+    return messages.filter((m) => !m.isRead && m.senderId !== user.id).length
+  }, [messages, user])
+
   useEffect(() => {
     if (open && user) {
       loadMessages()
@@ -33,16 +38,24 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
   }, [open, user])
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
     const handleStoreUpdate = () => {
-      if (open && user) {
-        loadMessages()
-        const settings = getChatSettings()
-        setChatEnabled(settings.isEnabled)
-      }
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        if (open && user) {
+          loadMessages()
+          const settings = getChatSettings()
+          setChatEnabled(settings.isEnabled)
+        }
+      }, 100)
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      window.removeEventListener("store-updated", handleStoreUpdate)
+      clearTimeout(timeoutId)
+    }
   }, [open, user])
 
   useEffect(() => {
@@ -109,6 +122,7 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
                   Chat Desabilitado
                 </Badge>
               )}
+              {unreadCount > 0 && <Badge className="text-xs">{unreadCount} Novas Mensagens</Badge>}
             </div>
           </div>
         </DialogHeader>

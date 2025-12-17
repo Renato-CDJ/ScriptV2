@@ -64,16 +64,22 @@ const OperatorContent = memo(function OperatorContent() {
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
+    let isUpdating = false
 
     const handleStoreUpdate = () => {
+      if (isUpdating) return // Prevent concurrent updates
+
       if (currentStep && currentProductId) {
+        isUpdating = true
         clearTimeout(timeoutId)
+
         timeoutId = setTimeout(() => {
           const updatedStep = getScriptStepById(currentStep.id, currentProductId)
           if (updatedStep) {
             setCurrentStep(updatedStep)
           }
-        }, 150)
+          isUpdating = false
+        }, 200) // Increased debounce time
       }
     }
 
@@ -98,6 +104,20 @@ const OperatorContent = memo(function OperatorContent() {
       }
     },
     [isSessionActive, currentProductId],
+  )
+
+  const handleSearchStep = useCallback(
+    (stepId: string) => {
+      if (currentProductId) {
+        const step = getScriptStepById(stepId, currentProductId)
+        if (step) {
+          setStepHistory((prev) => [...prev, step.id])
+          setCurrentStep(step)
+          setSearchQuery("")
+        }
+      }
+    },
+    [currentProductId],
   )
 
   const handleStartAttendance = useCallback((config: AttendanceConfigType) => {
@@ -257,6 +277,8 @@ const OperatorContent = memo(function OperatorContent() {
                   searchQuery={searchQuery}
                   showControls={showControls}
                   productName={currentProductName}
+                  onSearchStep={handleSearchStep}
+                  allSteps={currentProductId ? getScriptSteps().filter((s) => s.productId === currentProductId) : []}
                 />
               </div>
             ) : null}

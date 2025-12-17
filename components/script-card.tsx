@@ -5,10 +5,12 @@ import type React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { CheckCircle2, AlertCircle, ArrowLeft, AlertTriangle } from "lucide-react"
+import { CheckCircle2, AlertCircle, ArrowLeft, AlertTriangle, Search, X } from "lucide-react"
 import type { ScriptStep, ContentSegment } from "@/lib/types"
 import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 
 interface ScriptCardProps {
   step: ScriptStep
@@ -20,15 +22,15 @@ interface ScriptCardProps {
   searchQuery?: string
   showControls?: boolean
   productName?: string
+  onSearchStep?: (stepId: string) => void
+  allSteps?: ScriptStep[]
 }
-
-const ACCESSIBILITY_STORAGE_KEY = "callcenter_accessibility_settings"
 
 function loadAccessibilitySettings(): { textSize: number; buttonSize: number } {
   if (typeof window === "undefined") return { textSize: 100, buttonSize: 80 }
 
   try {
-    const saved = localStorage.getItem(ACCESSIBILITY_STORAGE_KEY)
+    const saved = localStorage.getItem("callcenter_accessibility_settings")
     if (saved) {
       return JSON.parse(saved)
     }
@@ -43,11 +45,14 @@ function saveAccessibilitySettings(textSize: number, buttonSize: number) {
   if (typeof window === "undefined") return
 
   try {
-    localStorage.setItem(ACCESSIBILITY_STORAGE_KEY, JSON.stringify({ textSize, buttonSize }))
+    localStorage.setItem("callcenter_accessibility_settings", JSON.stringify({ textSize, buttonSize }))
   } catch (error) {
     console.error("[v0] Error saving accessibility settings:", error)
   }
 }
+
+const calculateFontSize = (baseSize: number, scale: number) => baseSize + (scale / 100) * baseSize
+const calculatePadding = (basePadding: number, scale: number) => basePadding + (scale / 100) * basePadding
 
 const renderContentWithSegments = memo(function renderContentWithSegments(
   content: string,
@@ -157,6 +162,8 @@ export const ScriptCard = memo(function ScriptCard({
   searchQuery = "",
   showControls = true,
   productName = "",
+  onSearchStep,
+  allSteps = [],
 }: ScriptCardProps) {
   const [textSize, setTextSize] = useState<number[]>(() => {
     const settings = loadAccessibilitySettings()
@@ -169,6 +176,9 @@ export const ScriptCard = memo(function ScriptCard({
   const [showTabulation, setShowTabulation] = useState(false)
   const [showTabulationPulse, setShowTabulationPulse] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
+  const [showAlertBalloon, setShowAlertBalloon] = useState(false)
+  const [searchText, setSearchText] = useState("")
+  const [showSearch, setShowSearch] = useState(false)
 
   const hasTabulations = step.tabulations && step.tabulations.length > 0
   const hasAlert = step.alert && step.alert.message
@@ -197,6 +207,20 @@ export const ScriptCard = memo(function ScriptCard({
     return () => window.removeEventListener("keydown", handleKeyPress)
   }, [canGoBack, onGoBack])
 
+  useEffect(() => {
+    if (!hasAlert) {
+      setShowAlertBalloon(false)
+      return
+    }
+
+    setShowAlertBalloon(true)
+    const timer = setTimeout(() => {
+      setShowAlertBalloon(false)
+    }, 10000)
+
+    return () => clearTimeout(timer)
+  }, [hasAlert, step.id]) // Reset when step changes
+
   const processedContent = useMemo(() => {
     const safeContent = step.content || ""
     return safeContent
@@ -219,16 +243,43 @@ export const ScriptCard = memo(function ScriptCard({
     [searchQuery, step.title],
   )
 
-  const textFontSize = useMemo(() => 16 + (textSize[0] / 100) * 16, [textSize])
-  const navButtonFontSize = useMemo(() => 14 + (buttonSize[0] / 100) * 8, [buttonSize])
-  const navButtonPadding = useMemo(() => 12 + (buttonSize[0] / 100) * 8, [buttonSize])
-  const buttonFontSize = useMemo(() => 12 + (buttonSize[0] / 100) * 8, [buttonSize])
-  const buttonPadding = useMemo(() => 12 + (buttonSize[0] / 100) * 8, [buttonSize])
+  const textFontSize = useMemo(() => calculateFontSize(16, textSize[0]), [textSize])
+  const navButtonFontSize = useMemo(() => calculateFontSize(14, buttonSize[0]), [buttonSize])
+  const navButtonPadding = useMemo(() => calculatePadding(12, buttonSize[0]), [buttonSize])
+  const buttonFontSize = useMemo(() => calculateFontSize(12, buttonSize[0]), [buttonSize])
+  const buttonPadding = useMemo(() => calculatePadding(12, buttonSize[0]), [buttonSize])
 
   const handleTabulationOpen = useCallback(() => setShowTabulation(true), [])
   const handleTabulationClose = useCallback(() => setShowTabulation(false), [])
   const handleAlertOpen = useCallback(() => setShowAlert(true), [])
   const handleAlertClose = useCallback(() => setShowAlert(false), [])
+  const handleSearchOpen = useCallback(() => {
+    setShowSearch(true)
+    setSearchText("")
+  }, [])
+  const handleSearchClose = useCallback(() => {
+    setShowSearch(false)
+    setSearchText("")
+  }, [])
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchText(value)
+      if (value.trim() && allSteps.length > 0) {
+        const result = allSteps.find(
+          (s) =>
+            s.title.toLowerCase().includes(value.toLowerCase()) ||
+            s.content.toLowerCase().includes(value.toLowerCase()),
+        )
+        if (result && onSearchStep) {
+          onSearchStep(result.id)
+        }
+      }
+    },
+    [allSteps, onSearchStep],
+  )
+
+  const handleBalloonClose = useCallback(() => setShowAlertBalloon(false), [])
 
   const contentStyles = useMemo(() => {
     const styles: React.CSSProperties = {
@@ -357,27 +408,73 @@ export const ScriptCard = memo(function ScriptCard({
         </Button>
       )}
 
+      {hasAlert && showAlertBalloon && (
+        <div className="fixed top-[140px] left-8 z-[9999] w-[90%] max-w-md animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="relative bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/90 dark:to-amber-900/90 backdrop-blur-sm rounded-2xl shadow-2xl border-2 border-amber-300 dark:border-amber-700 p-4">
+            {/* Close button */}
+            <button
+              onClick={handleBalloonClose}
+              className="absolute top-2 right-2 p-1 rounded-full hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors"
+              aria-label="Fechar alerta"
+            >
+              <X className="h-4 w-4 text-amber-700 dark:text-amber-300" />
+            </button>
+
+            {/* Alert icon and title */}
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 rounded-lg bg-amber-500 dark:bg-amber-600 animate-pulse">
+                <AlertTriangle className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="font-bold text-amber-900 dark:text-amber-100 text-sm">{alertTitle}</h3>
+            </div>
+
+            {/* Alert message */}
+            <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed whitespace-pre-wrap">
+              {step.alert?.message}
+            </p>
+
+            {/* Balloon arrow pointing down */}
+            <div className="absolute -bottom-3 left-12 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[12px] border-t-amber-300 dark:border-t-amber-700"></div>
+            <div className="absolute -bottom-[10px] left-12 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-amber-100 dark:border-t-amber-900/90"></div>
+          </div>
+        </div>
+      )}
+
       <Card className="relative shadow-2xl border-2 border-orange-200/80 dark:border-orange-500/60 w-full overflow-hidden backdrop-blur-sm">
-        {hasAlert && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAlertOpen}
-            className="absolute top-3 left-3 md:top-4 md:left-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm animate-pulse"
-          >
-            <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 md:mr-2 animate-bounce" />
-            <span className="hidden md:inline">{alertTitle}</span>
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-            </span>
-          </Button>
-        )}
+        <Popover open={showSearch} onOpenChange={setShowSearch}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSearchOpen}
+              className="absolute top-4 left-4 z-20 h-11 w-11 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm hover:from-blue-500/30 hover:to-cyan-500/30 border-2 border-blue-500/50 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-110 animate-pulse-subtle"
+              title="Buscar tela do roteiro"
+            >
+              <Search className="h-5 w-5 text-blue-500 dark:text-cyan-400 animate-color-pulse" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-4" align="start" side="bottom">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Search className="h-5 w-5 text-muted-foreground" />
+                <h4 className="font-semibold text-sm">Buscar Tela</h4>
+              </div>
+              <Input
+                placeholder="Digite título ou conteúdo..."
+                value={searchText}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">A tela será exibida conforme você digita</p>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         <Button
           variant="outline"
           size="sm"
-          onClick={handleTabulationOpen}
+          onClick={() => setShowTabulation(true)}
           className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
             showTabulationPulse ? "animate-bounce" : ""
           }`}
@@ -421,39 +518,6 @@ export const ScriptCard = memo(function ScriptCard({
         <div className="flex flex-wrap justify-center gap-4 md:gap-5 w-full max-w-3xl">{renderedButtons}</div>
       </div>
 
-      <Dialog open={showAlert} onOpenChange={setShowAlert}>
-        <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto border-2 border-border">
-          <DialogHeader className="space-y-3 pb-4 border-b border-border">
-            <DialogTitle className="flex items-center gap-3 text-xl font-bold">
-              <div className="p-2 rounded-lg bg-amber-500 dark:bg-amber-600 animate-pulse">
-                <AlertTriangle className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-foreground">{alertTitle}</span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="group relative rounded-xl border-2 border-border bg-muted/50 p-6 shadow-md">
-              <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <AlertTriangle className="h-12 w-12 text-amber-500 dark:text-amber-400" />
-              </div>
-              <div className="relative">
-                <p className="text-base text-foreground leading-relaxed whitespace-pre-wrap break-words">
-                  {step.alert?.message}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="pt-4 border-t border-border">
-            <Button
-              onClick={handleAlertClose}
-              className="w-full h-11 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700 text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base"
-            >
-              Entendi
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={showTabulation} onOpenChange={setShowTabulation}>
         <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto border-2 border-orange-200 dark:border-zinc-700">
           <DialogHeader className="space-y-3 pb-4 border-b border-border">
@@ -474,7 +538,7 @@ export const ScriptCard = memo(function ScriptCard({
               step.tabulations.map((tabulation, index) => (
                 <div
                   key={tabulation.id || index}
-                  className="group relative rounded-xl border-2 border-slate-600 dark:border-slate-600 bg-white dark:bg-slate-700 p-5 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden"
+                  className="group relative rounded-xl border-2 border-slate-600 dark:border-slate-600 bg-white dark:bg-slate-700 p-5 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-orange-500/40 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden"
                 >
                   <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
                     <CheckCircle2 className="h-12 w-12 text-orange-500 dark:text-orange-400" />
@@ -509,7 +573,7 @@ export const ScriptCard = memo(function ScriptCard({
           </div>
           <div className="pt-4 border-t border-border">
             <Button
-              onClick={handleTabulationClose}
+              onClick={() => setShowTabulation(false)}
               className="w-full h-11 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 text-white dark:text-white font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base"
             >
               Entendi

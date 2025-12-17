@@ -2,9 +2,28 @@
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { LayoutDashboard, FileText, Tags, AlertCircle, Radio, StickyNote, Users, Settings, LogOut, Package, Sun, Moon, Settings2, MessageSquare, Shield, MessageCircle, Presentation } from 'lucide-react'
+import {
+  LayoutDashboard,
+  FileText,
+  Tags,
+  AlertCircle,
+  Radio,
+  StickyNote,
+  Users,
+  Settings,
+  LogOut,
+  Package,
+  Sun,
+  Moon,
+  Settings2,
+  MessageSquare,
+  Shield,
+  MessageCircle,
+  Presentation,
+  BookOpen,
+} from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 
@@ -17,6 +36,7 @@ const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard" },
   { id: "scripts", label: "Roteiros", icon: FileText, permission: "scripts" },
   { id: "products", label: "Produtos", icon: Package, permission: "products" },
+  { id: "initial-guide", label: "Guia Inicial", icon: BookOpen, permission: "dashboard" },
   { id: "attendance-config", label: "Configurar Atendimento", icon: Settings2, permission: "attendanceConfig" },
   { id: "tabulations", label: "Tabulações", icon: Tags, permission: "tabulations" },
   { id: "situations", label: "Situações", icon: AlertCircle, permission: "situations" },

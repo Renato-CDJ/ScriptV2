@@ -260,3 +260,12 @@ export interface OperatorRanking {
 }
 
 export type Ranking = OperatorRanking
+
+export interface Contract {
+  id: string
+  name: string
+  description: string
+  createdAt: Date
+  updatedAt: Date
+  isActive: boolean
+}

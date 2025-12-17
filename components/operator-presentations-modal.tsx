@@ -10,7 +10,7 @@ import { getActivePresentationsForOperator, getPresentationProgressByOperator } 
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
 import type { Presentation } from "@/lib/types"
-import { BookOpen, Play, PresentationIcon, FileText } from "lucide-react"
+import { BookOpen, Play, PresentationIcon } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
 interface OperatorPresentationsModalProps {
@@ -116,29 +116,28 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
           <ScrollArea className="h-[calc(90vh-180px)] px-6 pr-4">
             {!loadingFiles && pptFiles.length > 0 && (
               <>
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Apresentações PowerPoint
-                  </h3>
-                  <div className="space-y-3">
+                <div className="mb-6 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {pptFiles.map((file) => (
-                      <Card key={file.name} className="overflow-hidden hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <CardTitle className="text-lg">{file.displayName}</CardTitle>
-                              <CardDescription className="mt-1">Arquivo {file.extension.toUpperCase()}</CardDescription>
+                      <Card
+                        key={file.name}
+                        className="overflow-hidden hover:shadow-lg hover:border-orange-500/50 transition-all duration-200 group"
+                      >
+                        <CardHeader className="pb-4 bg-gradient-to-br from-background to-muted/30">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 rounded-lg bg-orange-500/10 group-hover:bg-orange-500/20 transition-colors">
+                              <PresentationIcon className="h-5 w-5 text-orange-500" />
                             </div>
-                            <Badge variant="secondary">PowerPoint</Badge>
+                            <CardTitle className="text-lg flex-1">{file.displayName}</CardTitle>
                           </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-4">
                           <Button
                             onClick={() => handleViewPPT(file)}
-                            className="w-full bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90"
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white dark:bg-primary dark:hover:bg-primary/90"
+                            size="lg"
                           >
-                            <PresentationIcon className="h-4 w-4 mr-2" />
+                            <Play className="h-4 w-4 mr-2" />
                             Iniciar Apresentação
                           </Button>
                         </CardContent>
@@ -146,7 +145,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                     ))}
                   </div>
                 </div>
-                <Separator className="my-6" />
+                {presentations.length > 0 && <Separator className="my-6" />}
               </>
             )}
 

@@ -59,7 +59,6 @@
   --border: oklch(0.32 0.02 260);
   --input: oklch(0.3 0.02 260);
   --ring: oklch(0.68 0.19 45);
-  /* Updated chart colors to match orange/amber theme */
   --chart-1: oklch(0.68 0.19 45);
   --chart-2: oklch(0.72 0.18 50);
   --chart-3: oklch(0.75 0.16 55);
@@ -75,8 +74,8 @@
   --sidebar-ring: oklch(0.68 0.19 45);
 }
 
+/* Fixed calc() expressions by computing values directly */
 @theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -101,10 +100,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 0.225rem;
+  --radius-md: 0.425rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.825rem;
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -123,7 +122,6 @@
     @apply bg-background text-foreground;
   }
 
-  /* Added responsive viewport height support */
   html,
   body {
     height: 100%;
@@ -226,8 +224,6 @@
   }
 }
 
-/* Add will-change for better animation performance */
-
 @keyframes float {
   0%,
   100% {
@@ -278,6 +274,29 @@
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+/* Adding animations for search icon pulsing effect */
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes color-pulse {
+  0%,
+  100% {
+    color: rgb(59, 130, 246); /* blue-500 */
+  }
+  50% {
+    color: rgb(6, 182, 212); /* cyan-500 */
   }
 }
 
@@ -341,7 +360,17 @@
   will-change: transform;
 }
 
-/* Added responsive utilities for better screen adaptation */
+/* Adding animation classes for search icon */
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-color-pulse {
+  animation: color-pulse 3s ease-in-out infinite;
+  will-change: color;
+}
+
 @media (max-width: 640px) {
   :root {
     font-size: 14px;

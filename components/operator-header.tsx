@@ -20,6 +20,7 @@ import {
   Bell,
   MessageCircle,
   BookOpen,
+  FileText,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
@@ -39,6 +40,7 @@ import { Label } from "@/components/ui/label"
 import { OperatorMessagesModal } from "@/components/operator-messages-modal"
 import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { OperatorPresentationsModal } from "@/components/operator-presentations-modal"
+import { OperatorInitialGuideModal } from "@/components/operator-initial-guide-modal"
 
 interface OperatorHeaderProps {
   searchQuery?: string
@@ -76,6 +78,7 @@ export const OperatorHeader = memo(function OperatorHeader({
   const [unreadChatCount, setUnreadChatCount] = useState(0)
   const [showPresentationsModal, setShowPresentationsModal] = useState(false)
   const [availablePresentationsCount, setAvailablePresentationsCount] = useState(0)
+  const [showInitialGuideModal, setShowInitialGuideModal] = useState(false)
 
   useEffect(() => {
     const handleStoreUpdate = () => {
@@ -353,6 +356,16 @@ export const OperatorHeader = memo(function OperatorHeader({
               <Button
                 variant="outline"
                 size="icon"
+                onClick={() => setShowInitialGuideModal(true)}
+                className="h-9 w-9 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 dark:from-teal-600 dark:to-cyan-600 dark:hover:from-teal-700 dark:hover:to-cyan-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                title="Guia Inicial"
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => setShowPresentationsModal(true)}
                 className="h-9 w-9 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 dark:from-yellow-600 dark:to-orange-600 dark:hover:from-yellow-700 dark:hover:to-orange-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
                 title="Treinamentos"
@@ -419,7 +432,7 @@ export const OperatorHeader = memo(function OperatorHeader({
                   variant="outline"
                   size="icon"
                   onClick={onToggleControls}
-                  className="h-9 w-9 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-orange-600 dark:to-orange-700 dark:hover:from-orange-700 dark:hover:to-orange-800 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                  className="h-9 w-9 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-orange-600 dark:to-amber-500 dark:hover:from-orange-700 dark:hover:to-amber-600 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                   title={showControls ? "Ocultar Controles" : "Exibir Controles"}
                 >
                   {showControls ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -474,6 +487,7 @@ export const OperatorHeader = memo(function OperatorHeader({
       <OperatorMessagesModal open={showMessagesModal} onOpenChange={setShowMessagesModal} />
       <OperatorChatModal open={showChatModal} onOpenChange={setShowChatModal} />
       <OperatorPresentationsModal isOpen={showPresentationsModal} onClose={() => setShowPresentationsModal(false)} />
+      <OperatorInitialGuideModal open={showInitialGuideModal} onOpenChange={setShowInitialGuideModal} />
     </>
   )
 })

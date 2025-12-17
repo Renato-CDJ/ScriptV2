@@ -21,6 +21,7 @@ import type {
   ChatSettings, // Imported for chat
   Presentation, // Imported for presentations
   PresentationProgress, // Imported for presentation progress
+  Contract, // Imported for contracts
 } from "./types"
 import { db, auth } from "./firebase" // Updated import for auth
 import { doc, setDoc, onSnapshot } from "firebase/firestore"
@@ -138,19 +139,13 @@ let firebaseSyncDisabled = false // Renamed from firebaseSyncFailed for clarity
 let pendingFirebaseWrites = 0
 const MAX_PENDING_WRITES = 5 // Reduced from 10 to 5 to prevent overload
 
+const BATCH_INTERVAL = 500 // Increased from 200ms
+const MIN_WRITE_INTERVAL = 1000 // Increased from 500ms to reduce Firebase load
 let lastFirebaseWrite = 0
-const MIN_WRITE_INTERVAL = 1000 // Minimum 1 second between writes
+const writeQueue = new Map<string, { data: unknown; timestamp: number }>()
+let batchTimer: NodeJS.Timeout | null = null
 
-export function saveImmediately(key: string, data: unknown) {
-  if (typeof window === "undefined") return
-
-  // Save to localStorage immediately (with full data including imageData)
-  localStorage.setItem(key, JSON.stringify(data))
-
-  // Notify listeners about the update
-  notifyUpdateImmediate()
-
-  // Skip if Firebase sync is disabled or too many pending writes
+function syncToFirebase(key: string, data: unknown) {
   if (firebaseSyncDisabled || pendingFirebaseWrites >= MAX_PENDING_WRITES) {
     return
   }
@@ -161,8 +156,8 @@ export function saveImmediately(key: string, data: unknown) {
   }
   lastFirebaseWrite = now
 
-  // Schedule Firebase sync with a small delay to batch operations
   pendingFirebaseWrites++
+
   setTimeout(async () => {
     try {
       if (db && !firebaseSyncDisabled) {
@@ -190,7 +185,41 @@ export function saveImmediately(key: string, data: unknown) {
     } finally {
       pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
     }
-  }, 200) // Increased delay from 100ms to 200ms
+  }, BATCH_INTERVAL)
+}
+
+function flushBatchQueue() {
+  if (writeQueue.size === 0) return
+
+  const entries = Array.from(writeQueue.entries())
+  writeQueue.clear()
+
+  entries.forEach(([key, { data }]) => {
+    syncToFirebase(key, data)
+  })
+}
+
+export function saveImmediately(key: string, data: unknown) {
+  if (typeof window === "undefined") return
+
+  // Save to localStorage immediately (with full data including imageData)
+  localStorage.setItem(key, JSON.stringify(data))
+
+  // Notify listeners about the update
+  notifyUpdateImmediate()
+
+  // Skip if Firebase sync is disabled or too many pending writes
+  if (firebaseSyncDisabled || pendingFirebaseWrites >= MAX_PENDING_WRITES) {
+    return
+  }
+
+  const now = Date.now()
+  if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
+    return
+  }
+  lastFirebaseWrite = now
+
+  syncToFirebase(key, data)
 }
 
 function handleFirebaseError(error: unknown) {
@@ -214,6 +243,25 @@ function handleFirebaseError(error: unknown) {
   } else {
     console.error("Error syncing to Firebase:", error)
   }
+}
+
+function save(key: string, data: unknown) {
+  if (typeof window === "undefined") return
+
+  // Save to localStorage immediately
+  localStorage.setItem(key, JSON.stringify(data))
+
+  // Notify listeners with debounce
+  scheduleNotification()
+
+  // Add to batch queue
+  writeQueue.set(key, { data, timestamp: Date.now() })
+
+  // Schedule batch flush
+  if (batchTimer) {
+    clearTimeout(batchTimer)
+  }
+  batchTimer = setTimeout(flushBatchQueue, BATCH_INTERVAL)
 }
 
 export const debouncedSave = debounce(async (key: string, data: unknown) => {
@@ -264,12 +312,12 @@ export const debouncedSave = debounce(async (key: string, data: unknown) => {
 let unsubscribers: (() => void)[] = []
 // let firebaseSyncFailed = false // Removed as firebaseSyncDisabled is used instead
 
+let syncEnabled = false
+
 export function enableRealtimeSync() {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined" || syncEnabled) return
 
-  // Check if already syncing to avoid duplicate listeners
-  if (unsubscribers.length > 0) return
-
+  syncEnabled = true
   console.log("[v0] Attempting to enable Firebase realtime sync...")
   console.log("[v0] If you see permission errors, update your Firestore Security Rules in the Firebase Console")
 
@@ -874,7 +922,8 @@ export const STORAGE_KEYS = {
   CHAT_SETTINGS: "callcenter_chat_settings",
   PRESENTATIONS: "callcenter_presentations",
   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
-}
+  CONTRACTS: "contracts", // Added storage key for contracts
+} as const
 
 // Initialize mock data
 export function initializeMockData() {
@@ -1047,6 +1096,11 @@ export function initializeMockData() {
       },
     ]
     localStorage.setItem(STORAGE_KEYS.QUIZ_ATTEMPTS, JSON.stringify(mockQuizAttempts))
+  }
+
+  // Initialize mock data for contracts
+  if (!localStorage.getItem(STORAGE_KEYS.CONTRACTS)) {
+    localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify([]))
   }
 
   cleanupOldSessions()
@@ -1545,6 +1599,9 @@ interface JsonData {
   marcas?: Record<string, Record<string, any>>
 }
 
+// Helper function to sync data to Firebase with debouncing and sanitization
+// The previous syncToFirebase function was removed and consolidated above.
+
 export function importScriptFromJson(jsonData: JsonData): { productCount: number; stepCount: number } {
   if (typeof window === "undefined") return { productCount: 0, stepCount: 0 }
 
@@ -1640,7 +1697,7 @@ export function importScriptFromJson(jsonData: JsonData): { productCount: number
     }
   } catch (error) {
     console.error("[v0] Error importing script from JSON:", error)
-    throw error // Re-throw to allow caller to handle the error
+    throw error
   }
 
   return { productCount, stepCount }
@@ -2280,6 +2337,11 @@ export function sendChatMessage(
     url: string
     name: string
   },
+  replyTo?: {
+    messageId: string
+    content: string
+    senderName: string
+  },
 ): ChatMessage {
   if (typeof window === "undefined")
     return {
@@ -2290,18 +2352,20 @@ export function sendChatMessage(
       recipientId,
       content,
       attachment,
+      replyTo,
       createdAt: new Date(),
       isRead: false,
     }
 
   const newMessage: ChatMessage = {
-    id: `chat-${Date.now()}`,
+    id: `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     senderId,
     senderName,
     senderRole,
     recipientId,
     content,
     attachment,
+    replyTo,
     createdAt: new Date(),
     isRead: false,
   }
@@ -2331,17 +2395,15 @@ export function getChatMessagesForUser(userId: string, userRole: "operator" | "a
   const messages = getAllChatMessages()
 
   if (userRole === "operator") {
-    // Operator sees: messages they sent + messages from admins to them or all operators
+    // Operator sees: messages they sent + messages from admins to them specifically or to all operators
     return messages
       .filter(
         (m) => m.senderId === userId || (m.senderRole === "admin" && (!m.recipientId || m.recipientId === userId)),
       )
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
   } else {
-    // Admin sees: all messages from operators + messages they sent
-    return messages
-      .filter((m) => m.senderRole === "operator" || m.senderId === userId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    // Admin sees: messages from specific operator when filtering, or all operator messages
+    return messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
   }
 }
 
@@ -2485,4 +2547,87 @@ export function exportPresentationReport(presentationId: string): string {
   })
 
   return csvContent
+}
+
+// Contract management functions
+export function getContracts(): Contract[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTS) || "[]")
+}
+
+export function addContract(contract: Omit<Contract, "id" | "createdAt" | "updatedAt">): Contract {
+  if (typeof window === "undefined")
+    return {
+      ...contract,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+  const contracts = getContracts()
+  const newContract: Contract = {
+    ...contract,
+    id: crypto.randomUUID(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+  contracts.push(newContract)
+  // Using debouncedSave for consistency with other save operations
+  debouncedSave(STORAGE_KEYS.CONTRACTS, contracts)
+  // syncToFirebase("contracts", contracts) // Removed direct syncToFirebase call, debouncedSave handles it.
+  notifyUpdateImmediate()
+  return newContract
+}
+
+export function updateContract(id: string, updates: Partial<Omit<Contract, "id" | "createdAt">>): void {
+  if (typeof window === "undefined") return
+
+  const contracts = getContracts()
+  const index = contracts.findIndex((c) => c.id === id)
+  if (index !== -1) {
+    contracts[index] = {
+      ...contracts[index],
+      ...updates,
+      updatedAt: new Date(),
+    }
+    debouncedSave(STORAGE_KEYS.CONTRACTS, contracts)
+    notifyUpdateImmediate()
+  }
+}
+
+export function deleteContract(id: string): void {
+  if (typeof window === "undefined") return
+
+  const contracts = getContracts().filter((c) => c.id !== id)
+  debouncedSave(STORAGE_KEYS.CONTRACTS, contracts)
+  notifyUpdateImmediate()
+}
+
+export function getActiveContracts(): Contract[] {
+  if (typeof window === "undefined") return []
+  return getContracts().filter((c) => c.isActive)
+}
+
+export function cleanupRealtimeSync() {
+  unsubscribers.forEach((unsub) => unsub())
+  unsubscribers = []
+  syncEnabled = false
+  if (batchTimer) {
+    clearTimeout(batchTimer)
+  }
+  if (notificationTimer) {
+    clearTimeout(notificationTimer)
+  }
+}
+
+let notificationTimer: NodeJS.Timeout | null = null
+function scheduleNotification() {
+  if (notificationTimer) {
+    clearTimeout(notificationTimer)
+  }
+  notificationTimer = setTimeout(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("store-updated"))
+    }
+  }, 100) // Small delay to batch multiple updates
 }
