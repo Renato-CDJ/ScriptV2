@@ -167,135 +167,128 @@ export default function PresentationPage() {
   if (slides.length > 0) {
     return (
       <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
-        {/* Header */}
-        <div className="h-14 bg-black/80 backdrop-blur flex items-center justify-between px-4 border-b border-white/10">
+        {/* Header - Compact header when not fullscreen */}
+        <div
+          className={`${
+            isFullscreen ? "h-0 opacity-0" : "h-12"
+          } bg-black/90 backdrop-blur flex items-center justify-between px-3 border-b border-white/10 transition-all duration-200`}
+        >
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-white/10">
-              <X className="h-4 w-4 mr-2" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="text-white hover:bg-white/10 h-8"
+            >
+              <X className="h-4 w-4 mr-1" />
               Fechar
             </Button>
-            <div className="text-sm font-medium text-white/90 truncate max-w-[300px]">
+            <div className="text-xs font-medium text-white/90 truncate max-w-[250px]">
               {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
             </div>
             {isMarkedAsRead && (
-              <Badge className="bg-green-600 hover:bg-green-700 text-white">
+              <Badge className="bg-green-600 hover:bg-green-700 text-white text-xs h-6">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Lido
               </Badge>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-white/80">
-              Slide {currentSlide + 1} de {slides.length}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/80">
+              {currentSlide + 1} / {slides.length}
             </span>
             {currentSlide === slides.length - 1 && !isMarkedAsRead && (
               <Button
                 variant="default"
                 size="sm"
                 onClick={handleMarkAsRead}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
               >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
+                <CheckCircle2 className="h-3 w-3 mr-1" />
                 Marcar como Lido
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="text-white hover:bg-white/10 h-8">
               {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
             </Button>
           </div>
         </div>
 
-        {/* Slide display - 95% of screen */}
-        <div className="flex-1 flex items-center justify-center p-4" style={{ height: "calc(95vh - 3.5rem - 4rem)" }}>
-          <div className="relative w-full h-full flex items-center justify-center">
+        <div
+          className="flex-1 flex items-center justify-center"
+          style={{
+            height: isFullscreen ? "100vh" : "calc(100vh - 3rem - 3.5rem)",
+            width: "100vw",
+          }}
+        >
+          <div
+            className="relative flex items-center justify-center"
+            style={{
+              width: isFullscreen ? "100vw" : "95vw",
+              height: isFullscreen ? "100vh" : "95%",
+            }}
+          >
             <Image
               src={slides[currentSlide] || "/placeholder.svg"}
               alt={`Slide ${currentSlide + 1}`}
               fill
               className="object-contain"
               priority={currentSlide < 3}
-              sizes="95vw"
+              sizes="(max-width: 768px) 95vw, 95vw"
             />
           </div>
         </div>
 
-        {/* Navigation controls */}
-        <div className="h-16 bg-black/80 backdrop-blur flex items-center justify-center gap-4 px-4 border-t border-white/10">
+        <div
+          className={`${
+            isFullscreen ? "absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 hover:opacity-100" : "relative h-14"
+          } bg-black/90 backdrop-blur flex items-center justify-center gap-3 px-4 border-t border-white/10 transition-all duration-200 rounded-lg`}
+          style={isFullscreen ? { width: "auto" } : {}}
+        >
           <Button
             variant="outline"
-            size="lg"
+            size={isFullscreen ? "sm" : "default"}
             onClick={() => setCurrentSlide((prev) => Math.max(0, prev - 1))}
             disabled={currentSlide === 0}
             className="bg-white/10 border-white/20 text-white hover:bg-white/20"
           >
-            <ChevronLeft className="h-5 w-5 mr-2" />
-            Anterior
+            <ChevronLeft className={`${isFullscreen ? "h-4 w-4" : "h-5 w-5"}`} />
+            {!isFullscreen && <span className="ml-1">Anterior</span>}
           </Button>
 
-          <div className="text-sm font-medium text-white px-4 min-w-[120px] text-center">
+          <div
+            className={`${isFullscreen ? "text-xs" : "text-sm"} font-medium text-white px-3 min-w-[80px] text-center`}
+          >
             {currentSlide + 1} / {slides.length}
           </div>
 
           <Button
             variant="outline"
-            size="lg"
+            size={isFullscreen ? "sm" : "default"}
             onClick={() => setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1))}
             disabled={currentSlide === slides.length - 1}
             className="bg-white/10 border-white/20 text-white hover:bg-white/20"
           >
-            Próximo
-            <ChevronRight className="h-5 w-5 ml-2" />
+            {!isFullscreen && <span className="mr-1">Próximo</span>}
+            <ChevronRight className={`${isFullscreen ? "h-4 w-4" : "h-5 w-5"}`} />
           </Button>
         </div>
 
-        {/* Keyboard shortcuts hint */}
-        <div className="absolute bottom-20 right-4 text-xs text-white/60 bg-black/60 backdrop-blur px-3 py-2 rounded-md border border-white/10">
-          ← → Navegar • Space Próximo • F Tela cheia • ESC Sair
-        </div>
+        {/* Keyboard shortcuts hint - Smaller and repositioned */}
+        {!isFullscreen && (
+          <div className="absolute bottom-16 right-4 text-xs text-white/50 bg-black/50 backdrop-blur px-2 py-1 rounded border border-white/10">
+            ← → Space F ESC
+          </div>
+        )}
       </div>
     )
   }
 
   return (
     <div className="fixed inset-0 bg-background z-[9999] flex flex-col">
-      <div className="h-14 border-b flex items-center justify-between px-4 bg-background/95 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <X className="h-4 w-4 mr-2" />
-            Fechar
-          </Button>
-          <div className="text-sm font-medium truncate max-w-[300px]">
-            {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
-          </div>
-          {isMarkedAsRead && (
-            <Badge className="bg-green-600 hover:bg-green-700 text-white">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              Lido
-            </Badge>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!isMarkedAsRead && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleMarkAsRead}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Marcar como Lido
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={toggleFullscreen}>
-            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 relative overflow-hidden bg-muted/20 flex items-center justify-center p-8">
-        <div className="w-full h-full max-w-[95vw] max-h-[90vh]">
+      <div className="flex-1 relative overflow-hidden bg-muted/20 flex items-center justify-center">
+        <div className="w-[95vw] h-[95vh]">
           <iframe
             src={googleViewerUrl}
             className="w-full h-full border-0 rounded-lg shadow-2xl bg-white"
@@ -303,10 +296,6 @@ export default function PresentationPage() {
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
           />
         </div>
-      </div>
-
-      <div className="absolute bottom-4 right-4 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-2 rounded-md border">
-        Para navegação por slides individuais, converta o PPT em imagens
       </div>
     </div>
   )
