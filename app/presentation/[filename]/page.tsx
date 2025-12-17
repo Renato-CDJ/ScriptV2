@@ -55,6 +55,7 @@ export default function PresentationPage() {
 
         if (slideUrls.length > 0) {
           setSlides(slideUrls)
+          setCurrentSlide(0)
         } else {
           // Fallback: use iframe viewer
           setSlides([])
@@ -216,7 +217,7 @@ export default function PresentationPage() {
         </div>
 
         <div
-          className="flex-1 flex items-center justify-center bg-black"
+          className="flex-1 flex items-center justify-center bg-black p-2"
           style={{
             height: isFullscreen ? "100vh" : "calc(100vh - 3rem - 3.5rem)",
             width: "100vw",
@@ -290,8 +291,8 @@ export default function PresentationPage() {
 
   return (
     <div className="fixed inset-0 bg-background z-[9999] flex flex-col">
-      <div className="flex-1 relative overflow-hidden bg-muted/20 flex items-center justify-center">
-        <div className="w-[95vw] h-[95vh]">
+      <div className="flex-1 relative overflow-hidden bg-muted/20 flex items-center justify-center p-[2.5vw]">
+        <div className="w-full h-full">
           <iframe
             src={googleViewerUrl}
             className="w-full h-full border-0 rounded-lg shadow-2xl bg-white"
