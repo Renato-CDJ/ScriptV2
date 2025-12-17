@@ -13,7 +13,6 @@ import {
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
-import { PPTSlideViewer } from "@/components/ppt-slide-viewer"
 import type { Presentation } from "@/lib/types"
 import { BookOpen, Play, PresentationIcon, CheckCircle2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
@@ -40,9 +39,6 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const [pptFiles, setPptFiles] = useState<PPTFile[]>([])
   const [loadingFiles, setLoadingFiles] = useState(true)
   const [readPPTFiles, setReadPPTFiles] = useState<Set<string>>(new Set())
-
-  const [selectedPPTFile, setSelectedPPTFile] = useState<PPTFile | null>(null)
-  const [showPPTViewer, setShowPPTViewer] = useState(false)
 
   const loadData = useCallback(() => {
     if (user) {
@@ -109,14 +105,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   }
 
   const handleViewPPT = (file: PPTFile) => {
-    setSelectedPPTFile(file)
-    setShowPPTViewer(true)
-  }
-
-  const handleClosePPTViewer = () => {
-    setShowPPTViewer(false)
-    setSelectedPPTFile(null)
-    loadData()
+    router.push(`/presentation/${encodeURIComponent(file.name)}`)
   }
 
   return (
@@ -242,16 +231,6 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
 
       {selectedPresentation && (
         <PresentationViewer presentation={selectedPresentation} isOpen={showViewer} onClose={handleCloseViewer} />
-      )}
-
-      {selectedPPTFile && (
-        <PPTSlideViewer
-          filename={selectedPPTFile.name}
-          displayName={selectedPPTFile.displayName}
-          isOpen={showPPTViewer}
-          onClose={handleClosePPTViewer}
-          alreadyRead={readPPTFiles.has(selectedPPTFile.name)}
-        />
       )}
     </>
   )

@@ -28,6 +28,7 @@ export default function PresentationPage() {
         const baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
         const slideUrls: string[] = []
 
+        // Try to load up to 100 slides
         for (let i = 1; i <= 100; i++) {
           const paddedNum = String(i).padStart(3, "0")
           const slideUrl = `/presentations/slides/${baseFilename}/slide-${paddedNum}.png`
@@ -37,7 +38,15 @@ export default function PresentationPage() {
             if (response.ok) {
               slideUrls.push(slideUrl)
             } else {
-              break
+              // Try alternative naming: 001.png, 002.png
+              const altUrl = `/presentations/slides/${baseFilename}/${paddedNum}.png`
+              const altResponse = await fetch(altUrl, { method: "HEAD" })
+              if (altResponse.ok) {
+                slideUrls.push(altUrl)
+              } else {
+                // No more slides found
+                break
+              }
             }
           } catch {
             break
@@ -45,15 +54,13 @@ export default function PresentationPage() {
         }
 
         if (slideUrls.length > 0) {
-          console.log("[v0] Loaded slides:", slideUrls.length)
           setSlides(slideUrls)
-          setCurrentSlide(0)
         } else {
-          console.log("[v0] No slides found, using fallback viewer")
+          // Fallback: use iframe viewer
           setSlides([])
         }
       } catch (error) {
-        console.error("[v0] Error loading slides:", error)
+        console.error("Error loading slides:", error)
         setSlides([])
       } finally {
         setIsLoading(false)
@@ -86,12 +93,20 @@ export default function PresentationPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
         case "ArrowLeft":
+        case "PageUp":
           setCurrentSlide((prev) => Math.max(0, prev - 1))
           break
         case "ArrowRight":
+        case "PageDown":
         case " ":
           e.preventDefault()
           setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1))
+          break
+        case "Home":
+          setCurrentSlide(0)
+          break
+        case "End":
+          setCurrentSlide(slides.length - 1)
           break
         case "f":
         case "F":
@@ -121,6 +136,11 @@ export default function PresentationPage() {
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
   }, [])
 
+  const presentationUrl = `/presentations/${decodeURIComponent(filename)}`
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
+    typeof window !== "undefined" ? window.location.origin + presentationUrl : presentationUrl,
+  )}&embedded=true`
+
   const handleMarkAsRead = useCallback(() => {
     if (user && filename && !isMarkedAsRead) {
       const decodedFilename = decodeURIComponent(filename)
@@ -135,31 +155,30 @@ export default function PresentationPage() {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center">
+      <div className="fixed inset-0 bg-background z-[9999] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-white/70">Carregando apresentação...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando apresentação...</p>
         </div>
       </div>
     )
   }
 
   if (slides.length > 0) {
-    const isLastSlide = currentSlide === slides.length - 1
-
     return (
       <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
-        <div className="h-14 bg-black/95 backdrop-blur flex items-center justify-between px-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
+        {/* Header */}
+        <div className="h-14 bg-black/80 backdrop-blur flex items-center justify-between px-4 border-b border-white/10">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-white/10">
-              <X className="h-4 w-4 mr-1" />
+              <X className="h-4 w-4 mr-2" />
               Fechar
             </Button>
             <div className="text-sm font-medium text-white/90 truncate max-w-[300px]">
               {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
             </div>
             {isMarkedAsRead && (
-              <Badge className="bg-green-600 text-white text-xs">
+              <Badge className="bg-green-600 hover:bg-green-700 text-white">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Lido
               </Badge>
@@ -168,99 +187,126 @@ export default function PresentationPage() {
 
           <div className="flex items-center gap-3">
             <span className="text-sm text-white/80">
-              Slide {currentSlide + 1} / {slides.length}
+              Slide {currentSlide + 1} de {slides.length}
             </span>
+            {currentSlide === slides.length - 1 && !isMarkedAsRead && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleMarkAsRead}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Marcar como Lido
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="text-white hover:bg-white/10">
               {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-              <span className="ml-2 hidden sm:inline">Tela Cheia</span>
             </Button>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center bg-black overflow-hidden">
-          <div
-            className="relative"
-            style={{
-              width: isFullscreen ? "100vw" : "95vw",
-              height: isFullscreen ? "100vh" : "calc(95vh - 7rem)",
-            }}
-          >
+        {/* Slide display - 95% of screen */}
+        <div className="flex-1 flex items-center justify-center p-4" style={{ height: "calc(95vh - 3.5rem - 4rem)" }}>
+          <div className="relative w-full h-full flex items-center justify-center">
             <Image
               src={slides[currentSlide] || "/placeholder.svg"}
               alt={`Slide ${currentSlide + 1}`}
               fill
               className="object-contain"
-              priority
-              sizes="100vw"
+              priority={currentSlide < 3}
+              sizes="95vw"
             />
           </div>
         </div>
 
-        <div className="h-16 bg-black/95 backdrop-blur flex items-center justify-center gap-4 px-4 border-t border-white/10">
+        {/* Navigation controls */}
+        <div className="h-16 bg-black/80 backdrop-blur flex items-center justify-center gap-4 px-4 border-t border-white/10">
           <Button
             variant="outline"
-            size="default"
+            size="lg"
             onClick={() => setCurrentSlide((prev) => Math.max(0, prev - 1))}
             disabled={currentSlide === 0}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20 disabled:opacity-30"
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
           >
-            <ChevronLeft className="h-5 w-5 mr-1" />
+            <ChevronLeft className="h-5 w-5 mr-2" />
             Anterior
           </Button>
 
-          <div className="text-sm font-medium text-white px-4 min-w-[100px] text-center">
+          <div className="text-sm font-medium text-white px-4 min-w-[120px] text-center">
             {currentSlide + 1} / {slides.length}
           </div>
 
           <Button
             variant="outline"
-            size="default"
+            size="lg"
             onClick={() => setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1))}
-            disabled={isLastSlide}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20 disabled:opacity-30"
+            disabled={currentSlide === slides.length - 1}
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
           >
             Próximo
-            <ChevronRight className="h-5 w-5 ml-1" />
+            <ChevronRight className="h-5 w-5 ml-2" />
           </Button>
+        </div>
 
-          {isLastSlide && !isMarkedAsRead && (
-            <Button
-              variant="default"
-              size="default"
-              onClick={handleMarkAsRead}
-              className="bg-green-600 hover:bg-green-700 text-white ml-4"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Marcar como Lido
-            </Button>
-          )}
+        {/* Keyboard shortcuts hint */}
+        <div className="absolute bottom-20 right-4 text-xs text-white/60 bg-black/60 backdrop-blur px-3 py-2 rounded-md border border-white/10">
+          ← → Navegar • Space Próximo • F Tela cheia • ESC Sair
         </div>
       </div>
     )
   }
 
-  const presentationUrl = `/presentations/${decodeURIComponent(filename)}`
-  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
-    typeof window !== "undefined" ? window.location.origin + presentationUrl : presentationUrl,
-  )}&embedded=true`
-
   return (
-    <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
-      <div className="h-14 bg-black/95 backdrop-blur flex items-center justify-between px-4 border-b border-white/10">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-white/10">
-          <X className="h-4 w-4 mr-1" />
-          Fechar
-        </Button>
-        <div className="text-sm font-medium text-white/90">{decodeURIComponent(filename)}</div>
+    <div className="fixed inset-0 bg-background z-[9999] flex flex-col">
+      <div className="h-14 border-b flex items-center justify-between px-4 bg-background/95 backdrop-blur">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <X className="h-4 w-4 mr-2" />
+            Fechar
+          </Button>
+          <div className="text-sm font-medium truncate max-w-[300px]">
+            {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
+          </div>
+          {isMarkedAsRead && (
+            <Badge className="bg-green-600 hover:bg-green-700 text-white">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Lido
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!isMarkedAsRead && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleMarkAsRead}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Marcar como Lido
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={toggleFullscreen}>
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-8">
-        <iframe
-          src={googleViewerUrl}
-          className="w-[95%] h-[95%] border-0 rounded-lg shadow-2xl bg-white"
-          title="Presentation Viewer"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-        />
+      <div className="flex-1 relative overflow-hidden bg-muted/20 flex items-center justify-center p-8">
+        <div className="w-full h-full max-w-[95vw] max-h-[90vh]">
+          <iframe
+            src={googleViewerUrl}
+            className="w-full h-full border-0 rounded-lg shadow-2xl bg-white"
+            title="Presentation Viewer"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+          />
+        </div>
+      </div>
+
+      <div className="absolute bottom-4 right-4 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-2 rounded-md border">
+        Para navegação por slides individuais, converta o PPT em imagens
       </div>
     </div>
   )
