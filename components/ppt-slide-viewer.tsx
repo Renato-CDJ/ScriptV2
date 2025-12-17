@@ -30,10 +30,14 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
     const slidesList: string[] = []
     let slideNumber = 1
 
+    const folderName = filename.replace(/\.(pptx?|ppt)$/i, "")
+
+    console.log("[v0] Loading slides from folder:", folderName)
+
     // Try loading slides until we get a 404
     while (true) {
       const paddedNumber = slideNumber.toString().padStart(3, "0")
-      const slidePath = `/presentations/slides/${filename}/slide-${paddedNumber}.png`
+      const slidePath = `/presentations/slides/${folderName}/slide-${paddedNumber}.png`
 
       try {
         const response = await fetch(slidePath, { method: "HEAD" })
@@ -48,6 +52,7 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
       if (slideNumber > 1000) break
     }
 
+    console.log("[v0] Loaded slides:", slidesList.length)
     setSlides(slidesList)
     setLoading(false)
   }, [filename])
@@ -124,6 +129,7 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
   }
 
   if (slides.length === 0) {
+    const folderName = filename.replace(/\.(pptx?|ppt)$/i, "")
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-[95vw] h-[95vh] flex items-center justify-center">
@@ -131,7 +137,7 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
             <p className="text-lg font-semibold">Slides não encontrados</p>
             <p className="text-muted-foreground">
               Os slides para esta apresentação não estão disponíveis em{" "}
-              <code className="bg-muted px-2 py-1 rounded">/presentations/slides/{filename}/</code>
+              <code className="bg-muted px-2 py-1 rounded">/presentations/slides/{folderName}/</code>
             </p>
             <Button onClick={onClose} className="mt-4">
               Fechar
@@ -207,6 +213,17 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
               <Minimize2 className="h-4 w-4 mr-1" />
               Sair
             </Button>
+            {isLastSlide && (
+              <Button
+                onClick={handleMarkAsRead}
+                disabled={markedAsRead}
+                size="sm"
+                className={`gap-2 ${markedAsRead ? "bg-green-600 hover:bg-green-700" : "bg-orange-500 hover:bg-orange-600"}`}
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {markedAsRead ? "Lido" : "Marcar como Lido"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
