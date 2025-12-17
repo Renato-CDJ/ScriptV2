@@ -31,11 +31,11 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
     const slidesList: string[] = []
 
     console.log("[v0] Loading slides from folder:", filename)
-    console.log("[v0] Full path will be: /presentations/slides/" + filename + "/")
+    console.log("[v0] Full API path will be: /api/presentations/slides/" + encodeURIComponent(filename) + "/")
 
     for (let slideNumber = 1; slideNumber <= 200; slideNumber++) {
       const paddedNumber = slideNumber.toString().padStart(3, "0")
-      const slidePath = `/presentations/slides/${filename}/slide-${paddedNumber}.png`
+      const slidePath = `/api/presentations/slides/${encodeURIComponent(filename)}/slide-${paddedNumber}.png`
 
       if (slideNumber <= 3) {
         console.log(`[v0] Attempting to load slide ${slideNumber}:`, slidePath)
@@ -161,7 +161,7 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
             <p className="text-lg font-semibold">Slides não encontrados</p>
             <p className="text-muted-foreground">
               Os slides para esta apresentação não estão disponíveis em{" "}
-              <code className="bg-muted px-2 py-1 rounded">/presentations/slides/{filename}/</code>
+              <code className="bg-muted px-2 py-1 rounded">public/presentations/slides/{filename}/</code>
             </p>
             <p className="text-sm text-muted-foreground">
               Certifique-se de que os arquivos estão nomeados como: slide-001.png, slide-002.png, etc.
