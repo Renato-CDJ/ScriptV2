@@ -6,11 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { getActivePresentationsForOperator, getPresentationProgressByOperator } from "@/lib/store"
+import {
+  getActivePresentationsForOperator,
+  getPresentationProgressByOperator,
+  getPPTFileProgressByOperator,
+} from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
 import type { Presentation } from "@/lib/types"
-import { BookOpen, Play, PresentationIcon } from "lucide-react"
+import { BookOpen, Play, PresentationIcon, CheckCircle2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
 interface OperatorPresentationsModalProps {
@@ -34,6 +38,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [pptFiles, setPptFiles] = useState<PPTFile[]>([])
   const [loadingFiles, setLoadingFiles] = useState(true)
+  const [readPPTFiles, setReadPPTFiles] = useState<Set<string>>(new Set())
 
   const loadData = useCallback(() => {
     if (user) {
@@ -43,6 +48,10 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
       const progress = getPresentationProgressByOperator(user.id)
       const completed = new Set(progress.filter((p) => p.marked_as_seen).map((p) => p.presentationId))
       setCompletedIds(completed)
+
+      const pptProgress = getPPTFileProgressByOperator(user.id)
+      const readFiles = new Set(pptProgress.map((p) => p.filename))
+      setReadPPTFiles(readFiles)
     }
   }, [user])
 
@@ -118,31 +127,41 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
               <>
                 <div className="mb-6 mt-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {pptFiles.map((file) => (
-                      <Card
-                        key={file.name}
-                        className="overflow-hidden hover:shadow-lg hover:border-orange-500/50 transition-all duration-200 group"
-                      >
-                        <CardHeader className="pb-4 bg-gradient-to-br from-background to-muted/30">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 rounded-lg bg-orange-500/10 group-hover:bg-orange-500/20 transition-colors">
-                              <PresentationIcon className="h-5 w-5 text-orange-500" />
+                    {pptFiles.map((file) => {
+                      const isRead = readPPTFiles.has(file.name)
+
+                      return (
+                        <Card
+                          key={file.name}
+                          className="overflow-hidden hover:shadow-lg hover:border-orange-500/50 transition-all duration-200 group"
+                        >
+                          <CardHeader className="pb-4 bg-gradient-to-br from-background to-muted/30">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 rounded-lg bg-orange-500/10 group-hover:bg-orange-500/20 transition-colors">
+                                <PresentationIcon className="h-5 w-5 text-orange-500" />
+                              </div>
+                              <CardTitle className="text-lg flex-1">{file.displayName}</CardTitle>
+                              {isRead && (
+                                <Badge className="bg-green-600 hover:bg-green-700 text-white text-xs">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Lido
+                                </Badge>
+                              )}
                             </div>
-                            <CardTitle className="text-lg flex-1">{file.displayName}</CardTitle>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-4">
-                          <Button
-                            onClick={() => handleViewPPT(file)}
-                            className="w-full bg-orange-500 hover:bg-orange-600 text-white dark:bg-primary dark:hover:bg-primary/90"
-                            size="lg"
-                          >
-                            <Play className="h-4 w-4 mr-2" />
-                            Iniciar Apresentação
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardHeader>
+                          <CardContent className="pt-4">
+                            <Button
+                              onClick={() => handleViewPPT(file)}
+                              className="w-full bg-orange-500 hover:bg-orange-600 text-white dark:bg-primary dark:hover:bg-primary/90"
+                              size="lg"
+                            >
+                              <Play className="h-4 w-4 mr-2" />
+                              Iniciar Apresentação
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
                   </div>
                 </div>
                 {presentations.length > 0 && <Separator className="my-6" />}

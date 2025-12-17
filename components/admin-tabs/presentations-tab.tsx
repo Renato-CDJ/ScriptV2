@@ -27,6 +27,8 @@ import {
   getAllUsers,
   getPresentationProgressByPresentation,
   exportPresentationReport,
+  getPPTFileProgressByFilename,
+  exportPPTFileReport,
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Presentation, PresentationSlide } from "@/lib/types"
@@ -55,15 +57,15 @@ export function PresentationsTab() {
   const [editingPresentation, setEditingPresentation] = useState<Presentation | null>(null)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [showImagePreview, setShowImagePreview] = useState(false)
-
-  // Form state
+  const [pptFiles, setPptFiles] = useState<Array<{ name: string; displayName: string }>>([])
+  const [expandedPPTIds, setExpandedPPTIds] = useState<Set<string>>(new Set())
+  const [operatorSearch, setOperatorSearch] = useState("") // operatorSearch is declared here
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [slides, setSlides] = useState<PresentationSlide[]>([])
   const [isActive, setIsActive] = useState(true)
   const [recipients, setRecipients] = useState<string[]>([])
   const [sendToAll, setSendToAll] = useState(true)
-  const [operatorSearch, setOperatorSearch] = useState("")
 
   const loadData = useCallback(() => {
     setPresentations(getPresentations())
@@ -71,9 +73,21 @@ export function PresentationsTab() {
     setOperators(allUsers.filter((u) => u.role === "operator").map((u) => ({ id: u.id, fullName: u.fullName })))
   }, [])
 
+  const loadPPTFiles = useCallback(async () => {
+    try {
+      const response = await fetch("/api/presentations/files")
+      const data = await response.json()
+      setPptFiles(data.files || [])
+    } catch (error) {
+      console.error("Error loading PPT files:", error)
+      setPptFiles([])
+    }
+  }, [])
+
   useEffect(() => {
     loadData()
-  }, [loadData])
+    loadPPTFiles()
+  }, [loadData, loadPPTFiles])
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
@@ -82,6 +96,7 @@ export function PresentationsTab() {
       clearTimeout(timeoutId)
       timeoutId = setTimeout(() => {
         loadData()
+        loadPPTFiles()
       }, 200)
     }
 
@@ -90,7 +105,7 @@ export function PresentationsTab() {
       window.removeEventListener("store-updated", handleStoreUpdate)
       clearTimeout(timeoutId)
     }
-  }, [loadData])
+  }, [loadData, loadPPTFiles])
 
   const filteredOperators = useMemo(() => {
     if (!operatorSearch.trim()) return operators
@@ -305,6 +320,44 @@ export function PresentationsTab() {
     return presentation.slides.some(
       (slide) => slide.imageData === "[IMAGE_STORED_LOCALLY]" || (!slide.imageData && !slide.imageUrl),
     )
+  }
+
+  const handleExportPPTReport = (filename: string) => {
+    const csvContent = exportPPTFileReport(filename)
+    if (!csvContent) {
+      toast({
+        title: "Nenhum dado disponível",
+        description: "Nenhum operador marcou este arquivo como lido ainda.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    const safeFilename = filename.replace(/[^a-z0-9]/gi, "_")
+    link.setAttribute("download", `treinamento_${safeFilename}_${Date.now()}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({
+      title: "Relatório exportado",
+      description: "O relatório foi exportado com sucesso.",
+    })
+  }
+
+  const togglePPTExpanded = (filename: string) => {
+    setExpandedPPTIds((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(filename)) {
+        newSet.delete(filename)
+      } else {
+        newSet.add(filename)
+      }
+      return newSet
+    })
   }
 
   return (
@@ -541,6 +594,92 @@ export function PresentationsTab() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {pptFiles.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xl font-semibold">Arquivos PowerPoint</h3>
+            <Badge variant="secondary">{pptFiles.length}</Badge>
+          </div>
+
+          <div className="grid gap-4">
+            {pptFiles.map((file) => {
+              const isExpanded = expandedPPTIds.has(file.name)
+              const progressList = getPPTFileProgressByFilename(file.name)
+              const readCount = progressList.length
+
+              return (
+                <Card key={file.name} className="overflow-hidden">
+                  <CardHeader
+                    className="cursor-pointer hover:bg-muted/50 pb-3"
+                    onClick={() => togglePPTExpanded(file.name)}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        {isExpanded ? (
+                          <ChevronDown className="h-5 w-5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base break-words">{file.displayName}</CardTitle>
+                          <CardDescription className="mt-1 break-words">Arquivo PowerPoint</CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          <EyeIcon className="h-3 w-3 mr-1" />
+                          {readCount} lido{readCount !== 1 ? "s" : ""}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  {isExpanded && (
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleExportPPTReport(file.name)}
+                          disabled={readCount === 0}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Exportar Relatório Excel
+                        </Button>
+                      </div>
+
+                      {readCount > 0 ? (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Operadores que marcaram como lido:</p>
+                          <div className="border rounded-lg p-3 bg-muted/30 max-h-48 overflow-y-auto">
+                            <div className="space-y-1">
+                              {progressList.map((progress) => (
+                                <div key={progress.id} className="text-sm flex justify-between items-center py-1">
+                                  <span className="font-medium">{progress.operatorName}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(progress.markedAsReadAt).toLocaleString("pt-BR")}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Nenhum operador marcou este treinamento como lido ainda.
+                        </p>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              )
+            })}
+          </div>
+
+          <Separator className="my-6" />
+        </div>
+      )}
 
       <div className="grid gap-4">
         {presentations.length === 0 ? (

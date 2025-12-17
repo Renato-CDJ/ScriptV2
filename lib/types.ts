@@ -249,6 +249,14 @@ export interface PresentationProgress {
   completion_date?: Date
 }
 
+export interface PPTFileProgress {
+  id: string
+  filename: string // The PPT filename
+  operatorId: string
+  operatorName: string
+  markedAsReadAt: Date
+}
+
 export interface OperatorRanking {
   operatorId: string
   operatorName: string

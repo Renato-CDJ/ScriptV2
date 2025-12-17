@@ -22,6 +22,7 @@ import type {
   Presentation, // Imported for presentations
   PresentationProgress, // Imported for presentation progress
   Contract, // Imported for contracts
+  PPTFileProgress, // Imported for PPT file progress
 } from "./types"
 import { db, auth } from "./firebase" // Updated import for auth
 import { doc, setDoc, onSnapshot } from "firebase/firestore"
@@ -922,6 +923,7 @@ export const STORAGE_KEYS = {
   CHAT_SETTINGS: "callcenter_chat_settings",
   PRESENTATIONS: "callcenter_presentations",
   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
+  PPT_FILE_PROGRESS: "ppt_file_progress",
   CONTRACTS: "contracts", // Added storage key for contracts
 } as const
 
@@ -1101,6 +1103,11 @@ export function initializeMockData() {
   // Initialize mock data for contracts
   if (!localStorage.getItem(STORAGE_KEYS.CONTRACTS)) {
     localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify([]))
+  }
+
+  // Initialize mock data for PPT file progress
+  if (!localStorage.getItem(STORAGE_KEYS.PPT_FILE_PROGRESS)) {
+    localStorage.setItem(STORAGE_KEYS.PPT_FILE_PROGRESS, JSON.stringify([]))
   }
 
   cleanupOldSessions()
@@ -2630,4 +2637,56 @@ function scheduleNotification() {
       window.dispatchEvent(new CustomEvent("store-updated"))
     }
   }, 100) // Small delay to batch multiple updates
+}
+
+export function getPPTFileProgress(): PPTFileProgress[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PPT_FILE_PROGRESS) || "[]")
+}
+
+export function getPPTFileProgressByOperator(operatorId: string): PPTFileProgress[] {
+  return getPPTFileProgress().filter((p) => p.operatorId === operatorId)
+}
+
+export function getPPTFileProgressByFilename(filename: string): PPTFileProgress[] {
+  return getPPTFileProgress().filter((p) => p.filename === filename)
+}
+
+export function markPPTFileAsRead(filename: string, operatorId: string, operatorName: string) {
+  if (typeof window === "undefined") return
+
+  const progress = getPPTFileProgress()
+  const existing = progress.find((p) => p.filename === filename && p.operatorId === operatorId)
+
+  if (!existing) {
+    const newProgress: PPTFileProgress = {
+      id: `ppt-prog-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      filename,
+      operatorId,
+      operatorName,
+      markedAsReadAt: new Date(),
+    }
+    progress.push(newProgress)
+    debouncedSave(STORAGE_KEYS.PPT_FILE_PROGRESS, progress)
+    notifyUpdateImmediate()
+  }
+}
+
+export function exportPPTFileReport(filename: string): string {
+  const progressList = getPPTFileProgressByFilename(filename)
+
+  if (progressList.length === 0) {
+    return ""
+  }
+
+  // Create CSV header
+  let csv = "Nome,Login,Data de Conclusão\n"
+
+  // Add each operator's data
+  progressList.forEach((progress) => {
+    const date = new Date(progress.markedAsReadAt).toLocaleString("pt-BR")
+    csv += `"${progress.operatorName}","${progress.operatorId}","${date}"\n`
+  })
+
+  return "data:text/csv;charset=utf-8," + csv
 }
