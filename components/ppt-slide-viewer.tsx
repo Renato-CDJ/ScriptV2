@@ -30,34 +30,42 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
     setLoading(true)
     const slidesList: string[] = []
 
-    // Remove file extension to get folder name
-    const folderName = filename.replace(/\.(pptx?|ppt)$/i, "")
+    console.log("[v0] Loading slides from folder:", filename)
+    console.log("[v0] Full path will be: /presentations/slides/" + filename + "/")
 
-    console.log("[v0] Loading slides from folder:", folderName)
-
-    // Try loading up to 200 slides
     for (let slideNumber = 1; slideNumber <= 200; slideNumber++) {
       const paddedNumber = slideNumber.toString().padStart(3, "0")
-      const slidePath = `/presentations/slides/${folderName}/slide-${paddedNumber}.png`
+      const slidePath = `/presentations/slides/${filename}/slide-${paddedNumber}.png`
 
-      // Create a promise to test if image loads
+      if (slideNumber <= 3) {
+        console.log(`[v0] Attempting to load slide ${slideNumber}:`, slidePath)
+      }
+
       const imageExists = await new Promise<boolean>((resolve) => {
         const img = new Image()
-        img.onload = () => resolve(true)
-        img.onerror = () => resolve(false)
+        img.onload = () => {
+          if (slideNumber <= 3) {
+            console.log(`[v0] Successfully loaded:`, slidePath)
+          }
+          resolve(true)
+        }
+        img.onerror = () => {
+          if (slideNumber <= 3) {
+            console.log(`[v0] Failed to load:`, slidePath)
+          }
+          resolve(false)
+        }
         img.src = slidePath
       })
 
       if (imageExists) {
         slidesList.push(slidePath)
-        console.log("[v0] Found slide:", slidePath)
       } else {
-        // If we don't find a slide, assume no more slides exist
         break
       }
     }
 
-    console.log("[v0] Total slides loaded:", slidesList.length)
+    console.log("[v0] Loaded slides:", slidesList.length)
     setSlides(slidesList)
     setLoading(false)
   }, [filename])
@@ -140,7 +148,6 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
   }
 
   if (slides.length === 0) {
-    const folderName = filename.replace(/\.(pptx?|ppt)$/i, "")
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-[95vw] h-[95vh] flex items-center justify-center">
@@ -154,7 +161,7 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
             <p className="text-lg font-semibold">Slides não encontrados</p>
             <p className="text-muted-foreground">
               Os slides para esta apresentação não estão disponíveis em{" "}
-              <code className="bg-muted px-2 py-1 rounded">/presentations/slides/{folderName}/</code>
+              <code className="bg-muted px-2 py-1 rounded">/presentations/slides/{filename}/</code>
             </p>
             <p className="text-sm text-muted-foreground">
               Certifique-se de que os arquivos estão nomeados como: slide-001.png, slide-002.png, etc.
