@@ -246,7 +246,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
 
       {selectedPPTFile && (
         <PPTSlideViewer
-          filename={selectedPPTFile.displayName}
+          filename={selectedPPTFile.name}
           displayName={selectedPPTFile.displayName}
           isOpen={showPPTViewer}
           onClose={handleClosePPTViewer}

@@ -2,8 +2,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { markPPTFileAsRead } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, CheckCircle2, Loader2 } from "lucide-react"
@@ -29,43 +28,26 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
   const loadSlides = useCallback(async () => {
     setLoading(true)
     const slidesList: string[] = []
+    let slideNumber = 1
 
-    console.log("[v0] Loading slides from folder:", filename)
-    console.log("[v0] Full API path will be: /api/presentations/slides/" + encodeURIComponent(filename) + "/")
-
-    for (let slideNumber = 1; slideNumber <= 200; slideNumber++) {
+    // Try loading slides until we get a 404
+    while (true) {
       const paddedNumber = slideNumber.toString().padStart(3, "0")
-      const slidePath = `/api/presentations/slides/${encodeURIComponent(filename)}/slide-${paddedNumber}.png`
+      const slidePath = `/presentations/slides/${filename}/slide-${paddedNumber}.png`
 
-      if (slideNumber <= 3) {
-        console.log(`[v0] Attempting to load slide ${slideNumber}:`, slidePath)
-      }
-
-      const imageExists = await new Promise<boolean>((resolve) => {
-        const img = new Image()
-        img.onload = () => {
-          if (slideNumber <= 3) {
-            console.log(`[v0] Successfully loaded:`, slidePath)
-          }
-          resolve(true)
-        }
-        img.onerror = () => {
-          if (slideNumber <= 3) {
-            console.log(`[v0] Failed to load:`, slidePath)
-          }
-          resolve(false)
-        }
-        img.src = slidePath
-      })
-
-      if (imageExists) {
+      try {
+        const response = await fetch(slidePath, { method: "HEAD" })
+        if (!response.ok) break
         slidesList.push(slidePath)
-      } else {
+        slideNumber++
+      } catch {
         break
       }
+
+      // Safety limit to prevent infinite loop
+      if (slideNumber > 1000) break
     }
 
-    console.log("[v0] Loaded slides:", slidesList.length)
     setSlides(slidesList)
     setLoading(false)
   }, [filename])
@@ -132,12 +114,6 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-[95vw] h-[95vh] flex items-center justify-center">
-          <DialogHeader>
-            <VisuallyHidden>
-              <DialogTitle>Carregando Apresentação</DialogTitle>
-              <DialogDescription>Por favor, aguarde enquanto a apresentação é carregada.</DialogDescription>
-            </VisuallyHidden>
-          </DialogHeader>
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
             <p className="text-muted-foreground">Carregando apresentação...</p>
@@ -151,22 +127,13 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-[95vw] h-[95vh] flex items-center justify-center">
-          <DialogHeader>
-            <VisuallyHidden>
-              <DialogTitle>Slides Não Encontrados</DialogTitle>
-              <DialogDescription>Os slides para esta apresentação não foram encontrados.</DialogDescription>
-            </VisuallyHidden>
-          </DialogHeader>
           <div className="flex flex-col items-center gap-4 text-center">
             <p className="text-lg font-semibold">Slides não encontrados</p>
             <p className="text-muted-foreground">
               Os slides para esta apresentação não estão disponíveis em{" "}
-              <code className="bg-muted px-2 py-1 rounded">public/presentations/slides/{filename}/</code>
+              <code className="bg-muted px-2 py-1 rounded">/presentations/slides/{filename}/</code>
             </p>
-            <p className="text-sm text-muted-foreground">
-              Certifique-se de que os arquivos estão nomeados como: slide-001.png, slide-002.png, etc.
-            </p>
-            <Button onClick={onClose} className="mt-4 bg-orange-500 hover:bg-orange-600">
+            <Button onClick={onClose} className="mt-4">
               Fechar
             </Button>
           </div>
@@ -240,17 +207,6 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
               <Minimize2 className="h-4 w-4 mr-1" />
               Sair
             </Button>
-            {isLastSlide && (
-              <Button
-                onClick={handleMarkAsRead}
-                disabled={markedAsRead}
-                size="sm"
-                className={`gap-2 ${markedAsRead ? "bg-green-600 hover:bg-green-700" : "bg-orange-500 hover:bg-orange-600"}`}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {markedAsRead ? "Lido" : "Marcar como Lido"}
-              </Button>
-            )}
           </div>
         </div>
       </div>
@@ -262,7 +218,6 @@ export function PPTSlideViewer({ filename, displayName, isOpen, onClose, already
       <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 flex flex-col">
         <DialogHeader className="border-b px-6 py-4 flex-shrink-0">
           <DialogTitle className="text-2xl">{displayName}</DialogTitle>
-          <DialogDescription>Navegue pelos slides usando os botões ou as teclas de seta</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 flex items-center justify-center bg-muted/20 p-8 overflow-hidden">
