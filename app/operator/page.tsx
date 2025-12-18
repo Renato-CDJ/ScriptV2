@@ -8,7 +8,7 @@ import { ScriptCard } from "@/components/script-card"
 import { AttendanceConfig } from "@/components/attendance-config"
 import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { useAuth } from "@/lib/auth-context"
-import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/store"
+import { getScriptSteps, getScriptStepById, getProductById, enableRealtimeSync } from "@/lib/store"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { useRouter } from "next/navigation"
 
@@ -30,6 +30,10 @@ const OperatorContent = memo(function OperatorContent() {
   >(undefined)
   const [showChatModal, setShowChatModal] = useState(false) // Declared showChatModal variable
 
+  useEffect(() => {
+    enableRealtimeSync()
+  }, [])
+
   const handleBackToStart = useCallback(() => {
     setIsSessionActive(false)
     setCurrentStep(null)
@@ -40,7 +44,7 @@ const OperatorContent = memo(function OperatorContent() {
     setCurrentProductId(null)
     setCurrentProductName("")
     setCurrentProductCategory(undefined)
-    setShowChatModal(false) // Reset showChatModal on back to start
+    setShowChatModal(false)
   }, [])
 
   useEffect(() => {
@@ -79,7 +83,7 @@ const OperatorContent = memo(function OperatorContent() {
             setCurrentStep(updatedStep)
           }
           isUpdating = false
-        }, 200) // Increased debounce time
+        }, 100) // Increased debounce time
       }
     }
 

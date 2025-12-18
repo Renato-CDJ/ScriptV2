@@ -10,7 +10,7 @@ import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
 import Image from "next/image"
-import { getAllUsers } from "@/lib/store"
+import { getAllUsersAsync } from "@/lib/store"
 import type { LoginSession } from "@/lib/types"
 
 export const LoginForm = memo(function LoginForm() {
@@ -44,7 +44,10 @@ export const LoginForm = memo(function LoginForm() {
       setIsLoading(true)
 
       try {
-        const users = getAllUsers()
+        console.log("[v0] Loading users from Firebase...")
+        const users = await getAllUsersAsync()
+        console.log("[v0] Users loaded:", users.length)
+
         const normalizedUsername = username.toLowerCase().trim()
         const user = users.find((u) => u.username.toLowerCase() === normalizedUsername)
 

@@ -22,7 +22,6 @@ import type {
   Presentation, // Imported for presentations
   PresentationProgress, // Imported for presentation progress
   Contract, // Imported for contracts
-  PPTFileProgress, // Imported for PPT file progress
 } from "./types"
 import { db, auth } from "./firebase" // Updated import for auth
 import { doc, setDoc, onSnapshot } from "firebase/firestore"
@@ -923,7 +922,6 @@ export const STORAGE_KEYS = {
   CHAT_SETTINGS: "callcenter_chat_settings",
   PRESENTATIONS: "callcenter_presentations",
   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
-  PPT_FILE_PROGRESS: "ppt_file_progress",
   CONTRACTS: "contracts", // Added storage key for contracts
 } as const
 
@@ -1103,11 +1101,6 @@ export function initializeMockData() {
   // Initialize mock data for contracts
   if (!localStorage.getItem(STORAGE_KEYS.CONTRACTS)) {
     localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify([]))
-  }
-
-  // Initialize mock data for PPT file progress
-  if (!localStorage.getItem(STORAGE_KEYS.PPT_FILE_PROGRESS)) {
-    localStorage.setItem(STORAGE_KEYS.PPT_FILE_PROGRESS, JSON.stringify([]))
   }
 
   cleanupOldSessions()
@@ -1459,6 +1452,32 @@ export function deleteProduct(id: string) {
 export function getAllUsers(): User[] {
   if (typeof window === "undefined") return []
   return JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+}
+
+export async function loadFromFirebase(key: string): Promise<unknown | null> {
+  if (typeof window === "undefined" || !db || firebaseSyncDisabled) {
+    return null
+  }
+
+  try {
+    // Dynamically import getDoc to avoid potential circular dependencies or runtime issues
+    const { getDoc } = await import("firebase/firestore")
+    const docRef = doc(db, FIREBASE_COLLECTION, key)
+    const docSnap = await getDoc(docRef)
+
+    if (docSnap.exists()) {
+      const data = docSnap.data()
+      if (data && data.data) {
+        // Update localStorage with Firebase data
+        localStorage.setItem(key, JSON.stringify(data.data))
+        return data.data
+      }
+    }
+    return null
+  } catch (error) {
+    console.error("[v0] Error loading from Firebase:", error)
+    return null
+  }
 }
 
 export function updateUser(user: User) {
@@ -2258,6 +2277,11 @@ export function createAdminUser(username: string, fullName: string, password?: s
 
     users.push(newUser)
     saveImmediately(STORAGE_KEYS.USERS, users)
+
+    if (db && !firebaseSyncDisabled) {
+      syncToFirebase(STORAGE_KEYS.USERS, users)
+    }
+
     notifyUpdateImmediate()
 
     return newUser
@@ -2639,54 +2663,15 @@ function scheduleNotification() {
   }, 100) // Small delay to batch multiple updates
 }
 
-export function getPPTFileProgress(): PPTFileProgress[] {
+export async function getAllUsersAsync(): Promise<User[]> {
   if (typeof window === "undefined") return []
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.PPT_FILE_PROGRESS) || "[]")
-}
 
-export function getPPTFileProgressByOperator(operatorId: string): PPTFileProgress[] {
-  return getPPTFileProgress().filter((p) => p.operatorId === operatorId)
-}
-
-export function getPPTFileProgressByFilename(filename: string): PPTFileProgress[] {
-  return getPPTFileProgress().filter((p) => p.filename === filename)
-}
-
-export function markPPTFileAsRead(filename: string, operatorId: string, operatorName: string) {
-  if (typeof window === "undefined") return
-
-  const progress = getPPTFileProgress()
-  const existing = progress.find((p) => p.filename === filename && p.operatorId === operatorId)
-
-  if (!existing) {
-    const newProgress: PPTFileProgress = {
-      id: `ppt-prog-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      filename,
-      operatorId,
-      operatorName,
-      markedAsReadAt: new Date(),
-    }
-    progress.push(newProgress)
-    debouncedSave(STORAGE_KEYS.PPT_FILE_PROGRESS, progress)
-    notifyUpdateImmediate()
-  }
-}
-
-export function exportPPTFileReport(filename: string): string {
-  const progressList = getPPTFileProgressByFilename(filename)
-
-  if (progressList.length === 0) {
-    return ""
+  // Try to load from Firebase first
+  const firebaseData = await loadFromFirebase(STORAGE_KEYS.USERS)
+  if (firebaseData && Array.isArray(firebaseData)) {
+    return firebaseData as User[]
   }
 
-  // Create CSV header
-  let csv = "Nome,Login,Data de Conclusão\n"
-
-  // Add each operator's data
-  progressList.forEach((progress) => {
-    const date = new Date(progress.markedAsReadAt).toLocaleString("pt-BR")
-    csv += `"${progress.operatorName}","${progress.operatorId}","${date}"\n`
-  })
-
-  return "data:text/csv;charset=utf-8," + csv
+  // Fallback to localStorage
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
 }

@@ -3,24 +3,17 @@
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Maximize, Minimize, X, CheckCircle2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Maximize, Minimize, X } from "lucide-react"
 import Image from "next/image"
-import { markPPTFileAsRead, getPPTFileProgressByOperator } from "@/lib/store"
-import { useAuth } from "@/lib/auth-context"
-import { useToast } from "@/hooks/use-toast"
 
 export default function PresentationPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
-  const { toast } = useToast()
   const filename = params.filename as string
   const [currentSlide, setCurrentSlide] = useState(0)
   const [slides, setSlides] = useState<string[]>([])
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isMarkedAsRead, setIsMarkedAsRead] = useState(false)
 
   useEffect(() => {
     const loadSlides = async () => {
@@ -69,15 +62,6 @@ export default function PresentationPage() {
 
     loadSlides()
   }, [filename])
-
-  useEffect(() => {
-    if (user && filename) {
-      const progress = getPPTFileProgressByOperator(user.id)
-      const decodedFilename = decodeURIComponent(filename)
-      const isRead = progress.some((p) => p.filename === decodedFilename)
-      setIsMarkedAsRead(isRead)
-    }
-  }, [user, filename])
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -141,18 +125,6 @@ export default function PresentationPage() {
     typeof window !== "undefined" ? window.location.origin + presentationUrl : presentationUrl,
   )}&embedded=true`
 
-  const handleMarkAsRead = useCallback(() => {
-    if (user && filename && !isMarkedAsRead) {
-      const decodedFilename = decodeURIComponent(filename)
-      markPPTFileAsRead(decodedFilename, user.id, user.fullName)
-      setIsMarkedAsRead(true)
-      toast({
-        title: "Treinamento marcado como lido",
-        description: "O treinamento foi registrado como concluído.",
-      })
-    }
-  }, [user, filename, isMarkedAsRead, toast])
-
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-background z-[9999] flex items-center justify-center">
@@ -177,29 +149,12 @@ export default function PresentationPage() {
             <div className="text-sm font-medium text-white/90 truncate max-w-[300px]">
               {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
             </div>
-            {isMarkedAsRead && (
-              <Badge className="bg-green-600 hover:bg-green-700 text-white">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Lido
-              </Badge>
-            )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-white/80">
               Slide {currentSlide + 1} de {slides.length}
             </span>
-            {currentSlide === slides.length - 1 && !isMarkedAsRead && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleMarkAsRead}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Marcar como Lido
-              </Button>
-            )}
             <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="text-white hover:bg-white/10">
               {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
             </Button>
@@ -268,30 +223,11 @@ export default function PresentationPage() {
           <div className="text-sm font-medium truncate max-w-[300px]">
             {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
           </div>
-          {isMarkedAsRead && (
-            <Badge className="bg-green-600 hover:bg-green-700 text-white">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              Lido
-            </Badge>
-          )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {!isMarkedAsRead && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleMarkAsRead}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Marcar como Lido
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={toggleFullscreen}>
-            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={toggleFullscreen}>
+          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+        </Button>
       </div>
 
       <div className="flex-1 relative overflow-hidden bg-muted/20 flex items-center justify-center p-8">
