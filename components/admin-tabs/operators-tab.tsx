@@ -46,16 +46,28 @@ export function OperatorsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const loadOperators = () => {
+    const loadOperators = async () => {
+      console.log("[v0] Loading operators from Firebase...")
+
+      // Clear session cache to force fresh load
+      sessionStorage.removeItem("firebase_users_cache")
+
       const allUsers = getAllUsers()
-      setOperators(allUsers.filter((u) => u.role === "operator"))
+      const ops = allUsers.filter((u) => u.role === "operator")
+      console.log("[v0] Loaded operators count:", ops.length)
+      console.log(
+        "[v0] Operators:",
+        ops.map((o) => o.username),
+      )
+      setOperators(ops)
     }
 
     loadOperators()
 
-    const interval = setInterval(loadOperators, 30000)
+    const interval = setInterval(loadOperators, 3000)
 
     const handleStoreUpdate = () => {
+      console.log("[v0] Store updated, reloading operators...")
       loadOperators()
     }
 
@@ -140,7 +152,8 @@ export function OperatorsTab() {
       })
     } else {
       // Check if username already exists
-      if (operators.some((op) => op.username === formData.username)) {
+      const allUsers = getAllUsers()
+      if (allUsers.some((u) => u.username === formData.username)) {
         toast({
           title: "Erro",
           description: "Este usuário já existe",
@@ -173,17 +186,23 @@ export function OperatorsTab() {
         },
       }
 
-      const allUsers = getAllUsers()
       allUsers.push(newOperator)
 
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers))
+      sessionStorage.setItem("firebase_users_cache", JSON.stringify(allUsers))
+
+      // Force immediate Firebase sync
+      console.log("[v0] Saving new operator to Firebase:", newOperator.username)
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
       // Update local state immediately
       setOperators([...operators, newOperator])
 
+      console.log("[v0] New operator created successfully")
+
       toast({
         title: "Sucesso",
-        description: "Operador adicionado com sucesso",
+        description: "Operador adicionado com sucesso. Usuário sincronizado com Firebase.",
       })
     }
 
