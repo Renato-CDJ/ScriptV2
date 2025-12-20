@@ -1698,32 +1698,24 @@ export function getAllUsers(): User[] {
 
   const data = localStorage.getItem(STORAGE_KEYS.USERS)
 
-  console.log("[v0] getAllUsers - raw data length:", data?.length || 0)
-
   if (!data) {
-    console.log("[v0] getAllUsers - no data found in localStorage")
     return []
   }
 
   try {
     const users = JSON.parse(data)
-    console.log("[v0] getAllUsers - parsed users:", users.length)
 
     // Filter out invalid users without username
     const validUsers = users.filter((u: User) => u.username && typeof u.username === "string")
 
-    console.log("[v0] getAllUsers - valid users:", validUsers.length)
-    console.log("[v0] getAllUsers - user roles:", validUsers.map((u: User) => u.role).join(", "))
-
     // If we filtered out users, save the cleaned list back
     if (validUsers.length < users.length) {
-      console.log("[v0] Cleaning up invalid users from localStorage")
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(validUsers))
     }
 
     return validUsers
   } catch (error) {
-    console.error("[v0] getAllUsers - parse error:", error)
+    console.error("[v0] Error loading users:", error)
     return []
   }
 }

@@ -49,12 +49,9 @@ export function OperatorsTab() {
 
   useEffect(() => {
     const loadOperators = async () => {
-      console.log("[v0] Loading operators from localStorage and Firebase...")
-
       const allUsers = getAllUsers()
 
       if (allUsers.length === 0) {
-        console.log("[v0] No users found, initializing with default operators")
         const allDefaultUsers = [...DEFAULT_OPERATORS, ...REGULAR_OPERATORS]
         localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allDefaultUsers))
 
@@ -71,11 +68,6 @@ export function OperatorsTab() {
       }
 
       const ops = allUsers.filter((u) => u.role === "operator")
-      console.log("[v0] Loaded operators count:", ops.length)
-      console.log(
-        "[v0] Operators:",
-        ops.map((o) => o.username),
-      )
       setOperators(ops)
     }
 
@@ -84,7 +76,6 @@ export function OperatorsTab() {
     const interval = setInterval(loadOperators, 5000)
 
     const handleStoreUpdate = () => {
-      console.log("[v0] Store updated, reloading operators...")
       loadOperators()
     }
 
@@ -207,14 +198,11 @@ export function OperatorsTab() {
 
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers))
 
-      console.log("[v0] Saving new operator to Firebase:", newOperator.username)
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
       setOperators([...operators, newOperator])
 
       window.dispatchEvent(new Event("store-updated"))
-
-      console.log("[v0] New operator created successfully")
 
       toast({
         title: "Sucesso",
@@ -311,8 +299,6 @@ export function OperatorsTab() {
       let skippedCount = 0
       const errors: string[] = []
 
-      console.log("[v0] Starting import, existing users:", allUsers.length)
-
       rows.forEach((row, index) => {
         const fullName = row[nameColumnIndex]?.trim()
         const username = row[usernameColumnIndex]?.trim()
@@ -358,11 +344,9 @@ export function OperatorsTab() {
 
         allUsers.push(newOperator)
         importedCount++
-        console.log("[v0] Imported operator:", username)
       })
 
       // Save all users immediately to localStorage
-      console.log("[v0] Saving", allUsers.length, "users to localStorage")
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers))
 
       // Force save to ensure persistence
@@ -370,8 +354,6 @@ export function OperatorsTab() {
 
       // Trigger store update event
       window.dispatchEvent(new Event("store-updated"))
-
-      console.log("[v0] Import complete, total users:", allUsers.length)
 
       // Reload operators list
       const ops = allUsers.filter((u) => u.role === "operator")
