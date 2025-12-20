@@ -1696,25 +1696,24 @@ export function deleteProduct(id: string) {
 export function getAllUsers(): User[] {
   if (typeof window === "undefined") return []
 
-  // Try to load from Firebase cache first
-  const cachedData = sessionStorage.getItem("firebase_users_cache")
-  if (cachedData) {
-    try {
-      const users = JSON.parse(cachedData)
-      // Filter out invalid users
-      return users.filter((u: User) => u.username && typeof u.username === "string")
-    } catch {
-      // If parse fails, fall through to localStorage
-    }
-  }
-
   const data = localStorage.getItem(STORAGE_KEYS.USERS)
-  if (!data) return []
+
+  console.log("[v0] getAllUsers - raw data length:", data?.length || 0)
+
+  if (!data) {
+    console.log("[v0] getAllUsers - no data found in localStorage")
+    return []
+  }
 
   try {
     const users = JSON.parse(data)
+    console.log("[v0] getAllUsers - parsed users:", users.length)
+
     // Filter out invalid users without username
     const validUsers = users.filter((u: User) => u.username && typeof u.username === "string")
+
+    console.log("[v0] getAllUsers - valid users:", validUsers.length)
+    console.log("[v0] getAllUsers - user roles:", validUsers.map((u: User) => u.role).join(", "))
 
     // If we filtered out users, save the cleaned list back
     if (validUsers.length < users.length) {
@@ -1723,7 +1722,8 @@ export function getAllUsers(): User[] {
     }
 
     return validUsers
-  } catch {
+  } catch (error) {
+    console.error("[v0] getAllUsers - parse error:", error)
     return []
   }
 }

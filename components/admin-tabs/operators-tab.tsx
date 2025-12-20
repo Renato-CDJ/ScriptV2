@@ -306,11 +306,12 @@ export function OperatorsTab() {
         return
       }
 
-      // Import operators
       const allUsers = getAllUsers()
       let importedCount = 0
       let skippedCount = 0
       const errors: string[] = []
+
+      console.log("[v0] Starting import, existing users:", allUsers.length)
 
       rows.forEach((row, index) => {
         const fullName = row[nameColumnIndex]?.trim()
@@ -331,8 +332,9 @@ export function OperatorsTab() {
 
         // Create new operator
         const newOperator: User = {
-          id: `op-${Date.now()}-${index}`,
+          id: `op-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           username: username,
+          name: fullName,
           fullName: fullName,
           isOnline: false,
           role: "operator",
@@ -356,9 +358,24 @@ export function OperatorsTab() {
 
         allUsers.push(newOperator)
         importedCount++
+        console.log("[v0] Imported operator:", username)
       })
 
+      // Save all users immediately to localStorage
+      console.log("[v0] Saving", allUsers.length, "users to localStorage")
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers))
+
+      // Force save to ensure persistence
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
+
+      // Trigger store update event
+      window.dispatchEvent(new Event("store-updated"))
+
+      console.log("[v0] Import complete, total users:", allUsers.length)
+
+      // Reload operators list
+      const ops = allUsers.filter((u) => u.role === "operator")
+      setOperators(ops)
 
       // Show results
       if (importedCount > 0) {
@@ -378,6 +395,7 @@ export function OperatorsTab() {
         }, 500)
       }
     } catch (error) {
+      console.error("[v0] Import error:", error)
       toast({
         title: "Erro",
         description: "Erro ao processar o arquivo. Verifique o formato.",
