@@ -32,6 +32,8 @@ import {
 } from "@/lib/store"
 import type { User } from "@/lib/types"
 import * as XLSX from "xlsx"
+import { DEFAULT_OPERATORS } from "@/data/operators"
+import { REGULAR_OPERATORS } from "@/data/regular-operators" // Import regular operators list
 
 export function OperatorsTab() {
   const [operators, setOperators] = useState<User[]>([])
@@ -46,16 +48,43 @@ export function OperatorsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const loadOperators = () => {
+    const loadOperators = async () => {
+      console.log("[v0] Loading operators from localStorage and Firebase...")
+
       const allUsers = getAllUsers()
-      setOperators(allUsers.filter((u) => u.role === "operator"))
+
+      if (allUsers.length === 0) {
+        console.log("[v0] No users found, initializing with default operators")
+        const allDefaultUsers = [...DEFAULT_OPERATORS, ...REGULAR_OPERATORS]
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allDefaultUsers))
+
+        // Sync to Firebase
+        if (typeof window !== "undefined") {
+          allDefaultUsers.forEach((user) => {
+            saveImmediately(STORAGE_KEYS.USERS, allDefaultUsers)
+          })
+        }
+
+        const ops = allDefaultUsers.filter((u) => u.role === "operator")
+        setOperators(ops)
+        return
+      }
+
+      const ops = allUsers.filter((u) => u.role === "operator")
+      console.log("[v0] Loaded operators count:", ops.length)
+      console.log(
+        "[v0] Operators:",
+        ops.map((o) => o.username),
+      )
+      setOperators(ops)
     }
 
     loadOperators()
 
-    const interval = setInterval(loadOperators, 30000)
+    const interval = setInterval(loadOperators, 5000)
 
     const handleStoreUpdate = () => {
+      console.log("[v0] Store updated, reloading operators...")
       loadOperators()
     }
 
@@ -140,7 +169,8 @@ export function OperatorsTab() {
       })
     } else {
       // Check if username already exists
-      if (operators.some((op) => op.username === formData.username)) {
+      const allUsers = getAllUsers()
+      if (allUsers.some((u) => u.username === formData.username)) {
         toast({
           title: "Erro",
           description: "Este usuário já existe",
@@ -173,17 +203,22 @@ export function OperatorsTab() {
         },
       }
 
-      const allUsers = getAllUsers()
       allUsers.push(newOperator)
 
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers))
+
+      console.log("[v0] Saving new operator to Firebase:", newOperator.username)
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
-      // Update local state immediately
       setOperators([...operators, newOperator])
+
+      window.dispatchEvent(new Event("store-updated"))
+
+      console.log("[v0] New operator created successfully")
 
       toast({
         title: "Sucesso",
-        description: "Operador adicionado com sucesso",
+        description: "Operador adicionado e sincronizado com Firebase.",
       })
     }
 
@@ -447,6 +482,12 @@ export function OperatorsTab() {
         <div>
           <h2 className="text-3xl font-bold">Gerenciar Operadores</h2>
           <p className="text-muted-foreground mt-1">Visualize e gerencie os operadores do sistema</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Os operadores padrão são carregados de{" "}
+            <code className="bg-muted px-1 py-0.5 rounded">data/operators.ts</code> (admins) e{" "}
+            <code className="bg-muted px-1 py-0.5 rounded">data/regular-operators.ts</code> (operadores regulares). Você
+            também pode adicionar operadores manualmente ou importar via planilha Excel/CSV.
+          </p>
         </div>
         <div className="flex gap-3">
           <input

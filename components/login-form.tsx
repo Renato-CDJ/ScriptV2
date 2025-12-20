@@ -10,7 +10,7 @@ import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
 import Image from "next/image"
-import { getAllUsersAsync } from "@/lib/store"
+import { getAllUsersAsync, getAllUsers } from "@/lib/store"
 import type { LoginSession } from "@/lib/types"
 
 export const LoginForm = memo(function LoginForm() {
@@ -44,18 +44,40 @@ export const LoginForm = memo(function LoginForm() {
       setIsLoading(true)
 
       try {
-        console.log("[v0] Loading users from Firebase...")
-        const users = await getAllUsersAsync()
-        console.log("[v0] Users loaded:", users.length)
+        console.log("[v0] Loading users for login...")
+        let users = getAllUsers()
+        console.log("[v0] Users from localStorage:", users.length)
+
+        // If localStorage is empty, try Firebase
+        if (users.length === 0) {
+          console.log("[v0] localStorage empty, trying Firebase...")
+          users = await getAllUsersAsync()
+          console.log("[v0] Users from Firebase:", users.length)
+        }
+
+        console.log(
+          "[v0] User list:",
+          users.map((u) => ({ username: u.username, role: u.role })),
+        )
+
+        const validUsers = users.filter((u) => u.username && typeof u.username === "string")
+        console.log("[v0] Valid users with username:", validUsers.length)
 
         const normalizedUsername = username.toLowerCase().trim()
-        const user = users.find((u) => u.username.toLowerCase() === normalizedUsername)
+        const user = validUsers.find((u) => u.username.toLowerCase() === normalizedUsername)
 
         if (!user) {
+          console.log("[v0] User not found. Username searched:", normalizedUsername)
+          console.log(
+            "[v0] Available usernames:",
+            validUsers.map((u) => u.username),
+          )
           setError("Usuário não encontrado")
           setIsLoading(false)
           return
         }
+
+        console.log("[v0] User found:", user.username, "Role:", user.role)
 
         // Check password for admin users
         if (user.role === "admin") {
