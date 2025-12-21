@@ -27,13 +27,11 @@ import {
   getTodayConnectedTime,
   getCurrentUser,
   isUserOnline,
-  saveImmediately,
+  saveImmediately, // Import saveImmediately instead of debouncedSave
   STORAGE_KEYS,
 } from "@/lib/store"
 import type { User } from "@/lib/types"
 import * as XLSX from "xlsx"
-import { AlertCircle } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export function OperatorsTab() {
   const [operators, setOperators] = useState<User[]>([])
@@ -44,24 +42,18 @@ export function OperatorsTab() {
     fullName: "",
     username: "",
   })
-  const [firebaseSyncEnabled, setFirebaseSyncEnabled] = useState(true)
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const loadOperators = async () => {
+    const loadOperators = () => {
       const allUsers = getAllUsers()
-
-      const firebaseDisabled = localStorage.getItem("firebase_sync_disabled") === "true"
-      setFirebaseSyncEnabled(!firebaseDisabled)
-
-      const ops = allUsers.filter((u) => u.role === "operator")
-      setOperators(ops)
+      setOperators(allUsers.filter((u) => u.role === "operator"))
     }
 
     loadOperators()
 
-    const interval = setInterval(loadOperators, 5000)
+    const interval = setInterval(loadOperators, 30000)
 
     const handleStoreUpdate = () => {
       loadOperators()
@@ -113,6 +105,7 @@ export function OperatorsTab() {
 
     forceLogoutUser(operatorId)
 
+    // If the logged out user is the current user, redirect to login
     if (currentUser && currentUser.id === operatorId) {
       window.location.href = "/"
     }
@@ -134,6 +127,7 @@ export function OperatorsTab() {
     }
 
     if (isEditMode && editingOperator) {
+      // Update existing operator
       const updatedOperator: User = {
         ...editingOperator,
         fullName: formData.fullName,
@@ -145,8 +139,8 @@ export function OperatorsTab() {
         description: "Operador atualizado com sucesso",
       })
     } else {
-      const allUsers = getAllUsers()
-      if (allUsers.some((u) => u.username === formData.username)) {
+      // Check if username already exists
+      if (operators.some((op) => op.username === formData.username)) {
         toast({
           title: "Erro",
           description: "Este usuário já existe",
@@ -179,19 +173,17 @@ export function OperatorsTab() {
         },
       }
 
+      const allUsers = getAllUsers()
       allUsers.push(newOperator)
-
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers))
 
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
+      // Update local state immediately
       setOperators([...operators, newOperator])
-
-      window.dispatchEvent(new Event("store-updated"))
 
       toast({
         title: "Sucesso",
-        description: "Operador adicionado e sincronizado com Firebase.",
+        description: "Operador adicionado com sucesso",
       })
     }
 
@@ -206,6 +198,7 @@ export function OperatorsTab() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Check file extension
     const fileName = file.name.toLowerCase()
     if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
       toast({
@@ -220,15 +213,19 @@ export function OperatorsTab() {
       let rows: string[][] = []
 
       if (fileName.endsWith(".csv")) {
+        // Parse CSV
         const text = await file.text()
         rows = text.split("\n").map((line) => line.split(",").map((cell) => cell.trim()))
       } else {
+        // Parse Excel file
         const arrayBuffer = await file.arrayBuffer()
         const workbook = XLSX.read(arrayBuffer, { type: "array" })
 
+        // Get first sheet
         const firstSheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[firstSheetName]
 
+        // Convert to array of arrays
         const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][]
         rows = data.map((row) => row.map((cell) => String(cell || "").trim()))
       }
@@ -239,20 +236,25 @@ export function OperatorsTab() {
       if (rows.length > 0) {
         const headerRow = rows[0].map((cell) => cell.toLowerCase())
 
+        // Look for "nome completo" or "nome" column
         nameColumnIndex = headerRow.findIndex((cell) => cell.includes("nome completo") || cell === "nome")
 
+        // Look for "usuario" or "usuário" column
         usernameColumnIndex = headerRow.findIndex(
           (cell) => cell.includes("usuario") || cell.includes("usuário") || cell === "usuario",
         )
 
+        // If headers found, remove header row
         if (nameColumnIndex !== -1 && usernameColumnIndex !== -1) {
           rows = rows.slice(1)
         } else {
+          // If no headers found, assume first two columns are name and username
           nameColumnIndex = 0
           usernameColumnIndex = 1
         }
       }
 
+      // Filter out empty rows
       rows = rows.filter(
         (row) =>
           row.length > Math.max(nameColumnIndex, usernameColumnIndex) &&
@@ -269,6 +271,7 @@ export function OperatorsTab() {
         return
       }
 
+      // Import operators
       const allUsers = getAllUsers()
       let importedCount = 0
       let skippedCount = 0
@@ -284,16 +287,17 @@ export function OperatorsTab() {
           return
         }
 
+        // Check if username already exists
         if (allUsers.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
           errors.push(`Linha ${index + 2}: Usuário "${username}" já existe`)
           skippedCount++
           return
         }
 
+        // Create new operator
         const newOperator: User = {
-          id: `op-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          id: `op-${Date.now()}-${index}`,
           username: username,
-          name: fullName,
           fullName: fullName,
           isOnline: false,
           role: "operator",
@@ -319,15 +323,9 @@ export function OperatorsTab() {
         importedCount++
       })
 
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allUsers))
-
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
-      window.dispatchEvent(new Event("store-updated"))
-
-      const ops = allUsers.filter((u) => u.role === "operator")
-      setOperators(ops)
-
+      // Show results
       if (importedCount > 0) {
         toast({
           title: "Importação Concluída",
@@ -345,7 +343,6 @@ export function OperatorsTab() {
         }, 500)
       }
     } catch (error) {
-      console.error("[v0] Import error:", error)
       toast({
         title: "Erro",
         description: "Erro ao processar o arquivo. Verifique o formato.",
@@ -353,6 +350,7 @@ export function OperatorsTab() {
       })
     }
 
+    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -370,6 +368,7 @@ export function OperatorsTab() {
   }
 
   const handleExportReport = () => {
+    // Prepare data for Excel
     const headers = ["Nome", "Quantidade Logins no Dia", "Tempo Conectado"]
     const rows = operators.map((operator) => {
       const todaySessions = getTodayLoginSessions(operator.id)
@@ -382,6 +381,7 @@ export function OperatorsTab() {
       ]
     })
 
+    // Create Excel-compatible HTML table
     const htmlTable = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
       <head>
@@ -422,6 +422,7 @@ export function OperatorsTab() {
       </html>
     `
 
+    // Create blob and download as Excel file
     const blob = new Blob([htmlTable], { type: "application/vnd.ms-excel" })
     const link = document.createElement("a")
     const url = URL.createObjectURL(blob)
@@ -442,37 +443,10 @@ export function OperatorsTab() {
 
   return (
     <div className="space-y-6">
-      {!firebaseSyncEnabled && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Firebase não configurado</AlertTitle>
-          <AlertDescription>
-            O Firebase não está configurado corretamente. Os operadores estão salvos apenas localmente. Para habilitar
-            sincronização em tempo real, configure as regras de segurança do Firestore:
-            <pre className="mt-2 text-xs bg-black/10 p-2 rounded overflow-x-auto">
-              {`rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /usuarios/{userId} {
-      allow read, write: if true;
-    }
-  }
-}`}
-            </pre>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold">Gerenciar Operadores</h2>
           <p className="text-muted-foreground mt-1">Visualize e gerencie os operadores do sistema</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            Os operadores padrão (admins e monitorias) são carregados automaticamente de{" "}
-            <code className="bg-muted px-1 py-0.5 rounded">data/operators.ts</code> e operadores regulares de{" "}
-            <code className="bg-muted px-1 py-0.5 rounded">data/regular-operators.ts</code> no startup. Você também pode
-            adicionar operadores manualmente ou importar via planilha Excel/CSV.
-          </p>
         </div>
         <div className="flex gap-3">
           <input
@@ -484,7 +458,7 @@ service cloud.firestore {
           />
           <Button variant="outline" onClick={handleImportClick} className="gap-2 bg-transparent">
             <Upload className="h-4 w-4" />
-            Importar Operadores
+            Importar Usuários
           </Button>
           <Button variant="outline" onClick={handleExportReport} className="gap-2 bg-transparent">
             <Download className="h-4 w-4" />

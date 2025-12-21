@@ -23,17 +23,15 @@ import type {
   PresentationProgress, // Imported for presentation progress
   Contract, // Imported for contracts
 } from "./types"
-import { db, auth } from "./firebase"
-import { doc, setDoc, onSnapshot, collection, getDocs, deleteDoc } from "firebase/firestore"
+import { db, auth } from "./firebase" // Updated import for auth
+import { doc, setDoc, onSnapshot } from "firebase/firestore"
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth" // Imported for anonymous auth
 import debounce from "lodash.debounce" // Import debounce
-import { getOperatorsFromFile } from "./firebase-operators" // Updated import
 
 const saveQueue: Map<string, any> = new Map()
 const saveTimeout: NodeJS.Timeout | null = null
 
 const FIREBASE_COLLECTION = "app_data"
-const USUARIOS_COLLECTION = "usuarios"
 
 const notifyUpdateTimeout: NodeJS.Timeout | null = null
 const NOTIFY_DEBOUNCE_MS = 300
@@ -316,227 +314,28 @@ let unsubscribers: (() => void)[] = []
 
 let syncEnabled = false
 
-async function syncUserToFirebase(user: User) {
-  if (firebaseSyncDisabled || !db) return
-
-  try {
-    const userDocRef = doc(db, USUARIOS_COLLECTION, user.id)
-    await setDoc(userDocRef, {
-      ...user,
-      updatedAt: new Date().toISOString(),
-    })
-    console.log(`[v0] User ${user.name} synced to Firebase`)
-  } catch (error) {
-    console.error("[v0] Error syncing user to Firebase:", error)
-    handleFirebaseError(error)
-  }
-}
-
-async function loadUsersFromFirebase(): Promise<User[]> {
-  if (firebaseSyncDisabled || !db) return []
-
-  try {
-    console.log("[v0] Attempting to load users from Firebase...")
-    const usersCollection = collection(db, USUARIOS_COLLECTION)
-    const snapshot = await getDocs(usersCollection)
-    const users: User[] = []
-
-    snapshot.forEach((doc) => {
-      const data = doc.data()
-      // Ensure all required properties are present and have default values if missing
-      users.push({
-        id: data.id || doc.id, // Use doc.id if data.id is missing
-        username: data.username || data.login, // Use username or login
-        fullName: data.fullName || data.name, // Use fullName or name
-        role: data.role || "operator", // Default to operator
-        isOnline: data.isOnline !== undefined ? data.isOnline : false, // Default to false
-        createdAt: data.createdAt ? convertFirestoreTimestamp(data.createdAt) : new Date(), // Convert or default
-        password: data.password,
-        permissions: data.permissions || {
-          // Default permissions
-          dashboard: true,
-          scripts: true,
-          products: true,
-          attendanceConfig: true,
-          tabulations: true,
-          situations: true,
-          channels: true,
-          notes: true,
-          operators: true,
-          messagesQuiz: true,
-          settings: true,
-        },
-        loginSessions: data.loginSessions ? data.loginSessions.map(convertFirestoreTimestamp) : [],
-        lastLoginAt: data.lastLoginAt ? convertFirestoreTimestamp(data.lastLoginAt) : undefined,
-      })
-    })
-
-    console.log(`[v0] Loaded ${users.length} users from Firebase`)
-    return users
-  } catch (error: any) {
-    // Only show warning for permission errors, not full error
-    if (error?.code === "permission-denied") {
-      if (!firebaseSyncDisabled) {
-        console.warn(
-          "[v0] Firebase sync desabilitado: configure as regras de segurança do Firestore para habilitar sincronização em tempo real.",
-        )
-        firebaseSyncDisabled = true
-      }
-      return []
-    }
-    // Log other errors normally
-    console.error("[v0] Error loading users from Firebase:", error)
-    return []
-  }
-}
-
-// setupUsuariosListener function was redeclared. Keeping the last one.
-function setupUsuariosListener() {
-  if (firebaseSyncDisabled || !db) return
-
-  const usersCollection = collection(db, USUARIOS_COLLECTION)
-
-  const unsub = onSnapshot(
-    usersCollection,
-    (snapshot) => {
-      const users: User[] = []
-      snapshot.forEach((doc) => {
-        const data = doc.data()
-        // Ensure all required properties are present and have default values if missing
-        users.push({
-          id: data.id || doc.id, // Use doc.id if data.id is missing
-          username: data.username || data.login, // Use username or login
-          fullName: data.fullName || data.name, // Use fullName or name
-          role: data.role || "operator", // Default to operator
-          isOnline: data.isOnline !== undefined ? data.isOnline : false, // Default to false
-          createdAt: data.createdAt ? convertFirestoreTimestamp(data.createdAt) : new Date(), // Convert or default
-          password: data.password,
-          permissions: data.permissions || {
-            // Default permissions
-            dashboard: true,
-            scripts: true,
-            products: true,
-            attendanceConfig: true,
-            tabulations: true,
-            situations: true,
-            channels: true,
-            notes: true,
-            operators: true,
-            messagesQuiz: true,
-            settings: true,
-          },
-          loginSessions: data.loginSessions ? data.loginSessions.map(convertFirestoreTimestamp) : [],
-          lastLoginAt: data.lastLoginAt ? convertFirestoreTimestamp(data.lastLoginAt) : undefined,
-        })
-      })
-
-      console.log(`[v0] Realtime update: ${users.length} users from Firebase`)
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
-      notifyUpdateImmediate()
-
-      // Broadcast to other tabs
-      if (typeof window !== "undefined" && window.BroadcastChannel) {
-        const channel = new BroadcastChannel("usuarios-sync")
-        channel.postMessage({ type: "usuarios-updated", users })
-        channel.close()
-      }
-    },
-    (error) => {
-      console.error("[v0] Error in usuarios listener:", error)
-      if (error.code === "permission-denied") {
-        console.warn("[v0] Permission denied for usuarios collection. Configure Firestore rules.")
-        firebaseSyncDisabled = true // Disable sync if permission denied
-      }
-    },
-  )
-
-  unsubscribers.push(unsub)
-}
-
-// enableRealtimeSync function was redeclared. Keeping the last one.
 export function enableRealtimeSync() {
-  if (typeof window === "undefined" || !db || syncEnabled || firebaseSyncDisabled) {
-    return
-  }
-
-  console.log("[v0] Attempting to enable Firebase realtime sync...")
-
-  setupUsuariosListener()
-
-  const keys = [
-    // STORAGE_KEYS.USERS, // Now handled by setupUsuariosListener
-    STORAGE_KEYS.PRODUCTS,
-    STORAGE_KEYS.TABULATIONS,
-    STORAGE_KEYS.SITUATIONS,
-    STORAGE_KEYS.CHANNELS,
-    // STORAGE_KEYS.MESSAGES_QUIZ, // Assuming this refers to Message type, which is STORAGE_KEYS.MESSAGES
-    STORAGE_KEYS.CHAT_MESSAGES,
-    STORAGE_KEYS.PRESENTATIONS,
-    STORAGE_KEYS.CONTRACTS,
-  ]
-
-  let permissionErrorCount = 0
-
-  keys.forEach((key) => {
-    const docRef = doc(db, FIREBASE_COLLECTION, key)
-
-    const unsub = onSnapshot(
-      docRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data()
-          if (data && data.data) {
-            if (key === STORAGE_KEYS.USERS) {
-              // This part is now handled by setupUsuariosListener
-              // sessionStorage.setItem("firebase_users_cache", JSON.stringify(data.data))
-            }
-
-            localStorage.setItem(key, JSON.stringify(data.data))
-            notifyUpdateImmediate()
-          }
-        }
-      },
-      (error) => {
-        permissionErrorCount++
-
-        if (permissionErrorCount === 1) {
-          console.warn(`[v0] Firebase permission error detected. Sistema funcionará apenas com localStorage.`)
-          console.warn("Para habilitar sincronização Firebase, configure as regras de segurança do Firestore.")
-        }
-
-        // Disable Firebase sync after first permission error
-        if (error.code === "permission-denied" && !firebaseSyncDisabled) {
-          firebaseSyncDisabled = true
-          // Clean up all listeners
-          unsubscribers.forEach((unsub) => unsub())
-          unsubscribers = []
-        }
-      },
-    )
-
-    // Only add unsubscriber if Firebase sync is still enabled
-    if (!firebaseSyncDisabled) {
-      unsubscribers.push(unsub)
-    }
-  })
-
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      console.log("[v0] Firebase autenticado")
-    } else if (!firebaseSyncDisabled) {
-      signInAnonymously(auth)
-        .then(() => {
-          console.log("[v0] Firebase login anônimo realizado")
-        })
-        .catch((error) => {
-          console.warn("[v0] Não foi possível autenticar no Firebase. Sistema funcionará apenas localmente.")
-          firebaseSyncDisabled = true
-        })
-    }
-  })
+  if (typeof window === "undefined" || syncEnabled) return
 
   syncEnabled = true
-  console.log("[v0] Realtime sync enabled successfully")
+  console.log("[v0] Attempting to enable Firebase realtime sync...")
+  console.log("[v0] If you see permission errors, update your Firestore Security Rules in the Firebase Console")
+
+  // Ensure user is authenticated anonymously to bypass basic security rules
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      setupListeners()
+    } else {
+      signInAnonymously(auth)
+        .then(() => {
+          console.log("[v0] Signed in anonymously to Firebase")
+        })
+        .catch((error) => {
+          console.error("Error signing in anonymously:", error)
+          firebaseSyncDisabled = true // Use firebaseSyncDisabled
+        })
+    }
+  })
 }
 
 function setupListeners() {
@@ -544,19 +343,7 @@ function setupListeners() {
   unsubscribers.forEach((unsub) => unsub())
   unsubscribers = []
 
-  // Use the keys from enableRealtimeSync for consistency
-  const keysToSync = [
-    // STORAGE_KEYS.USERS, // Now handled by setupUsuariosListener
-    STORAGE_KEYS.PRODUCTS,
-    // STORAGE_KEYS.SCRIPTS,
-    STORAGE_KEYS.TABULATIONS,
-    STORAGE_KEYS.SITUATIONS,
-    STORAGE_KEYS.CHANNELS,
-    // STORAGE_KEYS.MESSAGES_QUIZ,
-    STORAGE_KEYS.CHAT_MESSAGES,
-    STORAGE_KEYS.PRESENTATIONS,
-    STORAGE_KEYS.CONTRACTS,
-  ]
+  const keysToSync = Object.values(STORAGE_KEYS)
 
   keysToSync.forEach((key) => {
     const unsub = onSnapshot(
@@ -571,48 +358,37 @@ function setupListeners() {
             const currentValue = localStorage.getItem(key)
             const newValue = JSON.stringify(data.data) // Use data.data
 
-            if (key === STORAGE_KEYS.USERS) {
-              // This part is now handled by setupUsuariosListener
-              // try {
-              //   const localUsers = JSON.parse(currentValue) as User[]
-              //   const remoteUsers = data.data as User[]
-              //   // Merge: keep all unique users by ID, prefer local data for conflicts
-              //   const mergedUsers = [...localUsers]
-              //   remoteUsers.forEach((remoteUser: User) => {
-              //     const existingIndex = mergedUsers.findIndex((u) => u.id === remoteUser.id)
-              //     if (existingIndex === -1) {
-              //       // User doesn't exist locally, add it
-              //       mergedUsers.push(remoteUser)
-              //     }
-              //     // If user exists locally, keep local version (it's more recent)
-              //   })
-              //   const mergedValue = JSON.stringify(mergedUsers)
-              //   if (currentValue !== mergedValue) {
-              //     localStorage.setItem(key, mergedValue)
-              //     // Cache users data in sessionStorage after merge
-              //     if (key === STORAGE_KEYS.USERS) {
-              //       sessionStorage.setItem("firebase_users_cache", JSON.stringify(mergedUsers))
-              //     }
-              //     window.dispatchEvent(new CustomEvent("store-updated"))
-              //   }
-              // } catch (e) {
-              //   // If merge fails, fall back to normal behavior
-              //   if (currentValue !== newValue) {
-              //     localStorage.setItem(key, newValue)
-              //     // Cache users data in sessionStorage after merge failure
-              //     if (key === STORAGE_KEYS.USERS) {
-              //       sessionStorage.setItem("firebase_users_cache", JSON.stringify(data.data))
-              //     }
-              //     window.dispatchEvent(new CustomEvent("store-updated"))
-              //   }
-              // }
+            if (key === STORAGE_KEYS.USERS && currentValue) {
+              try {
+                const localUsers = JSON.parse(currentValue) as User[]
+                const remoteUsers = data.data as User[]
+
+                // Merge: keep all unique users by ID, prefer local data for conflicts
+                const mergedUsers = [...localUsers]
+
+                remoteUsers.forEach((remoteUser: User) => {
+                  const existingIndex = mergedUsers.findIndex((u) => u.id === remoteUser.id)
+                  if (existingIndex === -1) {
+                    // User doesn't exist locally, add it
+                    mergedUsers.push(remoteUser)
+                  }
+                  // If user exists locally, keep local version (it's more recent)
+                })
+
+                const mergedValue = JSON.stringify(mergedUsers)
+                if (currentValue !== mergedValue) {
+                  localStorage.setItem(key, mergedValue)
+                  window.dispatchEvent(new CustomEvent("store-updated"))
+                }
+              } catch (e) {
+                // If merge fails, fall back to normal behavior
+                if (currentValue !== newValue) {
+                  localStorage.setItem(key, newValue)
+                  window.dispatchEvent(new CustomEvent("store-updated"))
+                }
+              }
             } else if (currentValue !== newValue) {
               localStorage.setItem(key, newValue)
-              // Cache users data in sessionStorage if not the users key
-              if (key === STORAGE_KEYS.USERS) {
-                // This part is now handled by setupUsuariosListener
-                // sessionStorage.setItem("firebase_users_cache", JSON.stringify(data.data))
-              }
               window.dispatchEvent(new CustomEvent("store-updated"))
             }
           }
@@ -656,113 +432,113 @@ export function loadScriptsFromDataFolder() {
 }
 
 // Mock data for demonstration
-// const MOCK_USERS: User[] = [
-//   {
-//     id: "1",
-//     username: "admin",
-//     fullName: "Administrador Sistema",
-//     role: "admin",
-//     isOnline: true,
-//     createdAt: new Date(),
-//     permissions: {
-//       dashboard: true,
-//       scripts: true,
-//       products: true,
-//       attendanceConfig: true,
-//       tabulations: true,
-//       situations: true,
-//       channels: true,
-//       notes: true,
-//       operators: true,
-//       messagesQuiz: true,
-//       settings: true,
-//     },
-//   },
-//   {
-//     id: "2",
-//     username: "Monitoria1",
-//     fullName: "Monitoria 1",
-//     role: "admin",
-//     isOnline: true,
-//     createdAt: new Date(),
-//     permissions: {
-//       dashboard: true,
-//       scripts: true,
-//       products: true,
-//       attendanceConfig: true,
-//       tabulations: true,
-//       situations: true,
-//       channels: true,
-//       notes: true,
-//       operators: true,
-//       messagesQuiz: true,
-//       settings: true,
-//     },
-//   },
-//   {
-//     id: "3",
-//     username: "Monitoria2",
-//     fullName: "Monitoria 2",
-//     role: "admin",
-//     isOnline: true,
-//     createdAt: new Date(),
-//     permissions: {
-//       dashboard: true,
-//       scripts: true,
-//       products: true,
-//       attendanceConfig: true,
-//       tabulations: true,
-//       situations: true,
-//       channels: true,
-//       notes: true,
-//       operators: true,
-//       messagesQuiz: true,
-//       settings: true,
-//     },
-//   },
-//   {
-//     id: "4",
-//     username: "Monitoria3",
-//     fullName: "Monitoria 3",
-//     role: "admin",
-//     isOnline: true,
-//     createdAt: new Date(),
-//     permissions: {
-//       dashboard: true,
-//       scripts: true,
-//       products: true,
-//       attendanceConfig: true,
-//       tabulations: true,
-//       situations: true,
-//       channels: true,
-//       notes: true,
-//       operators: true,
-//       messagesQuiz: true,
-//       settings: true,
-//     },
-//   },
-//   {
-//     id: "5",
-//     username: "Monitoria4",
-//     fullName: "Monitoria 4",
-//     role: "admin",
-//     isOnline: true,
-//     createdAt: new Date(),
-//     permissions: {
-//       dashboard: true,
-//       scripts: true,
-//       products: true,
-//       attendanceConfig: true,
-//       tabulations: true,
-//       situations: true,
-//       channels: true,
-//       notes: true,
-//       operators: true,
-//       messagesQuiz: true,
-//       settings: true,
-//     },
-//   },
-// ]
+const MOCK_USERS: User[] = [
+  {
+    id: "1",
+    username: "admin",
+    fullName: "Administrador Sistema",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "2",
+    username: "Monitoria1",
+    fullName: "Monitoria 1",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "3",
+    username: "Monitoria2",
+    fullName: "Monitoria 2",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "4",
+    username: "Monitoria3",
+    fullName: "Monitoria 3",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "5",
+    username: "Monitoria4",
+    fullName: "Monitoria 4",
+    role: "admin",
+    isOnline: true,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+]
 
 const MOCK_SCRIPT_STEPS: ScriptStep[] = []
 
@@ -1018,7 +794,7 @@ const MOCK_SITUATIONS: ServiceSituation[] = [
   },
   {
     id: "sit-7",
-    name: "QUANDO O CLIENTE DO FIES CITAR QUE QUER PAUSAR O PAGAMENTO DAS SUAS PARCELAS",
+    name: "QUANDO O CLIENTE DO FIES DISSER QUE QUER PAUSAR O PAGAMENTO DAS SUAS PARCELAS",
     description:
       'Caso o cliente do FIES questione a possibilidade de renegociar ou solicite o desconto para seu contrato, informar:\n\n1. "Você pode verificar se o seu contrato tem a possibilidade de realizar renegociação no site http://sifesweb.caixa.gov.br, APP FIES CAIXA ou na sua agência."\n\nATENÇÃO! Lembrando que essa orientação só deve ser repassada para aqueles clientes que já fizeram a confirmação positiva.',
     isActive: true,
@@ -1106,7 +882,7 @@ const MOCK_CHANNELS: Channel[] = [
   {
     id: "ch-5",
     name: "SAC CAIXA",
-    contact: "0800 721 0101",
+    contact: "0800 726 0101",
     isActive: true,
     createdAt: new Date(),
   },
@@ -1147,7 +923,6 @@ export const STORAGE_KEYS = {
   PRESENTATIONS: "callcenter_presentations",
   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
   CONTRACTS: "contracts", // Added storage key for contracts
-  MESSAGES_QUIZ: "callcenter_messages_quiz", // Assuming this is intended, but similar to MESSAGES
 } as const
 
 // Initialize mock data
@@ -1156,7 +931,14 @@ export function initializeMockData() {
 
   enableRealtimeSync()
 
-  initializeOperatorsFromFile()
+  const existingUsers = localStorage.getItem(STORAGE_KEYS.USERS)
+  if (!existingUsers) {
+    debouncedSave(STORAGE_KEYS.USERS, MOCK_USERS)
+    console.log(
+      "[v0] Users initialized:",
+      MOCK_USERS.map((u) => u.username),
+    )
+  }
 
   if (!localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS)) {
     localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify([]))
@@ -1398,9 +1180,9 @@ export function logout() {
     const users: User[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
     const user = users.find((u) => u.id === currentUser.id)
 
-    if (user && user.loginSessions && user.loginSessions.length > 0) {
+    if (user && user.loginSessions) {
       const lastSession = user.loginSessions[user.loginSessions.length - 1]
-      if (lastSession && !lastSession.logoutAt) {
+      if (!lastSession.logoutAt) {
         lastSession.logoutAt = new Date()
         lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
         user.isOnline = false
@@ -1669,102 +1451,36 @@ export function deleteProduct(id: string) {
 // Additional user management functions
 export function getAllUsers(): User[] {
   if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+}
 
-  const data = localStorage.getItem(STORAGE_KEYS.USERS)
-
-  if (!data) {
-    return []
-  }
+export function updateUser(user: User) {
+  if (typeof window === "undefined") return
 
   try {
-    const users = JSON.parse(data)
+    const users = getAllUsers()
+    const index = users.findIndex((u) => u.id === user.id)
 
-    // Filter out invalid users without username
-    const validUsers = users.filter((u: User) => u.username && typeof u.username === "string")
-
-    // If we filtered out users, save the cleaned list back
-    if (validUsers.length < users.length) {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(validUsers))
+    if (index !== -1) {
+      users[index] = user
+      saveImmediately(STORAGE_KEYS.USERS, users)
+      notifyUpdateImmediate()
     }
-
-    return validUsers
   } catch (error) {
-    console.error("[v0] Error loading users:", error)
-    return []
+    console.error("[v0] Error updating user:", error)
   }
 }
 
-export async function loadFromFirebase(key: string): Promise<unknown | null> {
-  if (typeof window === "undefined" || !db || firebaseSyncDisabled) {
-    return null
-  }
+export function deleteUser(userId: string) {
+  if (typeof window === "undefined") return
 
   try {
-    // Dynamically import getDoc to avoid potential circular dependencies or runtime issues
-    const { getDoc } = await import("firebase/firestore")
-    const docRef = doc(db, FIREBASE_COLLECTION, key)
-    const docSnap = await getDoc(docRef)
-
-    if (docSnap.exists()) {
-      const data = docSnap.data()
-      if (data && data.data) {
-        // Update localStorage with Firebase data
-        localStorage.setItem(key, JSON.stringify(data.data))
-        // Cache users data in sessionStorage when loaded from Firebase
-        if (key === STORAGE_KEYS.USERS) {
-          sessionStorage.setItem("firebase_users_cache", JSON.stringify(data.data))
-        }
-        return data.data
-      }
-    }
-    return null
+    const users = getAllUsers().filter((u) => u.id !== userId)
+    saveImmediately(STORAGE_KEYS.USERS, users)
+    notifyUpdateImmediate()
   } catch (error) {
-    console.error("[v0] Error loading from Firebase:", error)
-    // Clear users cache if loading fails
-    if (key === STORAGE_KEYS.USERS) {
-      sessionStorage.removeItem("firebase_users_cache")
-    }
-    return null
+    console.error("[v0] Error deleting user:", error)
   }
-}
-
-// updateUser was redeclared. Using the latter implementation.
-// export function updateUser(user: User) {
-//   if (typeof window === "undefined") return
-
-//   try {
-//     const users = getAllUsers()
-//     const index = users.findIndex((u) => u.id === user.id)
-
-//     if (index !== -1) {
-//       users[index] = user
-//       saveImmediately(STORAGE_KEYS.USERS, users)
-//       // Update users cache in sessionStorage
-//       sessionStorage.setItem("firebase_users_cache", JSON.stringify(users))
-//       notifyUpdateImmediate()
-//     }
-//   } catch (error) {
-//     console.error("[v0] Error updating user:", error)
-//   }
-// }
-
-// Delete user from Firebase usuarios collection
-export async function deleteUser(userId: string) {
-  const users = getAllUsers()
-  const filteredUsers = users.filter((u) => u.id !== userId)
-  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(filteredUsers))
-
-  if (!firebaseSyncDisabled && db) {
-    try {
-      const userDocRef = doc(db, USUARIOS_COLLECTION, userId)
-      await deleteDoc(userDocRef)
-      console.log(`[v0] User ${userId} deleted from Firebase`)
-    } catch (error) {
-      console.error("[v0] Error deleting user from Firebase:", error)
-    }
-  }
-
-  notifyUpdate()
 }
 
 export function forceLogoutUser(userId: string) {
@@ -1776,15 +1492,13 @@ export function forceLogoutUser(userId: string) {
 
     if (user && user.loginSessions && user.loginSessions.length > 0) {
       const lastSession = user.loginSessions[user.loginSessions.length - 1]
-      if (lastSession && !lastSession.logoutAt) {
+      if (!lastSession.logoutAt) {
         lastSession.logoutAt = new Date()
         lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
         user.isOnline = false
 
         const updatedUsers = users.map((u) => (u.id === user.id ? user : u))
         saveImmediately(STORAGE_KEYS.USERS, updatedUsers)
-        // Update users cache in sessionStorage
-        sessionStorage.setItem("firebase_users_cache", JSON.stringify(updatedUsers))
         notifyUpdateImmediate()
       }
     }
@@ -2486,7 +2200,7 @@ export function updateAdminPermissions(userId: string, permissions: AdminPermiss
 
     if (user && user.role === "admin") {
       user.permissions = permissions
-      updateUser(user) // Call the updated updateUser
+      updateUser(user)
     }
   } catch (error) {
     console.error("[v0] Error updating admin permissions:", error)
@@ -2537,11 +2251,6 @@ export function createAdminUser(username: string, fullName: string, password?: s
 
     users.push(newUser)
     saveImmediately(STORAGE_KEYS.USERS, users)
-
-    if (db && !firebaseSyncDisabled) {
-      syncToFirebase(STORAGE_KEYS.USERS, users)
-    }
-
     notifyUpdateImmediate()
 
     return newUser
@@ -2921,175 +2630,4 @@ function scheduleNotification() {
       window.dispatchEvent(new CustomEvent("store-updated"))
     }
   }, 100) // Small delay to batch multiple updates
-}
-
-export async function getAllUsersAsync(): Promise<User[]> {
-  if (typeof window === "undefined") return []
-
-  // Try to load from Firebase first (silently fails if no permissions)
-  const firebaseUsers = await loadUsersFromFirebase()
-  if (firebaseUsers && firebaseUsers.length > 0) {
-    console.log(`[v0] Successfully loaded ${firebaseUsers.length} users from Firebase.`)
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(firebaseUsers))
-    return firebaseUsers
-  }
-
-  // Fallback to localStorage (primary storage when Firebase unavailable)
-  const stored = localStorage.getItem(STORAGE_KEYS.USERS)
-  if (!stored) {
-    return []
-  }
-
-  try {
-    const users = JSON.parse(stored)
-    if (users.length > 0) {
-      console.log(`[v0] Loaded ${users.length} users from localStorage.`)
-    }
-    return Array.isArray(users) ? users : []
-  } catch (e) {
-    console.error("[v0] Error parsing users from localStorage:", e)
-    return []
-  }
-}
-
-if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
-  const userChannel = new BroadcastChannel("user-updates")
-  userChannel.onmessage = (event) => {
-    if (event.data.type === "user-added" || event.data.type === "user-updated") {
-      console.log("[v0] Received user update from another tab")
-      notifyUpdateImmediate()
-    }
-  }
-}
-
-// Updated addUser to use syncUserToFirebase and BroadcastChannel
-export function addUser(user: User): void {
-  if (typeof window === "undefined") return
-
-  const users = getAllUsers()
-
-  // Check if user already exists
-  if (users.some((u) => u.id === user.id)) {
-    console.warn("[v0] User already exists:", user.username)
-    return
-  }
-
-  users.push(user)
-
-  // Save immediately to localStorage (primary storage)
-  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
-  console.log("[v0] User added to localStorage:", user.username, "Total users:", users.length)
-
-  // Broadcast to other tabs using BroadcastChannel
-  if (typeof BroadcastChannel !== "undefined") {
-    const channel = new BroadcastChannel("user-updates")
-    channel.postMessage({ type: "user-added", user })
-    channel.close()
-  }
-
-  // Try to save to Firebase (optional, best effort)
-  syncUserToFirebase(user)
-
-  // Notify immediate update
-  notifyUpdateImmediate()
-}
-
-// Updated updateUser to use syncUserToFirebase
-export function updateUser(updatedUser: User) {
-  if (typeof window === "undefined") return
-
-  try {
-    const users = getAllUsers()
-    const index = users.findIndex((u) => u.id === updatedUser.id)
-
-    if (index !== -1) {
-      users[index] = updatedUser
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
-      console.log("[v0] User updated in localStorage:", updatedUser.username)
-
-      // Broadcast to other tabs using BroadcastChannel
-      if (typeof BroadcastChannel !== "undefined") {
-        const channel = new BroadcastChannel("user-updates")
-        channel.postMessage({ type: "user-updated", user: updatedUser })
-        channel.close()
-      }
-
-      // Sync to Firebase
-      syncUserToFirebase(updatedUser)
-
-      notifyUpdateImmediate()
-    }
-  } catch (error) {
-    console.error("[v0] Error updating user:", error)
-  }
-}
-
-export async function initializeOperatorsFromFile() {
-  if (typeof window === "undefined" || !db) {
-    console.error("[v0] Firebase não está configurado. Configure as credenciais do Firebase primeiro.")
-    return
-  }
-
-  if (firebaseSyncDisabled) {
-    console.error("[v0] ⚠️ ATENÇÃO: Firebase está desabilitado por falta de permissões.")
-    console.error("[v0] Para usar o sistema, configure as regras do Firestore:")
-    console.error(`
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /usuarios/{userId} {
-      allow read, write: if true;
-    }
-  }
-}
-    `)
-    return
-  }
-
-  console.log("[v0] Loading operators from data files...")
-  const operatorsFromFile = getOperatorsFromFile()
-  console.log(`[v0] Loaded ${operatorsFromFile.length} operators from data files`)
-
-  // Check which operators already exist in Firebase
-  const existingUsers = await getAllUsersAsync()
-  const existingUsernames = new Set(existingUsers.map((u) => u.username))
-
-  // Sync operators to Firebase (only new ones)
-  for (const operator of operatorsFromFile) {
-    if (!existingUsernames.has(operator.username)) {
-      console.log(`[v0] Adding operator to Firebase: ${operator.username}`)
-      // When loading from files, we might not have all necessary user properties,
-      // so we ensure a User object is created with defaults.
-      const newUser: User = {
-        id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Generate a more unique ID
-        username: operator.username,
-        fullName: operator.fullName,
-        password: operator.password, // Assuming password is provided in the operator data
-        role: operator.role || "operator", // Default to operator if not specified
-        isOnline: false, // Default to offline
-        createdAt: new Date(),
-        permissions: {
-          // Default permissions, can be adjusted based on role
-          dashboard: true,
-          scripts: true,
-          products: true,
-          attendanceConfig: true,
-          tabulations: true,
-          situations: true,
-          channels: true,
-          notes: true,
-          operators: operator.role === "admin", // Admins have operator management
-          messagesQuiz: true,
-          settings: operator.role === "admin", // Admins have settings access
-        },
-        loginSessions: [], // Initialize with empty sessions
-        lastLoginAt: undefined, // Initialize lastLoginAt
-      }
-      await syncUserToFirebase(newUser)
-    } else {
-      console.log(`[v0] Operator already exists: ${operator.username}`)
-    }
-  }
-
-  console.log("[v0] Operators synchronized with Firebase")
 }

@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, lazy, Suspense, memo, useEffect } from "react"
+import { useState, lazy, Suspense, memo } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import { Toaster } from "@/components/ui/toaster"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Loader2 } from "lucide-react"
-import { enableRealtimeSync } from "@/lib/store"
 
 const DashboardTab = lazy(() =>
   import("@/components/admin-tabs/dashboard-tab").then((m) => ({ default: m.DashboardTab })),
@@ -56,24 +55,8 @@ const LoadingFallback = memo(function LoadingFallback() {
 
 const AdminContent = memo(function AdminContent() {
   const [activeTab, setActiveTab] = useState("dashboard")
-  const [refreshKey, setRefreshKey] = useState(0)
   const router = useRouter()
   const { logout } = useAuth()
-
-  useEffect(() => {
-    enableRealtimeSync()
-  }, [])
-
-  useEffect(() => {
-    const handleStoreUpdate = () => {
-      setRefreshKey((prev) => prev + 1)
-    }
-
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => {
-      window.removeEventListener("store-updated", handleStoreUpdate)
-    }
-  }, [])
 
   const handleBack = () => {
     logout()
@@ -81,103 +64,101 @@ const AdminContent = memo(function AdminContent() {
   }
 
   const renderContent = () => {
-    const key = refreshKey
-
     switch (activeTab) {
       case "dashboard":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <DashboardTab key={key} />
+            <DashboardTab />
           </Suspense>
         )
       case "scripts":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <ScriptsTab key={key} />
+            <ScriptsTab />
           </Suspense>
         )
       case "products":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <ProductsTab key={key} />
+            <ProductsTab />
           </Suspense>
         )
       case "attendance-config":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <AttendanceTypesTab key={key} />
+            <AttendanceTypesTab />
           </Suspense>
         )
       case "operators":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <OperatorsTab key={key} />
+            <OperatorsTab />
           </Suspense>
         )
       case "tabulations":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <TabulationsTab key={key} />
+            <TabulationsTab />
           </Suspense>
         )
       case "situations":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <SituationsTab key={key} />
+            <SituationsTab />
           </Suspense>
         )
       case "channels":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <ChannelsTab key={key} />
+            <ChannelsTab />
           </Suspense>
         )
       case "notes":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <NotesTab key={key} />
+            <NotesTab />
           </Suspense>
         )
       case "messages-quiz":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <MessagesQuizTab key={key} />
+            <MessagesQuizTab />
           </Suspense>
         )
       case "chat":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <ChatTab key={key} />
+            <ChatTab />
           </Suspense>
         )
       case "settings":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <SettingsPage key={key} />
+            <SettingsPage />
           </Suspense>
         )
       case "access-control":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <AccessControlTab key={key} />
+            <AccessControlTab />
           </Suspense>
         )
       case "presentations":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <PresentationsTab key={key} />
+            <PresentationsTab />
           </Suspense>
         )
       case "initial-guide":
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <InitialGuideTab key={key} />
+            <InitialGuideTab />
           </Suspense>
         )
       default:
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <DashboardTab key={key} />
+            <DashboardTab />
           </Suspense>
         )
     }
