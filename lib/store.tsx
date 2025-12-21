@@ -27,8 +27,7 @@ import { db, auth } from "./firebase"
 import { doc, setDoc, onSnapshot, collection, getDocs, deleteDoc } from "firebase/firestore"
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth" // Imported for anonymous auth
 import debounce from "lodash.debounce" // Import debounce
-import { DEFAULT_OPERATORS } from "@/data/operators"
-import { REGULAR_OPERATORS } from "@/data/regular-operators"
+import { loadOperatorsFromFile } from "./firebase-operators"
 
 const saveQueue: Map<string, any> = new Map()
 const saveTimeout: NodeJS.Timeout | null = null
@@ -391,6 +390,7 @@ async function loadUsersFromFirebase(): Promise<User[]> {
   }
 }
 
+// setupUsuariosListener function was redeclared. Keeping the last one.
 function setupUsuariosListener() {
   if (firebaseSyncDisabled || !db) return
 
@@ -453,6 +453,7 @@ function setupUsuariosListener() {
   unsubscribers.push(unsub)
 }
 
+// enableRealtimeSync function was redeclared. Keeping the last one.
 export function enableRealtimeSync() {
   if (typeof window === "undefined" || !db || syncEnabled || firebaseSyncDisabled) {
     return
@@ -1155,34 +1156,7 @@ export function initializeMockData() {
 
   enableRealtimeSync()
 
-  getAllUsersAsync().then((existingUsers) => {
-    console.log("[v0] Initializing data, existing users:", existingUsers.length)
-
-    // Filter valid users (must have username property)
-    const validUsers = existingUsers.filter((u) => u.username && typeof u.username === "string")
-    console.log("[v0] Valid users with username:", validUsers.length)
-
-    if (validUsers.length === 0) {
-      const allDefaultUsers = [...DEFAULT_OPERATORS, ...REGULAR_OPERATORS]
-      console.log("[v0] No valid users found, initializing with default users")
-      console.log("[v0] Admin users:", DEFAULT_OPERATORS.length)
-      console.log("[v0] Regular operators:", REGULAR_OPERATORS.length)
-
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(allDefaultUsers))
-      console.log(
-        "[v0] Users initialized:",
-        allDefaultUsers.map((u) => u.username),
-      )
-      // Sync all users to Firebase if sync is enabled
-      if (db && !firebaseSyncDisabled) {
-        allDefaultUsers.forEach((user) => syncUserToFirebase(user))
-      }
-      // Emit event to notify other components
-      window.dispatchEvent(new Event("store-updated"))
-    } else {
-      console.log("[v0] Found valid users, skipping default data initialization")
-    }
-  })
+  initializeOperatorsFromFile()
 
   if (!localStorage.getItem(STORAGE_KEYS.SCRIPT_STEPS)) {
     localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify([]))
@@ -3048,4 +3022,74 @@ export function updateUser(updatedUser: User) {
   } catch (error) {
     console.error("[v0] Error updating user:", error)
   }
+}
+
+export async function initializeOperatorsFromFile() {
+  if (typeof window === "undefined" || !db) {
+    console.error("[v0] Firebase não está configurado. Configure as credenciais do Firebase primeiro.")
+    return
+  }
+
+  if (firebaseSyncDisabled) {
+    console.error("[v0] ⚠️ ATENÇÃO: Firebase está desabilitado por falta de permissões.")
+    console.error("[v0] Para usar o sistema, configure as regras do Firestore:")
+    console.error(`
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /usuarios/{userId} {
+      allow read, write: if true;
+    }
+  }
+}
+    `)
+    return
+  }
+
+  console.log("[v0] Loading operators from CSV file...")
+
+  // Load operators from CSV file
+  const operatorsFromFile = await loadOperatorsFromFile()
+  console.log(`[v0] Loaded ${operatorsFromFile.length} operators from CSV file`)
+
+  // Check which operators already exist in Firebase
+  const existingUsers = await getAllUsersAsync()
+  const existingUsernames = new Set(existingUsers.map((u) => u.username))
+
+  // Sync operators to Firebase (only new ones)
+  for (const operator of operatorsFromFile) {
+    if (!existingUsernames.has(operator.username)) {
+      console.log(`[v0] Adding operator to Firebase: ${operator.username}`)
+
+      const newUser: User = {
+        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        username: operator.username,
+        fullName: operator.fullName,
+        password: operator.password,
+        role: operator.role,
+        isOnline: false,
+        createdAt: new Date(),
+        permissions: {
+          dashboard: true,
+          scripts: true,
+          products: true,
+          attendanceConfig: true,
+          tabulations: true,
+          situations: true,
+          channels: true,
+          notes: true,
+          operators: operator.role === "admin",
+          messagesQuiz: true,
+          settings: operator.role === "admin",
+        },
+        loginSessions: [],
+      }
+
+      await syncUserToFirebase(newUser)
+    } else {
+      console.log(`[v0] Operator already exists: ${operator.username}`)
+    }
+  }
+
+  console.log("[v0] Operators synchronized with Firebase")
 }
