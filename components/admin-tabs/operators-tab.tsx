@@ -468,9 +468,10 @@ service cloud.firestore {
           <h2 className="text-3xl font-bold">Gerenciar Operadores</h2>
           <p className="text-muted-foreground mt-1">Visualize e gerencie os operadores do sistema</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Os operadores padrão são carregados automaticamente de{" "}
-            <code className="bg-muted px-1 py-0.5 rounded">data/operators-list.csv</code> no startup. Você também pode
-            adicionar operadores manualmente ou importar via planilha Excel/CSV (apenas operadores).
+            Os operadores padrão (admins e monitorias) são carregados automaticamente de{" "}
+            <code className="bg-muted px-1 py-0.5 rounded">data/operators.ts</code> e operadores regulares de{" "}
+            <code className="bg-muted px-1 py-0.5 rounded">data/regular-operators.ts</code> no startup. Você também pode
+            adicionar operadores manualmente ou importar via planilha Excel/CSV.
           </p>
         </div>
         <div className="flex gap-3">

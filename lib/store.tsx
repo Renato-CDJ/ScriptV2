@@ -27,7 +27,7 @@ import { db, auth } from "./firebase"
 import { doc, setDoc, onSnapshot, collection, getDocs, deleteDoc } from "firebase/firestore"
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth" // Imported for anonymous auth
 import debounce from "lodash.debounce" // Import debounce
-import { loadOperatorsFromFile } from "./firebase-operators"
+import { getOperatorsFromFile } from "./firebase-operators" // Updated import
 
 const saveQueue: Map<string, any> = new Map()
 const saveTimeout: NodeJS.Timeout | null = null
@@ -3046,11 +3046,9 @@ service cloud.firestore {
     return
   }
 
-  console.log("[v0] Loading operators from CSV file...")
-
-  // Load operators from CSV file
-  const operatorsFromFile = await loadOperatorsFromFile()
-  console.log(`[v0] Loaded ${operatorsFromFile.length} operators from CSV file`)
+  console.log("[v0] Loading operators from data files...")
+  const operatorsFromFile = getOperatorsFromFile()
+  console.log(`[v0] Loaded ${operatorsFromFile.length} operators from data files`)
 
   // Check which operators already exist in Firebase
   const existingUsers = await getAllUsersAsync()
@@ -3060,16 +3058,18 @@ service cloud.firestore {
   for (const operator of operatorsFromFile) {
     if (!existingUsernames.has(operator.username)) {
       console.log(`[v0] Adding operator to Firebase: ${operator.username}`)
-
+      // When loading from files, we might not have all necessary user properties,
+      // so we ensure a User object is created with defaults.
       const newUser: User = {
-        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Generate a more unique ID
         username: operator.username,
         fullName: operator.fullName,
-        password: operator.password,
-        role: operator.role,
-        isOnline: false,
+        password: operator.password, // Assuming password is provided in the operator data
+        role: operator.role || "operator", // Default to operator if not specified
+        isOnline: false, // Default to offline
         createdAt: new Date(),
         permissions: {
+          // Default permissions, can be adjusted based on role
           dashboard: true,
           scripts: true,
           products: true,
@@ -3078,13 +3078,13 @@ service cloud.firestore {
           situations: true,
           channels: true,
           notes: true,
-          operators: operator.role === "admin",
+          operators: operator.role === "admin", // Admins have operator management
           messagesQuiz: true,
-          settings: operator.role === "admin",
+          settings: operator.role === "admin", // Admins have settings access
         },
-        loginSessions: [],
+        loginSessions: [], // Initialize with empty sessions
+        lastLoginAt: undefined, // Initialize lastLoginAt
       }
-
       await syncUserToFirebase(newUser)
     } else {
       console.log(`[v0] Operator already exists: ${operator.username}`)
