@@ -175,12 +175,23 @@ function syncToFirebase(key: string, data: unknown) {
               : data
         }
 
+        if (key === STORAGE_KEYS.USERS && Array.isArray(dataToSync)) {
+          console.log(`[v0] Writing ${dataToSync.length} users to Firebase (${key})`)
+          console.log(
+            "[v0] User roles:",
+            dataToSync.map((u: any) => ({ username: u.username, role: u.role })),
+          )
+        }
+
         await setDoc(doc(db, FIREBASE_COLLECTION, key), {
           data: dataToSync,
           updatedAt: new Date().toISOString(),
         })
+
+        console.log(`[v0] Successfully synced ${key} to Firebase`)
       }
     } catch (error: unknown) {
+      console.error(`[v0] Error syncing ${key} to Firebase:`, error)
       handleFirebaseError(error)
     } finally {
       pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
@@ -202,6 +213,8 @@ function flushBatchQueue() {
 export function saveImmediately(key: string, data: unknown) {
   if (typeof window === "undefined") return
 
+  console.log(`[v0] saveImmediately called for ${key}, data count:`, Array.isArray(data) ? data.length : "N/A")
+
   // Save to localStorage immediately (with full data including imageData)
   localStorage.setItem(key, JSON.stringify(data))
 
@@ -210,15 +223,23 @@ export function saveImmediately(key: string, data: unknown) {
 
   // Skip if Firebase sync is disabled or too many pending writes
   if (firebaseSyncDisabled || pendingFirebaseWrites >= MAX_PENDING_WRITES) {
+    console.log(
+      "[v0] Firebase sync skipped - disabled:",
+      firebaseSyncDisabled,
+      "pending writes:",
+      pendingFirebaseWrites,
+    )
     return
   }
 
   const now = Date.now()
   if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
+    console.log("[v0] Firebase sync throttled - too soon after last write")
     return
   }
   lastFirebaseWrite = now
 
+  console.log(`[v0] Syncing ${key} to Firebase...`)
   syncToFirebase(key, data)
 }
 
@@ -1180,9 +1201,10 @@ export function logout() {
     const users: User[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
     const user = users.find((u) => u.id === currentUser.id)
 
-    if (user && user.loginSessions) {
+    // </CHANGE> Added check to ensure lastSession exists before accessing properties
+    if (user && user.loginSessions && user.loginSessions.length > 0) {
       const lastSession = user.loginSessions[user.loginSessions.length - 1]
-      if (!lastSession.logoutAt) {
+      if (lastSession && !lastSession.logoutAt) {
         lastSession.logoutAt = new Date()
         lastSession.duration = lastSession.logoutAt.getTime() - new Date(lastSession.loginAt).getTime()
         user.isOnline = false
