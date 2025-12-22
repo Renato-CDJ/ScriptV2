@@ -14,14 +14,11 @@ export async function GET() {
     // Read all files from presentations directory
     const files = fs.readdirSync(presentationsPath)
 
-    const presentationFiles = files
+    // Filter only PPT/PPTX files and exclude README/gitkeep
+    const pptFiles = files
       .filter((file) => {
         const ext = path.extname(file).toLowerCase()
-        return (
-          (ext === ".ppt" || ext === ".pptx" || ext === ".pdf") &&
-          !file.startsWith(".") &&
-          !file.toLowerCase().includes("readme")
-        )
+        return (ext === ".ppt" || ext === ".pptx") && !file.startsWith(".") && !file.toLowerCase().includes("readme")
       })
       .map((file) => ({
         name: file,
@@ -30,7 +27,7 @@ export async function GET() {
         displayName: path.basename(file, path.extname(file)),
       }))
 
-    return NextResponse.json({ files: presentationFiles })
+    return NextResponse.json({ files: pptFiles })
   } catch (error) {
     console.error("Error reading presentations directory:", error)
     return NextResponse.json({ files: [] })

@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { getActivePresentationsForOperator, getPresentationProgressByOperator } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
-import { PDFViewer } from "@/components/pdf-viewer"
 import type { Presentation } from "@/lib/types"
 import { BookOpen, Play, PresentationIcon } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
@@ -35,8 +34,6 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [pptFiles, setPptFiles] = useState<PPTFile[]>([])
   const [loadingFiles, setLoadingFiles] = useState(true)
-  const [selectedPDFFile, setSelectedPDFFile] = useState<PPTFile | null>(null)
-  const [showPDFViewer, setShowPDFViewer] = useState(false)
 
   const loadData = useCallback(() => {
     if (user) {
@@ -99,31 +96,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   }
 
   const handleViewPPT = (file: PPTFile) => {
-    if (file.extension === ".pdf") {
-      setSelectedPDFFile(file)
-      setShowPDFViewer(true)
-    } else {
-      router.push(`/presentation/${encodeURIComponent(file.name)}`)
-    }
-  }
-
-  const handleClosePDFViewer = () => {
-    setShowPDFViewer(false)
-    setSelectedPDFFile(null)
-  }
-
-  const getFileIcon = (extension: string) => {
-    if (extension === ".pdf") {
-      return <BookOpen className="h-5 w-5 text-orange-500" />
-    }
-    return <PresentationIcon className="h-5 w-5 text-orange-500" />
-  }
-
-  const getFileTypeLabel = (extension: string) => {
-    if (extension === ".pdf") {
-      return "PDF"
-    }
-    return "Apresentação"
+    router.push(`/presentation/${encodeURIComponent(file.name)}`)
   }
 
   return (
@@ -136,7 +109,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                 <BookOpen className="h-6 w-6" />
                 Treinamentos
               </DialogTitle>
-              <DialogDescription>Visualize as apresentações de treinamento disponíveis (PPT e PDF)</DialogDescription>
+              <DialogDescription>Visualize as apresentações de treinamento disponíveis</DialogDescription>
             </DialogHeader>
           </div>
 
@@ -153,14 +126,9 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                         <CardHeader className="pb-4 bg-gradient-to-br from-background to-muted/30">
                           <div className="flex items-center gap-3 mb-2">
                             <div className="p-2 rounded-lg bg-orange-500/10 group-hover:bg-orange-500/20 transition-colors">
-                              {getFileIcon(file.extension)}
+                              <PresentationIcon className="h-5 w-5 text-orange-500" />
                             </div>
-                            <div className="flex-1">
-                              <CardTitle className="text-lg">{file.displayName}</CardTitle>
-                              <Badge variant="outline" className="mt-1 text-xs">
-                                {getFileTypeLabel(file.extension)}
-                              </Badge>
-                            </div>
+                            <CardTitle className="text-lg flex-1">{file.displayName}</CardTitle>
                           </div>
                         </CardHeader>
                         <CardContent className="pt-4">
@@ -170,7 +138,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                             size="lg"
                           >
                             <Play className="h-4 w-4 mr-2" />
-                            {file.extension === ".pdf" ? "Abrir PDF" : "Iniciar Apresentação"}
+                            Iniciar Apresentação
                           </Button>
                         </CardContent>
                       </Card>
@@ -244,15 +212,6 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
 
       {selectedPresentation && (
         <PresentationViewer presentation={selectedPresentation} isOpen={showViewer} onClose={handleCloseViewer} />
-      )}
-
-      {selectedPDFFile && (
-        <PDFViewer
-          isOpen={showPDFViewer}
-          onClose={handleClosePDFViewer}
-          fileName={selectedPDFFile.displayName}
-          filePath={selectedPDFFile.path}
-        />
       )}
     </>
   )
