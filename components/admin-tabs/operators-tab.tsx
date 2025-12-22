@@ -48,12 +48,14 @@ export function OperatorsTab() {
   useEffect(() => {
     const loadOperators = () => {
       const allUsers = getAllUsers()
-      setOperators(allUsers.filter((u) => u.role === "operator"))
+      const ops = allUsers.filter((u) => u.role === "operator")
+      console.log("[v0] Operators tab loaded:", ops.length, "operators")
+      setOperators(ops)
     }
 
     loadOperators()
 
-    const interval = setInterval(loadOperators, 30000)
+    const interval = setInterval(loadOperators, 5000)
 
     const handleStoreUpdate = () => {
       loadOperators()
@@ -175,6 +177,8 @@ export function OperatorsTab() {
 
       const allUsers = getAllUsers()
       allUsers.push(newOperator)
+
+      console.log("[v0] Adding new operator:", newOperator.username, "Total users:", allUsers.length)
 
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
@@ -324,6 +328,9 @@ export function OperatorsTab() {
       })
 
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
+
+      setOperators(allUsers.filter((u) => u.role === "operator"))
+      console.log("[v0] Imported", importedCount, "operators. Total users now:", allUsers.length)
 
       // Show results
       if (importedCount > 0) {

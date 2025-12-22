@@ -24,7 +24,7 @@ import type {
   Contract, // Imported for contracts
 } from "./types"
 import { db, auth } from "./firebase" // Updated import for auth
-import { doc, setDoc, onSnapshot } from "firebase/firestore"
+import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore" // Added getDoc for loadFromFirebase
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth" // Imported for anonymous auth
 import debounce from "lodash.debounce" // Import debounce
 
@@ -146,17 +146,30 @@ const writeQueue = new Map<string, { data: unknown; timestamp: number }>()
 let batchTimer: NodeJS.Timeout | null = null
 
 function syncToFirebase(key: string, data: unknown) {
-  if (firebaseSyncDisabled || pendingFirebaseWrites >= MAX_PENDING_WRITES) {
+  if (firebaseSyncDisabled) {
+    console.log("[v0] Firebase sync disabled, skipping", key)
     return
   }
 
-  const now = Date.now()
-  if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
-    return
-  }
-  lastFirebaseWrite = now
+  const isUserData = key === STORAGE_KEYS.USERS
 
+  if (!isUserData) {
+    if (pendingFirebaseWrites >= MAX_PENDING_WRITES) {
+      console.log("[v0] Too many pending writes, skipping", key)
+      return
+    }
+
+    const now = Date.now()
+    if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
+      console.log("[v0] Too soon since last write, skipping", key)
+      return
+    }
+  }
+
+  lastFirebaseWrite = Date.now()
   pendingFirebaseWrites++
+
+  const syncDelay = isUserData ? 0 : BATCH_INTERVAL
 
   setTimeout(async () => {
     try {
@@ -188,7 +201,9 @@ function syncToFirebase(key: string, data: unknown) {
           updatedAt: new Date().toISOString(),
         })
 
-        console.log(`[v0] Successfully synced ${key} to Firebase`)
+        console.log(
+          `[v0] Successfully synced ${key} to Firebase with ${Array.isArray(dataToSync) ? dataToSync.length : 1} items`,
+        )
       }
     } catch (error: unknown) {
       console.error(`[v0] Error syncing ${key} to Firebase:`, error)
@@ -196,7 +211,7 @@ function syncToFirebase(key: string, data: unknown) {
     } finally {
       pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
     }
-  }, BATCH_INTERVAL)
+  }, syncDelay)
 }
 
 function flushBatchQueue() {
@@ -2652,4 +2667,35 @@ function scheduleNotification() {
       window.dispatchEvent(new CustomEvent("store-updated"))
     }
   }, 100) // Small delay to batch multiple updates
+}
+
+export async function loadFromFirebase() {
+  if (typeof window === "undefined") return
+  if (!db) return
+
+  console.log("[v0] Loading all data from Firebase...")
+
+  try {
+    const promises = Object.entries(STORAGE_KEYS).map(async ([key, storageKey]) => {
+      try {
+        const docRef = doc(db, "app_data", storageKey)
+        const docSnap = await getDoc(docRef)
+
+        if (docSnap.exists()) {
+          const data = docSnap.data()
+          if (data && data.data) {
+            localStorage.setItem(storageKey, JSON.stringify(data.data))
+            console.log(`[v0] Loaded ${storageKey} from Firebase:`, data.data.length, "items")
+          }
+        }
+      } catch (error) {
+        console.error(`[v0] Error loading ${storageKey} from Firebase:`, error)
+      }
+    })
+
+    await Promise.all(promises)
+    console.log("[v0] Finished loading from Firebase")
+  } catch (error) {
+    console.error("[v0] Error in loadFromFirebase:", error)
+  }
 }
