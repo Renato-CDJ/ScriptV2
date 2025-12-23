@@ -22,6 +22,7 @@ import type {
   Presentation, // Imported for presentations
   PresentationProgress, // Imported for presentation progress
   Contract, // Imported for contracts
+  FilePresentationProgress, // Added for file presentation progress
 } from "./types"
 import { db, auth } from "./firebase" // Updated import for auth
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore" // Added getDoc for loadFromFirebase
@@ -918,7 +919,7 @@ const MOCK_CHANNELS: Channel[] = [
   {
     id: "ch-5",
     name: "SAC CAIXA",
-    contact: "0800 726 0101",
+    contact: "0800 721 0101",
     isActive: true,
     createdAt: new Date(),
   },
@@ -959,6 +960,7 @@ export const STORAGE_KEYS = {
   PRESENTATIONS: "callcenter_presentations",
   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
   CONTRACTS: "contracts", // Added storage key for contracts
+  FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
 } as const
 
 // Initialize mock data
@@ -1137,6 +1139,11 @@ export function initializeMockData() {
   // Initialize mock data for contracts
   if (!localStorage.getItem(STORAGE_KEYS.CONTRACTS)) {
     localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify([]))
+  }
+
+  // Initialize mock data for file presentation progress
+  if (!localStorage.getItem(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS)) {
+    localStorage.setItem(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS, JSON.stringify([]))
   }
 
   cleanupOldSessions()
@@ -2698,4 +2705,75 @@ export async function loadFromFirebase() {
   } catch (error) {
     console.error("[v0] Error in loadFromFirebase:", error)
   }
+}
+
+// File presentation progress tracking
+export function getFilePresentationProgress(): FilePresentationProgress[] {
+  if (typeof window === "undefined") return []
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS) || "[]")
+}
+
+export function getFilePresentationProgressByOperator(operatorId: string): FilePresentationProgress[] {
+  return getFilePresentationProgress().filter((p) => p.operatorId === operatorId)
+}
+
+export function getFilePresentationProgressByFile(fileName: string): FilePresentationProgress[] {
+  return getFilePresentationProgress().filter((p) => p.fileName === fileName)
+}
+
+export function markFilePresentationAsRead(fileName: string, operatorId: string, operatorName: string) {
+  if (typeof window === "undefined") return
+
+  const progress = getFilePresentationProgress()
+  const existing = progress.find((p) => p.fileName === fileName && p.operatorId === operatorId)
+
+  if (existing) {
+    existing.marked_as_seen = true
+    existing.completion_date = new Date()
+  } else {
+    const newProgress: FilePresentationProgress = {
+      id: `file-prog-${Date.now()}`,
+      fileName,
+      operatorId,
+      operatorName,
+      viewedAt: new Date(),
+      marked_as_seen: true,
+      completion_date: new Date(),
+    }
+    progress.push(newProgress)
+  }
+
+  saveImmediately(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS, progress)
+  notifyUpdateImmediate()
+}
+
+export function exportFilePresentationReport(fileName: string): string {
+  const progressList = getFilePresentationProgressByFile(fileName)
+
+  if (progressList.length === 0) {
+    return ""
+  }
+
+  // Create CSV content
+  let csvContent = "data:text/csv;charset=utf-8,"
+
+  // Header
+  csvContent += "Relatório de Treinamento - Arquivo\n\n"
+  csvContent += `Arquivo:,${fileName.replace(/,/g, ";")}\n`
+  csvContent += `Total de Operadores que Marcaram como Lido:,${progressList.filter((p) => p.marked_as_seen).length}\n\n`
+
+  // Progress details
+  csvContent += "Detalhes de Leitura:\n"
+  csvContent += "Operador,Data de Visualização,Hora,Marcado como Lido\n"
+
+  progressList.forEach((progress) => {
+    const date = new Date(progress.viewedAt)
+    const dateStr = date.toLocaleDateString("pt-BR")
+    const timeStr = date.toLocaleTimeString("pt-BR")
+    const seenStr = progress.marked_as_seen ? "Sim" : "Não"
+
+    csvContent += `${progress.operatorName.replace(/,/g, ";")},${dateStr},${timeStr},${seenStr}\n`
+  })
+
+  return csvContent
 }

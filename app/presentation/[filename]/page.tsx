@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Maximize, Minimize, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Maximize, Minimize, X, Check } from "lucide-react"
 import Image from "next/image"
+import { useAuth } from "@/lib/auth-context"
+import { markFilePresentationAsRead } from "@/lib/store"
 
 export default function PresentationPage() {
   const params = useParams()
@@ -14,6 +16,8 @@ export default function PresentationPage() {
   const [slides, setSlides] = useState<string[]>([])
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const { user } = useAuth()
+  const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false)
 
   useEffect(() => {
     const loadSlides = async () => {
@@ -125,6 +129,14 @@ export default function PresentationPage() {
     typeof window !== "undefined" ? window.location.origin + presentationUrl : presentationUrl,
   )}&embedded=true`
 
+  const handleMarkAsRead = () => {
+    if (user) {
+      const baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
+      markFilePresentationAsRead(baseFilename, user.id, user.fullName || user.username)
+      setHasMarkedAsRead(true)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-background z-[9999] flex items-center justify-center">
@@ -137,6 +149,8 @@ export default function PresentationPage() {
   }
 
   if (slides.length > 0) {
+    const isLastSlide = currentSlide === slides.length - 1
+
     return (
       <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
         {/* Header */}
@@ -192,16 +206,37 @@ export default function PresentationPage() {
             {currentSlide + 1} / {slides.length}
           </div>
 
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1))}
-            disabled={currentSlide === slides.length - 1}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-          >
-            Próximo
-            <ChevronRight className="h-5 w-5 ml-2" />
-          </Button>
+          {isLastSlide && user && !hasMarkedAsRead && (
+            <Button
+              variant="default"
+              size="lg"
+              onClick={handleMarkAsRead}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Check className="h-5 w-5 mr-2" />
+              Marcar como Lido
+            </Button>
+          )}
+
+          {isLastSlide && hasMarkedAsRead && (
+            <Button variant="outline" size="lg" disabled className="bg-green-600/20 border-green-600/40 text-white">
+              <Check className="h-5 w-5 mr-2" />
+              Marcado como Lido
+            </Button>
+          )}
+
+          {!isLastSlide && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1))}
+              disabled={currentSlide === slides.length - 1}
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+            >
+              Próximo
+              <ChevronRight className="h-5 w-5 ml-2" />
+            </Button>
+          )}
         </div>
 
         {/* Keyboard shortcuts hint */}

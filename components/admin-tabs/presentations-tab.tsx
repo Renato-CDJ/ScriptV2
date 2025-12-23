@@ -27,6 +27,8 @@ import {
   getAllUsers,
   getPresentationProgressByPresentation,
   exportPresentationReport,
+  getFilePresentationProgressByFile,
+  exportFilePresentationReport,
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Presentation, PresentationSlide } from "@/lib/types"
@@ -42,6 +44,7 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  Check,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
@@ -51,6 +54,8 @@ export function PresentationsTab() {
   const { toast } = useToast()
   const [presentations, setPresentations] = useState<Presentation[]>([])
   const [operators, setOperators] = useState<{ id: string; fullName: string }[]>([])
+  const [pptFiles, setPptFiles] = useState<any[]>([])
+  const [loadingFiles, setLoadingFiles] = useState(true)
   const [showDialog, setShowDialog] = useState(false)
   const [editingPresentation, setEditingPresentation] = useState<Presentation | null>(null)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
@@ -71,9 +76,34 @@ export function PresentationsTab() {
     setOperators(allUsers.filter((u) => u.role === "operator").map((u) => ({ id: u.id, fullName: u.fullName })))
   }, [])
 
+  const loadOperators = useCallback(() => {
+    const allUsers = getAllUsers()
+    setOperators(allUsers.filter((u) => u.role === "operator").map((u) => ({ id: u.id, fullName: u.fullName })))
+  }, [])
+
+  const loadPresentations = useCallback(() => {
+    setPresentations(getPresentations())
+  }, [])
+
+  const loadPPTFiles = useCallback(async () => {
+    try {
+      setLoadingFiles(true)
+      const response = await fetch("/api/presentations/files")
+      const data = await response.json()
+      setPptFiles(data.files || [])
+    } catch (error) {
+      console.error("Error loading PPT files:", error)
+      setPptFiles([])
+    } finally {
+      setLoadingFiles(false)
+    }
+  }, [])
+
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    loadOperators()
+    loadPresentations()
+    loadPPTFiles()
+  }, [loadOperators, loadPresentations, loadPPTFiles])
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
@@ -305,6 +335,31 @@ export function PresentationsTab() {
     return presentation.slides.some(
       (slide) => slide.imageData === "[IMAGE_STORED_LOCALLY]" || (!slide.imageData && !slide.imageUrl),
     )
+  }
+
+  const handleExportFileReport = (fileName: string) => {
+    const csvContent = exportFilePresentationReport(fileName)
+    if (!csvContent) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o relatório.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", `arquivo_relatorio_${fileName}_${Date.now()}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({
+      title: "Relatório exportado",
+      description: "O relatório foi baixado com sucesso.",
+    })
   }
 
   return (
@@ -630,6 +685,70 @@ export function PresentationsTab() {
           })
         )}
       </div>
+
+      {pptFiles.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-2xl font-bold tracking-tight mb-4">Arquivos PPT e PDF</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Arquivos de apresentação disponíveis na pasta public/presentations
+          </p>
+
+          <div className="space-y-4">
+            {pptFiles.map((file) => {
+              const fileProgress = getFilePresentationProgressByFile(file.displayName)
+              const readCount = fileProgress.filter((p) => p.marked_as_seen).length
+
+              return (
+                <Card key={file.name} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <CardTitle className="text-base break-words">{file.displayName}</CardTitle>
+                        <CardDescription>
+                          {file.extension.toUpperCase()} • {readCount} operador(es) marcaram como lido
+                        </CardDescription>
+                      </div>
+                      <Badge variant="secondary">{file.extension === ".pdf" ? "PDF" : "PPT"}</Badge>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-0">
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleExportFileReport(file.displayName)}
+                        disabled={readCount === 0}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar Relatório ({readCount})
+                      </Button>
+                    </div>
+
+                    {/* Show list of operators who marked as read */}
+                    {readCount > 0 && (
+                      <div className="mt-4 p-3 bg-muted/50 rounded-md">
+                        <p className="text-sm font-medium mb-2">Operadores que marcaram como lido:</p>
+                        <div className="space-y-1">
+                          {fileProgress
+                            .filter((p) => p.marked_as_seen)
+                            .map((progress) => (
+                              <div key={progress.id} className="text-sm text-muted-foreground flex items-center gap-2">
+                                <Check className="h-3 w-3 text-green-600" />
+                                {progress.operatorName} -{" "}
+                                {new Date(progress.completion_date!).toLocaleDateString("pt-BR")}
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
