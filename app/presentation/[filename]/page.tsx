@@ -3,10 +3,12 @@
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Maximize, Minimize, X, Check } from "lucide-react"
+import { ChevronLeft, ChevronRight, Maximize, Minimize, X } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
 import { useAuth } from "@/lib/auth-context"
 import { markFilePresentationAsRead } from "@/lib/store"
+import { CheckCircle2 } from "lucide-react"
 
 export default function PresentationPage() {
   const params = useParams()
@@ -132,8 +134,10 @@ export default function PresentationPage() {
   const handleMarkAsRead = () => {
     if (user) {
       const baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
+      console.log("[v0] Marking presentation as read:", baseFilename, user.id, user.fullName || user.username)
       markFilePresentationAsRead(baseFilename, user.id, user.fullName || user.username)
       setHasMarkedAsRead(true)
+      console.log("[v0] Marked as read successfully")
     }
   }
 
@@ -150,27 +154,51 @@ export default function PresentationPage() {
 
   if (slides.length > 0) {
     const isLastSlide = currentSlide === slides.length - 1
+    console.log(
+      "[v0] Current slide:",
+      currentSlide,
+      "Total slides:",
+      slides.length,
+      "Is last slide:",
+      isLastSlide,
+      "User:",
+      user,
+      "Has marked:",
+      hasMarkedAsRead,
+    )
 
     return (
       <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
-        {/* Header */}
-        <div className="h-14 bg-black/80 backdrop-blur flex items-center justify-between px-4 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-white/10">
-              <X className="h-4 w-4 mr-2" />
+        <div className="h-16 bg-gradient-to-r from-black via-black/95 to-black/90 backdrop-blur flex items-center justify-between px-6 border-b border-white/10 shadow-xl">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="text-white hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <X className="h-5 w-5 mr-2" />
               Fechar
             </Button>
-            <div className="text-sm font-medium text-white/90 truncate max-w-[300px]">
+            <Separator orientation="vertical" className="h-6 bg-white/20" />
+            <div className="text-sm font-medium text-white/90 truncate max-w-[400px]">
               {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-white/80">
-              Slide {currentSlide + 1} de {slides.length}
-            </span>
-            <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="text-white hover:bg-white/10">
-              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20">
+              <span className="text-sm font-medium text-white">
+                {currentSlide + 1} / {slides.length}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleFullscreen}
+              className="text-white hover:bg-white/10 hover:text-white transition-colors"
+            >
+              {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
             </Button>
           </div>
         </div>
@@ -189,21 +217,23 @@ export default function PresentationPage() {
           </div>
         </div>
 
-        {/* Navigation controls */}
-        <div className="h-16 bg-black/80 backdrop-blur flex items-center justify-center gap-4 px-4 border-t border-white/10">
+        <div className="h-20 bg-gradient-to-r from-black via-black/95 to-black/90 backdrop-blur flex items-center justify-center gap-3 px-6 border-t border-white/10 shadow-2xl">
           <Button
             variant="outline"
             size="lg"
             onClick={() => setCurrentSlide((prev) => Math.max(0, prev - 1))}
             disabled={currentSlide === 0}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+            className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:text-white disabled:opacity-30 transition-all min-w-[130px]"
           >
             <ChevronLeft className="h-5 w-5 mr-2" />
             Anterior
           </Button>
 
-          <div className="text-sm font-medium text-white px-4 min-w-[120px] text-center">
-            {currentSlide + 1} / {slides.length}
+          <div className="px-6 py-3 rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm min-w-[140px] text-center">
+            <div className="text-xs text-white/60 mb-1">Slide</div>
+            <div className="text-base font-bold text-white">
+              {currentSlide + 1} de {slides.length}
+            </div>
           </div>
 
           {isLastSlide && user && !hasMarkedAsRead && (
@@ -211,16 +241,21 @@ export default function PresentationPage() {
               variant="default"
               size="lg"
               onClick={handleMarkAsRead}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg shadow-green-600/30 hover:shadow-xl hover:shadow-green-600/40 transition-all min-w-[180px] font-semibold"
             >
-              <Check className="h-5 w-5 mr-2" />
+              <CheckCircle2 className="h-5 w-5 mr-2" />
               Marcar como Lido
             </Button>
           )}
 
           {isLastSlide && hasMarkedAsRead && (
-            <Button variant="outline" size="lg" disabled className="bg-green-600/20 border-green-600/40 text-white">
-              <Check className="h-5 w-5 mr-2" />
+            <Button
+              variant="outline"
+              size="lg"
+              disabled
+              className="bg-green-600/20 border-green-600/40 text-green-400 min-w-[180px] font-semibold"
+            >
+              <CheckCircle2 className="h-5 w-5 mr-2" />
               Marcado como Lido
             </Button>
           )}
@@ -231,7 +266,7 @@ export default function PresentationPage() {
               size="lg"
               onClick={() => setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1))}
               disabled={currentSlide === slides.length - 1}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:text-white disabled:opacity-30 transition-all min-w-[130px]"
             >
               Próximo
               <ChevronRight className="h-5 w-5 ml-2" />

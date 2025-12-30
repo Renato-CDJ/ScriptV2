@@ -229,6 +229,23 @@ function flushBatchQueue() {
 export function saveImmediately(key: string, data: unknown) {
   if (typeof window === "undefined") return
 
+  if (key === STORAGE_KEYS.USERS && Array.isArray(data)) {
+    console.log(`[v0] 💾 saveImmediately: Saving ${data.length} users`)
+
+    // Validate user data integrity
+    const validUsers = data.filter((u) => u && u.id && u.username)
+    if (validUsers.length !== data.length) {
+      console.warn(`[v0] ⚠️ Found ${data.length - validUsers.length} invalid users, filtering them out`)
+    }
+
+    if (validUsers.length === 0) {
+      console.error("[v0] ❌ Attempted to save 0 users - BLOCKING to prevent data loss!")
+      return
+    }
+
+    data = validUsers
+  }
+
   console.log(`[v0] saveImmediately called for ${key}, data count:`, Array.isArray(data) ? data.length : "N/A")
 
   // Save to localStorage immediately (with full data including imageData)
@@ -384,56 +401,58 @@ function setupListeners() {
 
   keysToSync.forEach((key) => {
     const unsub = onSnapshot(
-      doc(db, FIREBASE_COLLECTION, key), // Use FIREBASE_COLLECTION here
+      doc(db, FIREBASE_COLLECTION, key),
       (docSnapshot) => {
         if (docSnapshot.exists()) {
           const data = docSnapshot.data()
           if (data && data.data) {
-            // Check for 'data' property now
-            // Update local storage without triggering save back to firebase (avoid loop)
-            // We do this by writing directly to localStorage, bypassing debouncedSave
             const currentValue = localStorage.getItem(key)
-            const newValue = JSON.stringify(data.data) // Use data.data
+            const newValue = JSON.stringify(data.data)
 
-            if (key === STORAGE_KEYS.USERS && currentValue) {
-              try {
-                const localUsers = JSON.parse(currentValue) as User[]
-                const remoteUsers = data.data as User[]
+            if (key === STORAGE_KEYS.USERS) {
+              const remoteUsers = data.data as User[]
+              const currentUsers = currentValue ? JSON.parse(currentValue) : []
 
-                // Merge: keep all unique users by ID, prefer local data for conflicts
-                const mergedUsers = [...localUsers]
+              console.log(
+                `[v0] Firebase listener: Remote has ${remoteUsers.length} users, Local has ${currentUsers.length} users`,
+              )
 
-                remoteUsers.forEach((remoteUser: User) => {
-                  const existingIndex = mergedUsers.findIndex((u) => u.id === remoteUser.id)
-                  if (existingIndex === -1) {
-                    // User doesn't exist locally, add it
-                    mergedUsers.push(remoteUser)
-                  }
-                  // If user exists locally, keep local version (it's more recent)
-                })
-
-                const mergedValue = JSON.stringify(mergedUsers)
-                if (currentValue !== mergedValue) {
-                  localStorage.setItem(key, mergedValue)
-                  window.dispatchEvent(new CustomEvent("store-updated"))
-                }
-              } catch (e) {
-                // If merge fails, fall back to normal behavior
-                if (currentValue !== newValue) {
-                  localStorage.setItem(key, newValue)
-                  window.dispatchEvent(new CustomEvent("store-updated"))
-                }
+              // Protect against data loss - don't accept empty or significantly smaller datasets
+              if (remoteUsers.length === 0 && currentUsers.length > 0) {
+                console.warn(
+                  "[v0] ⚠️ Firebase sent 0 users but local has",
+                  currentUsers.length,
+                  "users - IGNORING Firebase data to prevent data loss",
+                )
+                return
               }
-            } else if (currentValue !== newValue) {
-              localStorage.setItem(key, newValue)
-              window.dispatchEvent(new CustomEvent("store-updated"))
+
+              if (remoteUsers.length < currentUsers.length * 0.5 && currentUsers.length > 10) {
+                console.warn(
+                  `[v0] ⚠️ Firebase has ${remoteUsers.length} users but local has ${currentUsers.length} - difference too large, IGNORING to prevent data loss`,
+                )
+                return
+              }
+
+              // Always use Firebase data as source of truth (when valid)
+              if (currentValue !== newValue) {
+                localStorage.setItem(key, newValue)
+                console.log(`[v0] ✅ Updated local storage with ${remoteUsers.length} users from Firebase`)
+                window.dispatchEvent(new CustomEvent("store-updated"))
+              }
+            } else {
+              // For other data, simple sync
+              if (currentValue !== newValue) {
+                localStorage.setItem(key, newValue)
+                window.dispatchEvent(new CustomEvent("store-updated"))
+              }
             }
           }
         }
       },
       (error) => {
+        console.error(`[v0] Error in ${key} listener:`, error.message)
         if (!firebaseSyncDisabled) {
-          // Use firebaseSyncDisabled
           console.error(`\n⚠️  Firebase Firestore Permission Error\n`)
           console.error(`Your Firestore Security Rules are blocking access.`)
           console.error(`\nTo fix this:\n`)
@@ -1519,8 +1538,13 @@ export function deleteUser(userId: string) {
   if (typeof window === "undefined") return
 
   try {
-    const users = getAllUsers().filter((u) => u.id !== userId)
-    saveImmediately(STORAGE_KEYS.USERS, users)
+    const users = getAllUsers()
+    const beforeCount = users.length
+    const updatedUsers = users.filter((u) => u.id !== userId)
+
+    console.log(`[v0] 🗑️ Deleting user: ${userId}, Before: ${beforeCount} users, After: ${updatedUsers.length} users`)
+
+    saveImmediately(STORAGE_KEYS.USERS, updatedUsers)
     notifyUpdateImmediate()
   } catch (error) {
     console.error("[v0] Error deleting user:", error)
@@ -2724,12 +2748,17 @@ export function getFilePresentationProgressByFile(fileName: string): FilePresent
 export function markFilePresentationAsRead(fileName: string, operatorId: string, operatorName: string) {
   if (typeof window === "undefined") return
 
+  console.log("[v0] markFilePresentationAsRead called:", fileName, operatorId, operatorName)
+
   const progress = getFilePresentationProgress()
+  console.log("[v0] Current file presentation progress:", progress)
+
   const existing = progress.find((p) => p.fileName === fileName && p.operatorId === operatorId)
 
   if (existing) {
     existing.marked_as_seen = true
     existing.completion_date = new Date()
+    console.log("[v0] Updated existing progress:", existing)
   } else {
     const newProgress: FilePresentationProgress = {
       id: `file-prog-${Date.now()}`,
@@ -2741,10 +2770,13 @@ export function markFilePresentationAsRead(fileName: string, operatorId: string,
       completion_date: new Date(),
     }
     progress.push(newProgress)
+    console.log("[v0] Created new progress:", newProgress)
   }
 
+  console.log("[v0] Saving progress to localStorage:", progress)
   saveImmediately(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS, progress)
   notifyUpdateImmediate()
+  console.log("[v0] Progress saved and notified")
 }
 
 export function exportFilePresentationReport(fileName: string): string {
@@ -2776,4 +2808,30 @@ export function exportFilePresentationReport(fileName: string): string {
   })
 
   return csvContent
+}
+
+export function addUser(user: Omit<User, "id" | "createdAt">) {
+  if (typeof window === "undefined") return
+
+  try {
+    const users = getAllUsers()
+    const newUser: User = {
+      ...user,
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date(),
+    }
+
+    const beforeCount = users.length
+    users.push(newUser)
+
+    console.log(`[v0] ➕ Adding user: ${newUser.username}, Before: ${beforeCount} users, After: ${users.length} users`)
+
+    saveImmediately(STORAGE_KEYS.USERS, users)
+    notifyUpdateImmediate()
+
+    return newUser
+  } catch (error) {
+    console.error("[v0] Error adding user:", error)
+    return null
+  }
 }

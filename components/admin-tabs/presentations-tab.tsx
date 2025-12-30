@@ -88,8 +88,10 @@ export function PresentationsTab() {
   const loadPPTFiles = useCallback(async () => {
     try {
       setLoadingFiles(true)
+      console.log("[v0] Loading PPT/PDF files...")
       const response = await fetch("/api/presentations/files")
       const data = await response.json()
+      console.log("[v0] Loaded files:", data.files)
       setPptFiles(data.files || [])
     } catch (error) {
       console.error("Error loading PPT files:", error)
@@ -697,6 +699,7 @@ export function PresentationsTab() {
             {pptFiles.map((file) => {
               const fileProgress = getFilePresentationProgressByFile(file.displayName)
               const readCount = fileProgress.filter((p) => p.marked_as_seen).length
+              console.log("[v0] File:", file.displayName, "Progress:", fileProgress, "Read count:", readCount)
 
               return (
                 <Card key={file.name} className="overflow-hidden">
