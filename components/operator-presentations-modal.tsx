@@ -115,6 +115,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
       console.log("[v0] Navigating to PPT presentation:", file.name)
       const encodedName = encodeURIComponent(file.name)
       console.log("[v0] Encoded URL:", `/presentation/${encodedName}`)
+      onClose() // Close the modal first
       router.push(`/presentation/${encodedName}`)
     }
   }
