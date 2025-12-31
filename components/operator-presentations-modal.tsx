@@ -104,8 +104,6 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
 
   const handleViewPPT = (file: PPTFile) => {
     console.log("[v0] Opening file:", file.name, "Extension:", file.extension)
-    console.log("[v0] File path:", file.path)
-    console.log("[v0] Display name:", file.displayName)
 
     if (file.extension === ".pdf") {
       console.log("[v0] Opening PDF viewer for:", file.displayName)
@@ -114,9 +112,16 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
     } else {
       console.log("[v0] Navigating to PPT presentation:", file.name)
       const encodedName = encodeURIComponent(file.name)
-      console.log("[v0] Encoded URL:", `/presentation/${encodedName}`)
-      onClose() // Close the modal first
-      router.push(`/presentation/${encodedName}`)
+      const targetUrl = `/presentation/${encodedName}`
+      console.log("[v0] Target URL:", targetUrl)
+
+      // Close modal and navigate
+      onClose()
+
+      // Use window.location.href for reliable navigation
+      setTimeout(() => {
+        window.location.href = targetUrl
+      }, 100)
     }
   }
 
