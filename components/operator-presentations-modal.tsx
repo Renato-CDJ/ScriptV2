@@ -103,11 +103,19 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   }
 
   const handleViewPPT = (file: PPTFile) => {
+    console.log("[v0] Opening file:", file.name, "Extension:", file.extension)
+    console.log("[v0] File path:", file.path)
+    console.log("[v0] Display name:", file.displayName)
+
     if (file.extension === ".pdf") {
+      console.log("[v0] Opening PDF viewer for:", file.displayName)
       setSelectedPDFFile(file)
       setShowPDFViewer(true)
     } else {
-      router.push(`/presentation/${encodeURIComponent(file.name)}`)
+      console.log("[v0] Navigating to PPT presentation:", file.name)
+      const encodedName = encodeURIComponent(file.name)
+      console.log("[v0] Encoded URL:", `/presentation/${encodedName}`)
+      router.push(`/presentation/${encodedName}`)
     }
   }
 
