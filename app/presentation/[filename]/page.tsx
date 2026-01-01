@@ -24,43 +24,21 @@ export default function PresentationPage() {
   useEffect(() => {
     const loadSlides = async () => {
       try {
-        let baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
-        baseFilename = baseFilename.replace(/\.+$/, "") // Remove trailing periods
-        const slideUrls: string[] = []
+        const decodedFilename = decodeURIComponent(filename)
+        console.log("[v0] Loading slides for:", decodedFilename)
 
-        // Try to load up to 100 slides
-        for (let i = 1; i <= 100; i++) {
-          const paddedNum = String(i).padStart(3, "0")
-          const slideUrl = `/presentations/slides/${baseFilename}/slide-${paddedNum}.png`
+        const response = await fetch(`/api/presentations/slides?filename=${encodeURIComponent(decodedFilename)}`)
+        const data = await response.json()
 
-          try {
-            const response = await fetch(slideUrl, { method: "HEAD" })
-            if (response.ok) {
-              slideUrls.push(slideUrl)
-            } else {
-              // Try alternative naming: 001.png, 002.png
-              const altUrl = `/presentations/slides/${baseFilename}/${paddedNum}.png`
-              const altResponse = await fetch(altUrl, { method: "HEAD" })
-              if (altResponse.ok) {
-                slideUrls.push(altUrl)
-              } else {
-                // No more slides found
-                break
-              }
-            }
-          } catch {
-            break
-          }
-        }
+        console.log("[v0] Slides API response:", data)
 
-        if (slideUrls.length > 0) {
-          setSlides(slideUrls)
+        if (data.slides && data.slides.length > 0) {
+          setSlides(data.slides)
         } else {
-          // Fallback: use iframe viewer
           setSlides([])
         }
       } catch (error) {
-        console.error("Error loading slides:", error)
+        console.error("[v0] Error loading slides:", error)
         setSlides([])
       } finally {
         setIsLoading(false)
@@ -127,18 +105,13 @@ export default function PresentationPage() {
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
   }, [])
 
-  const presentationUrl = `/presentations/${decodeURIComponent(filename)}`
-  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
-    typeof window !== "undefined" ? window.location.origin + presentationUrl : presentationUrl,
-  )}&embedded=true`
-
   const handleMarkAsRead = () => {
     if (user) {
-      let baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
-      baseFilename = baseFilename.replace(/\.+$/, "") // Remove trailing periods
-
-      console.log("[v0] Marking presentation as read:", baseFilename, user.id, user.fullName || user.username)
-      markFilePresentationAsRead(baseFilename, user.id, user.fullName || user.username)
+      const decodedFilename = decodeURIComponent(filename)
+        .replace(/\.(pptx?|PPTX?)$/, "")
+        .replace(/\.+$/, "")
+      console.log("[v0] Marking presentation as read:", decodedFilename, user.id, user.fullName || user.username)
+      markFilePresentationAsRead(decodedFilename, user.id, user.fullName || user.username)
       setHasMarkedAsRead(true)
       console.log("[v0] Marked as read successfully")
     }
@@ -154,6 +127,11 @@ export default function PresentationPage() {
       </div>
     )
   }
+
+  const presentationUrl = `/presentations/${decodeURIComponent(filename)}`
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
+    typeof window !== "undefined" ? window.location.origin + presentationUrl : presentationUrl,
+  )}&embedded=true`
 
   if (slides.length > 0) {
     const isLastSlide = currentSlide === slides.length - 1
@@ -208,7 +186,6 @@ export default function PresentationPage() {
           </div>
         </div>
 
-        {/* Slide display - 95% of screen */}
         <div className="flex-1 flex items-center justify-center p-4" style={{ height: "calc(95vh - 3.5rem - 4rem)" }}>
           <div className="relative w-full h-full flex items-center justify-center">
             <Image
@@ -287,6 +264,7 @@ export default function PresentationPage() {
     )
   }
 
+  // Fallback: Use Google Viewer for presentations without slides
   return (
     <div className="fixed inset-0 bg-background z-[9999] flex flex-col">
       <div className="h-14 border-b flex items-center justify-between px-4 bg-background/95 backdrop-blur">

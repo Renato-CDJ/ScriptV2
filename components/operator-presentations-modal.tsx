@@ -13,7 +13,7 @@ import {
 } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
-import { PDFViewer } from "@/components/pdf-viewer"
+import { PresentationSlideshowViewer } from "@/components/presentation-slideshow-viewer"
 import type { Presentation } from "@/lib/types"
 import { Play, PresentationIcon, CheckCircle2, FileText, GraduationCap } from "lucide-react"
 
@@ -37,8 +37,8 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const [showViewer, setShowViewer] = useState(false)
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [pptFiles, setPptFiles] = useState<PPTFile[]>([])
-  const [selectedPDFFile, setSelectedPDFFile] = useState<PPTFile | null>(null)
-  const [showPDFViewer, setShowPDFViewer] = useState(false)
+  const [selectedPPTFile, setSelectedPPTFile] = useState<PPTFile | null>(null)
+  const [showSlideshowViewer, setShowSlideshowViewer] = useState(false)
 
   const loadData = useCallback(() => {
     if (user) {
@@ -72,17 +72,8 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   const openFile = (file: PPTFile) => {
     console.log("[v0] Opening file:", file.displayName, "Type:", file.extension)
 
-    if (file.extension === ".pdf") {
-      console.log("[v0] Opening PDF viewer")
-      setSelectedPDFFile(file)
-      setShowPDFViewer(true)
-    } else {
-      console.log("[v0] Navigating to PPT:", `/presentation/${encodeURIComponent(file.name)}`)
-      onClose()
-      setTimeout(() => {
-        window.location.href = `/presentation/${encodeURIComponent(file.name)}`
-      }, 100)
-    }
+    setSelectedPPTFile(file)
+    setShowSlideshowViewer(true)
   }
 
   const getFileCompletionStatus = (fileName: string) => {
@@ -229,15 +220,18 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
         />
       )}
 
-      {selectedPDFFile && (
-        <PDFViewer
-          isOpen={showPDFViewer}
+      {selectedPPTFile && (
+        <PresentationSlideshowViewer
+          isOpen={showSlideshowViewer}
           onClose={() => {
-            setShowPDFViewer(false)
-            setSelectedPDFFile(null)
+            setShowSlideshowViewer(false)
+            setSelectedPPTFile(null)
+            loadData()
+            loadPPTFiles()
           }}
-          fileName={selectedPDFFile.displayName}
-          filePath={selectedPDFFile.path}
+          fileName={selectedPPTFile.displayName}
+          filePath={selectedPPTFile.path}
+          isPDF={selectedPPTFile.extension === ".pdf"}
         />
       )}
     </>
