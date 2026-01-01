@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth-context"
 import { PresentationViewer } from "@/components/presentation-viewer"
 import { PresentationSlideshowViewer } from "@/components/presentation-slideshow-viewer"
 import type { Presentation } from "@/lib/types"
-import { Play, PresentationIcon, CheckCircle2, FileText, GraduationCap } from "lucide-react"
+import { Play, CheckCircle2, GraduationCap } from "lucide-react"
 
 interface OperatorPresentationsModalProps {
   isOpen: boolean
@@ -85,67 +85,61 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl flex items-center gap-2">
-              <GraduationCap className="h-6 w-6 text-orange-500" />
+        <DialogContent className="max-w-5xl max-h-[90vh]">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+              <div className="p-2 bg-orange-500/10 rounded-lg">
+                <GraduationCap className="h-7 w-7 text-orange-500" />
+              </div>
               Biblioteca de Treinamentos
             </DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">Explore apresentações, PDFs e materiais de capacitação</p>
           </DialogHeader>
 
-          <ScrollArea className="h-[calc(85vh-120px)] pr-4">
+          <ScrollArea className="h-[calc(90vh-180px)] pr-4">
             {pptFiles.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Materiais de Treinamento
-                  <Badge variant="secondary" className="ml-2">
-                    {pptFiles.length}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-foreground">Materiais de Treinamento</h3>
+                  <Badge variant="secondary" className="text-sm px-3 py-1">
+                    {pptFiles.length} {pptFiles.length === 1 ? "arquivo" : "arquivos"}
                   </Badge>
-                </h3>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pptFiles.map((file) => {
                     const isCompleted = getFileCompletionStatus(file.displayName)
-                    const isPDF = file.extension === ".pdf"
 
                     return (
-                      <Card key={file.name} className="p-4 space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-orange-500/10 rounded-lg">
-                            {isPDF ? (
-                              <FileText className="h-5 w-5 text-orange-500" />
-                            ) : (
-                              <PresentationIcon className="h-5 w-5 text-orange-500" />
-                            )}
+                      <Card
+                        key={file.name}
+                        className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 border-2 hover:border-orange-500/50"
+                      >
+                        {isCompleted && (
+                          <div className="absolute top-3 right-3 z-10">
+                            <Badge className="bg-green-600 text-white border-0 shadow-lg">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Concluído
+                            </Badge>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium line-clamp-2 text-sm">{file.displayName}</h4>
-                            <div className="flex gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {isPDF ? "PDF" : "PowerPoint"}
-                              </Badge>
-                              {isCompleted ? (
-                                <Badge variant="default" className="text-xs bg-green-600">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Lido
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">
-                                  Pendente
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        )}
 
-                        <Button
-                          onClick={() => openFile(file)}
-                          className="w-full bg-orange-500 hover:bg-orange-600"
-                          size="sm"
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          Iniciar Apresentação
-                        </Button>
+                        <div className="p-5 space-y-4">
+                          <div className="space-y-2">
+                            <h4 className="font-semibold text-base line-clamp-2 leading-tight min-h-[2.5rem]">
+                              {file.displayName}
+                            </h4>
+                          </div>
+
+                          <Button
+                            onClick={() => openFile(file)}
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200 group-hover:scale-105"
+                            size="lg"
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Abrir Apresentação
+                          </Button>
+                        </div>
                       </Card>
                     )
                   })}
@@ -154,54 +148,64 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
             )}
 
             {presentations.length > 0 && (
-              <div className="space-y-4 mt-6">
-                <h3 className="text-lg font-semibold">
-                  Apresentações Interativas
-                  <Badge variant="secondary" className="ml-2">
-                    {presentations.length}
+              <div className="space-y-6 mt-8">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-foreground">Apresentações Interativas</h3>
+                  <Badge variant="secondary" className="text-sm px-3 py-1">
+                    {presentations.length} {presentations.length === 1 ? "apresentação" : "apresentações"}
                   </Badge>
-                </h3>
+                </div>
 
-                {presentations.map((presentation) => {
-                  const isCompleted = completedIds.has(presentation.id)
+                <div className="space-y-3">
+                  {presentations.map((presentation) => {
+                    const isCompleted = completedIds.has(presentation.id)
 
-                  return (
-                    <Card key={presentation.id} className="p-4">
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div>
-                          <h4 className="font-semibold">{presentation.title}</h4>
-                          {presentation.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{presentation.description}</p>
-                          )}
-                        </div>
-                        {isCompleted && (
-                          <Badge variant="default" className="bg-green-600">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Concluído
-                          </Badge>
-                        )}
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setSelectedPresentation(presentation)
-                          setShowViewer(true)
-                        }}
-                        className="w-full bg-orange-500 hover:bg-orange-600"
-                        size="sm"
+                    return (
+                      <Card
+                        key={presentation.id}
+                        className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-orange-500/50"
                       >
-                        <Play className="h-4 w-4 mr-2" />
-                        {isCompleted ? "Revisar" : "Iniciar Apresentação"}
-                      </Button>
-                    </Card>
-                  )
-                })}
+                        <div className="p-5">
+                          <div className="flex items-start justify-between gap-4 mb-4">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-base mb-1">{presentation.title}</h4>
+                              {presentation.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">{presentation.description}</p>
+                              )}
+                            </div>
+                            {isCompleted && (
+                              <Badge className="bg-green-600 text-white border-0 shadow-lg flex-shrink-0">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Concluído
+                              </Badge>
+                            )}
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setSelectedPresentation(presentation)
+                              setShowViewer(true)
+                            }}
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                            size="lg"
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            {isCompleted ? "Revisar Apresentação" : "Iniciar Apresentação"}
+                          </Button>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
             {pptFiles.length === 0 && presentations.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground">
-                <GraduationCap className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Nenhum treinamento disponível no momento</p>
+              <div className="py-16 text-center">
+                <div className="inline-flex p-4 bg-muted rounded-full mb-4">
+                  <GraduationCap className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Nenhum treinamento disponível</h3>
+                <p className="text-sm text-muted-foreground">Novos materiais serão adicionados em breve</p>
               </div>
             )}
           </ScrollArea>

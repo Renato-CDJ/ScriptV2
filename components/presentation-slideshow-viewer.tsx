@@ -103,7 +103,7 @@ export function PresentationSlideshowViewer({
 
     toast({
       title: "Marcado como lido",
-      description: "Esta apresentação foi marcada como lida com sucesso.",
+      description: "Esta apresentação foi marcada como lido com sucesso.",
     })
 
     setTimeout(() => {
@@ -117,44 +117,57 @@ export function PresentationSlideshowViewer({
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-7xl w-[95vw] h-[90vh]"}`}
+          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "w-[90vw] h-[90vh] max-w-none"}`}
           showCloseButton={false}
         >
           <div className="flex flex-col h-full bg-background">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-orange-500" />
-                <h3 className="font-semibold text-sm line-clamp-1">{fileName}</h3>
-                <Badge variant="outline" className="text-xs">
-                  PDF
-                </Badge>
+            <div className="flex items-center justify-between px-6 py-3 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-500/20 rounded-lg">
+                  <FileText className="h-5 w-5 text-orange-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm line-clamp-1">{fileName}</h3>
+                  <Badge variant="outline" className="text-xs mt-1">
+                    PDF
+                  </Badge>
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleFullscreen}
+                  className="h-9 w-9 hover:bg-orange-500/10"
+                >
                   {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-red-500/10">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            {/* PDF Content */}
-            <div className="flex-1 flex flex-col items-center justify-center overflow-auto bg-gray-900">
-              <iframe src={`${filePath}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full" title={fileName} />
+            <div className="flex-1 flex items-center justify-center overflow-hidden bg-gray-950">
+              <div className="w-full h-full">
+                <iframe
+                  src={`${filePath}#toolbar=0&navpanes=0&scrollbar=0`}
+                  className="w-full h-full"
+                  title={fileName}
+                />
+              </div>
             </div>
 
-            {/* Footer with Mark as Read */}
-            <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
-              <p className="text-sm text-muted-foreground">Visualize todo o conteúdo para marcar como lido</p>
+            <div className="flex items-center justify-between px-6 py-4 border-t bg-gradient-to-r from-orange-500/10 to-transparent">
+              <p className="text-sm text-muted-foreground">Visualize todo o conteúdo para concluir</p>
               <Button
                 onClick={handleMarkAsRead}
                 disabled={hasMarkedAsRead}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
+                size="lg"
               >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                {hasMarkedAsRead ? "Marcado como Lido" : "Marcar como Lido"}
+                <CheckCircle2 className="h-5 w-5 mr-2" />
+                {hasMarkedAsRead ? "✓ Marcado como Lido" : "Marcar como Lido"}
               </Button>
             </div>
           </div>
@@ -166,67 +179,71 @@ export function PresentationSlideshowViewer({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-7xl w-[95vw] h-[90vh]"}`}
+        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "w-[90vw] h-[90vh] max-w-none"}`}
         showCloseButton={false}
       >
         <div className="flex flex-col h-full bg-background">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-            <div className="flex items-center gap-2">
-              <PresentationIcon className="h-5 w-5 text-orange-500" />
-              <h3 className="font-semibold text-sm line-clamp-1">{fileName}</h3>
-              <Badge variant="outline" className="text-xs">
-                PPT
-              </Badge>
-              <Badge variant="secondary" className="text-xs">
-                {currentSlide + 1} / {slides.length}
-              </Badge>
+          <div className="flex items-center justify-between px-6 py-3 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-500/20 rounded-lg">
+                <PresentationIcon className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm line-clamp-1">{fileName}</h3>
+                <div className="flex gap-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    PowerPoint
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    Slide {currentSlide + 1} de {slides.length}
+                  </Badge>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="h-8 w-8">
+              <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="h-9 w-9 hover:bg-orange-500/10">
                 {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </Button>
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-red-500/10">
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          {/* Slide Content */}
-          <div className="flex-1 flex items-center justify-center overflow-auto bg-gray-900 relative">
+          <div className="flex-1 flex items-center justify-center overflow-hidden bg-gray-950 relative">
             {loading ? (
               <div className="text-white text-center">
-                <div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4" />
-                <p>Carregando apresentação...</p>
+                <div className="animate-spin h-10 w-10 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-lg">Carregando apresentação...</p>
               </div>
             ) : error ? (
               <div className="text-white text-center">
-                <p className="text-red-500 mb-4">{error}</p>
-                <Button onClick={onClose} variant="outline">
+                <p className="text-red-500 mb-4 text-lg">{error}</p>
+                <Button onClick={onClose} variant="outline" size="lg">
                   Fechar
                 </Button>
               </div>
             ) : (
-              <div className="relative w-full h-full flex items-center justify-center p-4">
+              <div className="relative w-full h-full flex items-center justify-center">
                 <img
                   src={slides[currentSlide] || "/placeholder.svg"}
                   alt={`Slide ${currentSlide + 1}`}
                   className="max-w-full max-h-full object-contain"
+                  style={{ aspectRatio: "16/9" }}
                   onError={(e) => {
                     console.error("[v0] Error loading slide:", slides[currentSlide])
-                    e.currentTarget.src = "/placeholder.svg?height=600&width=800"
+                    e.currentTarget.src = "/placeholder.svg?height=1080&width=1920"
                   }}
                 />
 
-                {/* Navigation Buttons */}
                 {currentSlide > 0 && (
                   <Button
                     variant="secondary"
                     size="icon"
                     onClick={handlePrevSlide}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full shadow-lg"
+                    className="absolute left-6 top-1/2 -translate-y-1/2 h-14 w-14 rounded-full shadow-2xl hover:scale-110 transition-transform"
                   >
-                    <ChevronLeft className="h-6 w-6" />
+                    <ChevronLeft className="h-7 w-7" />
                   </Button>
                 )}
                 {currentSlide < slides.length - 1 && (
@@ -234,21 +251,20 @@ export function PresentationSlideshowViewer({
                     variant="secondary"
                     size="icon"
                     onClick={handleNextSlide}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full shadow-lg"
+                    className="absolute right-6 top-1/2 -translate-y-1/2 h-14 w-14 rounded-full shadow-2xl hover:scale-110 transition-transform"
                   >
-                    <ChevronRight className="h-6 w-6" />
+                    <ChevronRight className="h-7 w-7" />
                   </Button>
                 )}
               </div>
             )}
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between px-6 py-4 border-t bg-gradient-to-r from-orange-500/10 to-transparent">
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
-                size="sm"
+                size="lg"
                 onClick={handlePrevSlide}
                 disabled={currentSlide === 0}
                 className="gap-2 bg-transparent"
@@ -258,7 +274,7 @@ export function PresentationSlideshowViewer({
               </Button>
               <Button
                 variant="outline"
-                size="sm"
+                size="lg"
                 onClick={handleNextSlide}
                 disabled={currentSlide === slides.length - 1}
                 className="gap-2 bg-transparent"
@@ -272,10 +288,11 @@ export function PresentationSlideshowViewer({
               <Button
                 onClick={handleMarkAsRead}
                 disabled={hasMarkedAsRead}
-                className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-lg"
+                size="lg"
               >
-                <CheckCircle2 className="h-4 w-4" />
-                {hasMarkedAsRead ? "Marcado como Lido" : "Marcar como Lido"}
+                <CheckCircle2 className="h-5 w-5" />
+                {hasMarkedAsRead ? "✓ Marcado como Lido" : "Marcar como Lido"}
               </Button>
             )}
           </div>
