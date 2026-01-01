@@ -117,7 +117,7 @@ export function PresentationSlideshowViewer({
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "w-[90vw] h-[90vh] max-w-none"}`}
+          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "w-[95vw] h-[95vh] max-w-none"}`}
           showCloseButton={false}
         >
           <div className="flex flex-col h-full bg-background">
@@ -179,7 +179,7 @@ export function PresentationSlideshowViewer({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "w-[90vw] h-[90vh] max-w-none"}`}
+        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "w-[95vw] h-[95vh] max-w-none"}`}
         showCloseButton={false}
       >
         <div className="flex flex-col h-full bg-background">
@@ -224,7 +224,7 @@ export function PresentationSlideshowViewer({
                 </Button>
               </div>
             ) : (
-              <div className="relative w-full h-full flex items-center justify-center">
+              <div className="relative w-full h-full flex items-center justify-center p-8">
                 <img
                   src={slides[currentSlide] || "/placeholder.svg"}
                   alt={`Slide ${currentSlide + 1}`}

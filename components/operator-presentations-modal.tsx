@@ -106,39 +106,52 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-3">
                   {pptFiles.map((file) => {
                     const isCompleted = getFileCompletionStatus(file.displayName)
 
                     return (
                       <Card
                         key={file.name}
-                        className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 border-2 hover:border-orange-500/50"
+                        className="group relative overflow-hidden hover:shadow-lg transition-all duration-200 border hover:border-orange-500/50"
                       >
-                        {isCompleted && (
-                          <div className="absolute top-3 right-3 z-10">
-                            <Badge className="bg-green-600 text-white border-0 shadow-lg">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Concluído
-                            </Badge>
-                          </div>
-                        )}
-
-                        <div className="p-5 space-y-4">
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-base line-clamp-2 leading-tight min-h-[2.5rem]">
-                              {file.displayName}
-                            </h4>
+                        <div className="p-4 flex items-center gap-4">
+                          {/* Icon section */}
+                          <div className="flex-shrink-0 p-3 bg-orange-500/10 rounded-lg">
+                            <GraduationCap className="h-6 w-6 text-orange-500" />
                           </div>
 
-                          <Button
-                            onClick={() => openFile(file)}
-                            className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200 group-hover:scale-105"
-                            size="lg"
-                          >
-                            <Play className="h-4 w-4 mr-2" />
-                            Abrir Apresentação
-                          </Button>
+                          {/* Content section */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-base mb-1 truncate">{file.displayName}</h4>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                PowerPoint
+                              </Badge>
+                              {isCompleted ? (
+                                <Badge className="bg-green-600 text-white border-0 text-xs">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Concluído
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">
+                                  Pendente
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Button section */}
+                          <div className="flex-shrink-0">
+                            <Button
+                              onClick={() => openFile(file)}
+                              className="bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                              size="default"
+                            >
+                              <Play className="h-4 w-4 mr-2" />
+                              Abrir Apresentação
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     )
