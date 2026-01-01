@@ -24,7 +24,8 @@ export default function PresentationPage() {
   useEffect(() => {
     const loadSlides = async () => {
       try {
-        const baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
+        let baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
+        baseFilename = baseFilename.replace(/\.+$/, "") // Remove trailing periods
         const slideUrls: string[] = []
 
         // Try to load up to 100 slides
@@ -133,7 +134,9 @@ export default function PresentationPage() {
 
   const handleMarkAsRead = () => {
     if (user) {
-      const baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
+      let baseFilename = decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")
+      baseFilename = baseFilename.replace(/\.+$/, "") // Remove trailing periods
+
       console.log("[v0] Marking presentation as read:", baseFilename, user.id, user.fullName || user.username)
       markFilePresentationAsRead(baseFilename, user.id, user.fullName || user.username)
       setHasMarkedAsRead(true)
@@ -182,7 +185,9 @@ export default function PresentationPage() {
             </Button>
             <Separator orientation="vertical" className="h-6 bg-white/20" />
             <div className="text-sm font-medium text-white/90 truncate max-w-[400px]">
-              {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
+              {decodeURIComponent(filename)
+                .replace(/\.(pptx?|PPTX?)$/, "")
+                .replace(/\.+$/, "")}
             </div>
           </div>
 
@@ -291,7 +296,9 @@ export default function PresentationPage() {
             Fechar
           </Button>
           <div className="text-sm font-medium truncate max-w-[300px]">
-            {decodeURIComponent(filename).replace(/\.(pptx?|PPTX?)$/, "")}
+            {decodeURIComponent(filename)
+              .replace(/\.(pptx?|PPTX?)$/, "")
+              .replace(/\.+$/, "")}
           </div>
         </div>
 
@@ -309,10 +316,6 @@ export default function PresentationPage() {
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
           />
         </div>
-      </div>
-
-      <div className="absolute bottom-4 right-4 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-2 rounded-md border">
-        Para navegação por slides individuais, converta o PPT em imagens
       </div>
     </div>
   )

@@ -70,16 +70,18 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   }, [isOpen, loadData, loadPPTFiles])
 
   const openFile = (file: PPTFile) => {
-    console.log("[v0] Button clicked for file:", file.displayName)
+    console.log("[v0] Opening file:", file.displayName, "Type:", file.extension)
 
     if (file.extension === ".pdf") {
-      console.log("[v0] Opening PDF:", file.path)
+      console.log("[v0] Opening PDF viewer")
       setSelectedPDFFile(file)
       setShowPDFViewer(true)
     } else {
-      console.log("[v0] Opening PPT - navigating to:", `/presentation/${encodeURIComponent(file.name)}`)
+      console.log("[v0] Navigating to PPT:", `/presentation/${encodeURIComponent(file.name)}`)
       onClose()
-      window.location.href = `/presentation/${encodeURIComponent(file.name)}`
+      setTimeout(() => {
+        window.location.href = `/presentation/${encodeURIComponent(file.name)}`
+      }, 100)
     }
   }
 

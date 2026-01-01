@@ -427,12 +427,13 @@ function setupListeners() {
                 return
               }
 
-              if (remoteUsers.length < currentUsers.length * 0.5 && currentUsers.length > 10) {
+              if (remoteUsers.length < currentUsers.length * 0.3 && currentUsers.length > 10) {
                 console.warn(
                   `[v0] ⚠️ Firebase has ${remoteUsers.length} users but local has ${currentUsers.length} - difference too large, IGNORING to prevent data loss`,
                 )
                 return
               }
+              // </CHANGE>
 
               // Always use Firebase data as source of truth (when valid)
               if (currentValue !== newValue) {
