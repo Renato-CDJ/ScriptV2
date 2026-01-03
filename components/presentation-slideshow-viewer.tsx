@@ -117,17 +117,17 @@ export function PresentationSlideshowViewer({
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "w-[95vw] h-[95vh] max-w-none"}`}
+          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-[98vw] w-[98vw] h-[90vh]"}`}
           showCloseButton={false}
         >
           <div className="flex flex-col h-full bg-background">
-            <div className="flex items-center justify-between px-6 py-3 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-orange-500/20 rounded-lg">
                   <FileText className="h-5 w-5 text-orange-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm line-clamp-1">{fileName}</h3>
+                  <h3 className="font-semibold text-base">{fileName}</h3>
                   <Badge variant="outline" className="text-xs mt-1">
                     PDF
                   </Badge>
@@ -179,17 +179,17 @@ export function PresentationSlideshowViewer({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "w-[95vw] h-[95vh] max-w-none"}`}
+        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-[98vw] w-[98vw] h-[90vh]"}`}
         showCloseButton={false}
       >
         <div className="flex flex-col h-full bg-background">
-          <div className="flex items-center justify-between px-6 py-3 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-500/20 rounded-lg">
                 <PresentationIcon className="h-5 w-5 text-orange-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-sm line-clamp-1">{fileName}</h3>
+                <h3 className="font-semibold text-base">{fileName}</h3>
                 <div className="flex gap-2 mt-1">
                   <Badge variant="outline" className="text-xs">
                     PowerPoint
@@ -228,8 +228,7 @@ export function PresentationSlideshowViewer({
                 <img
                   src={slides[currentSlide] || "/placeholder.svg"}
                   alt={`Slide ${currentSlide + 1}`}
-                  className="max-w-full max-h-full object-contain"
-                  style={{ aspectRatio: "16/9" }}
+                  className="max-w-full max-h-full object-contain aspect-video"
                   onError={(e) => {
                     console.error("[v0] Error loading slide:", slides[currentSlide])
                     e.currentTarget.src = "/placeholder.svg?height=1080&width=1920"
