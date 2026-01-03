@@ -117,33 +117,33 @@ export function PresentationSlideshowViewer({
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-[98vw] w-[98vw] h-[90vh]"}`}
+          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-[95vw] w-[95vw] h-[95vh]"}`}
           showCloseButton={false}
         >
           <div className="flex flex-col h-full bg-background">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-500/20 rounded-lg">
-                  <FileText className="h-5 w-5 text-orange-500" />
+            <div className="flex items-center justify-between px-8 py-5 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-500/20 rounded-xl">
+                  <FileText className="h-7 w-7 text-orange-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">{fileName}</h3>
-                  <Badge variant="outline" className="text-xs mt-1">
+                  <h3 className="font-semibold text-xl">{fileName}</h3>
+                  <Badge variant="outline" className="text-sm mt-1.5 px-3 py-1">
                     PDF
                   </Badge>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={toggleFullscreen}
-                  className="h-9 w-9 hover:bg-orange-500/10"
+                  className="h-11 w-11 hover:bg-orange-500/10"
                 >
-                  {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                  {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-red-500/10">
-                  <X className="h-4 w-4" />
+                <Button variant="ghost" size="icon" onClick={onClose} className="h-11 w-11 hover:bg-red-500/10">
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
             </div>
@@ -158,15 +158,15 @@ export function PresentationSlideshowViewer({
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-6 py-4 border-t bg-gradient-to-r from-orange-500/10 to-transparent">
-              <p className="text-sm text-muted-foreground">Visualize todo o conteúdo para concluir</p>
+            <div className="flex items-center justify-between px-8 py-5 border-t bg-gradient-to-r from-orange-500/10 to-transparent">
+              <p className="text-base text-muted-foreground">Visualize todo o conteúdo para concluir</p>
               <Button
                 onClick={handleMarkAsRead}
                 disabled={hasMarkedAsRead}
-                className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
+                className="bg-green-600 hover:bg-green-700 text-white shadow-lg px-8 py-6 text-base"
                 size="lg"
               >
-                <CheckCircle2 className="h-5 w-5 mr-2" />
+                <CheckCircle2 className="h-6 w-6 mr-2" />
                 {hasMarkedAsRead ? "✓ Marcado como Lido" : "Marcar como Lido"}
               </Button>
             </div>
@@ -179,33 +179,38 @@ export function PresentationSlideshowViewer({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-[98vw] w-[98vw] h-[90vh]"}`}
+        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-[95vw] w-[95vw] h-[95vh]"}`}
         showCloseButton={false}
       >
         <div className="flex flex-col h-full bg-background">
-          <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-500/20 rounded-lg">
-                <PresentationIcon className="h-5 w-5 text-orange-500" />
+          <div className="flex items-center justify-between px-8 py-5 border-b bg-gradient-to-r from-orange-500/10 to-transparent">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-500/20 rounded-xl">
+                <PresentationIcon className="h-7 w-7 text-orange-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-base">{fileName}</h3>
-                <div className="flex gap-2 mt-1">
-                  <Badge variant="outline" className="text-xs">
+                <h3 className="font-semibold text-xl">{fileName}</h3>
+                <div className="flex gap-2 mt-1.5">
+                  <Badge variant="outline" className="text-sm px-3 py-1">
                     PowerPoint
                   </Badge>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-sm px-3 py-1">
                     Slide {currentSlide + 1} de {slides.length}
                   </Badge>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="h-9 w-9 hover:bg-orange-500/10">
-                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFullscreen}
+                className="h-11 w-11 hover:bg-orange-500/10"
+              >
+                {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
               </Button>
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-red-500/10">
-                <X className="h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-11 w-11 hover:bg-red-500/10">
+                <X className="h-5 w-5" />
               </Button>
             </div>
           </div>
@@ -213,22 +218,22 @@ export function PresentationSlideshowViewer({
           <div className="flex-1 flex items-center justify-center overflow-hidden bg-gray-950 relative">
             {loading ? (
               <div className="text-white text-center">
-                <div className="animate-spin h-10 w-10 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4" />
-                <p className="text-lg">Carregando apresentação...</p>
+                <div className="animate-spin h-12 w-12 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-xl">Carregando apresentação...</p>
               </div>
             ) : error ? (
               <div className="text-white text-center">
-                <p className="text-red-500 mb-4 text-lg">{error}</p>
-                <Button onClick={onClose} variant="outline" size="lg">
+                <p className="text-red-500 mb-4 text-xl">{error}</p>
+                <Button onClick={onClose} variant="outline" size="lg" className="px-8 py-6 text-base bg-transparent">
                   Fechar
                 </Button>
               </div>
             ) : (
-              <div className="relative w-full h-full flex items-center justify-center p-8">
+              <div className="relative w-full h-full flex items-center justify-center p-12">
                 <img
                   src={slides[currentSlide] || "/placeholder.svg"}
                   alt={`Slide ${currentSlide + 1}`}
-                  className="max-w-full max-h-full object-contain aspect-video"
+                  className="max-w-full max-h-full object-contain"
                   onError={(e) => {
                     console.error("[v0] Error loading slide:", slides[currentSlide])
                     e.currentTarget.src = "/placeholder.svg?height=1080&width=1920"
@@ -240,9 +245,9 @@ export function PresentationSlideshowViewer({
                     variant="secondary"
                     size="icon"
                     onClick={handlePrevSlide}
-                    className="absolute left-6 top-1/2 -translate-y-1/2 h-14 w-14 rounded-full shadow-2xl hover:scale-110 transition-transform"
+                    className="absolute left-8 top-1/2 -translate-y-1/2 h-16 w-16 rounded-full shadow-2xl hover:scale-110 transition-transform"
                   >
-                    <ChevronLeft className="h-7 w-7" />
+                    <ChevronLeft className="h-8 w-8" />
                   </Button>
                 )}
                 {currentSlide < slides.length - 1 && (
@@ -250,25 +255,25 @@ export function PresentationSlideshowViewer({
                     variant="secondary"
                     size="icon"
                     onClick={handleNextSlide}
-                    className="absolute right-6 top-1/2 -translate-y-1/2 h-14 w-14 rounded-full shadow-2xl hover:scale-110 transition-transform"
+                    className="absolute right-8 top-1/2 -translate-y-1/2 h-16 w-16 rounded-full shadow-2xl hover:scale-110 transition-transform"
                   >
-                    <ChevronRight className="h-7 w-7" />
+                    <ChevronRight className="h-8 w-8" />
                   </Button>
                 )}
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between px-6 py-4 border-t bg-gradient-to-r from-orange-500/10 to-transparent">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between px-8 py-5 border-t bg-gradient-to-r from-orange-500/10 to-transparent">
+            <div className="flex items-center gap-4">
               <Button
                 variant="outline"
                 size="lg"
                 onClick={handlePrevSlide}
                 disabled={currentSlide === 0}
-                className="gap-2 bg-transparent"
+                className="gap-2 bg-transparent px-6 py-6 text-base"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-5 w-5" />
                 Anterior
               </Button>
               <Button
@@ -276,10 +281,10 @@ export function PresentationSlideshowViewer({
                 size="lg"
                 onClick={handleNextSlide}
                 disabled={currentSlide === slides.length - 1}
-                className="gap-2 bg-transparent"
+                className="gap-2 bg-transparent px-6 py-6 text-base"
               >
                 Próximo
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
 
@@ -287,10 +292,10 @@ export function PresentationSlideshowViewer({
               <Button
                 onClick={handleMarkAsRead}
                 disabled={hasMarkedAsRead}
-                className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-lg"
+                className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-lg px-8 py-6 text-base"
                 size="lg"
               >
-                <CheckCircle2 className="h-5 w-5" />
+                <CheckCircle2 className="h-6 w-6" />
                 {hasMarkedAsRead ? "✓ Marcado como Lido" : "Marcar como Lido"}
               </Button>
             )}

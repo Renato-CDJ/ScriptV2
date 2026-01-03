@@ -85,70 +85,69 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-5xl max-h-[90vh]">
-          <DialogHeader className="border-b pb-4">
-            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-              <div className="p-2 bg-orange-500/10 rounded-lg">
-                <GraduationCap className="h-7 w-7 text-orange-500" />
+        <DialogContent className="!w-[95vw] !h-[95vh] !max-w-[95vw] flex flex-col p-0">
+          <DialogHeader className="border-b px-8 py-6 flex-shrink-0">
+            <DialogTitle className="text-3xl font-bold flex items-center gap-4">
+              <div className="p-3 bg-orange-500/10 rounded-xl">
+                <GraduationCap className="h-9 w-9 text-orange-500" />
               </div>
-              Biblioteca de Treinamentos
+              Treinamentos
             </DialogTitle>
-            <p className="text-sm text-muted-foreground mt-1">Explore apresentações, PDFs e materiais de capacitação</p>
+            <p className="text-base text-muted-foreground mt-2">
+              Explore apresentações, PDFs e materiais de capacitação
+            </p>
           </DialogHeader>
 
-          <ScrollArea className="h-[calc(90vh-180px)] pr-4">
+          <ScrollArea className="flex-1 px-8 py-6">
             {pptFiles.length > 0 && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">Materiais de Treinamento</h3>
-                  <Badge variant="secondary" className="text-sm px-3 py-1">
+                  <h3 className="text-xl font-semibold text-foreground">Materiais de Treinamento</h3>
+                  <Badge variant="secondary" className="text-base px-4 py-2">
                     {pptFiles.length} {pptFiles.length === 1 ? "arquivo" : "arquivos"}
                   </Badge>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {pptFiles.map((file) => {
                     const isCompleted = getFileCompletionStatus(file.displayName)
 
                     return (
                       <Card
                         key={file.name}
-                        className="group relative overflow-hidden hover:shadow-lg transition-all duration-200 border hover:border-orange-500/50"
+                        className="group relative overflow-hidden hover:shadow-xl transition-all duration-200 border-2 hover:border-orange-500/50"
                       >
-                        <div className="p-4 flex items-center gap-4">
-                          {/* Icon section */}
-                          <div className="flex-shrink-0 p-3 bg-orange-500/10 rounded-lg">
-                            <GraduationCap className="h-6 w-6 text-orange-500" />
+                        <div className="p-6 flex items-center gap-6">
+                          <div className="flex-shrink-0 p-4 bg-orange-500/10 rounded-xl">
+                            <GraduationCap className="h-8 w-8 text-orange-500" />
                           </div>
 
-                          {/* Content section */}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-base mb-1 truncate">{file.displayName}</h4>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
+                          <div className="flex-1 min-w-0 pr-4">
+                            <h4 className="font-semibold text-xl mb-2 line-clamp-2">{file.displayName}</h4>
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline" className="text-sm px-3 py-1">
                                 PowerPoint
                               </Badge>
                               {isCompleted ? (
-                                <Badge className="bg-green-600 text-white border-0 text-xs">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                <Badge className="bg-green-600 text-white border-0 text-sm px-3 py-1">
+                                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
                                   Concluído
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-sm px-3 py-1">
                                   Pendente
                                 </Badge>
                               )}
                             </div>
                           </div>
 
-                          {/* Button section */}
                           <div className="flex-shrink-0">
                             <Button
                               onClick={() => openFile(file)}
-                              className="bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                              size="default"
+                              className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-6 text-base"
+                              size="lg"
                             >
-                              <Play className="h-4 w-4 mr-2" />
+                              <Play className="h-5 w-5 mr-2" />
                               Abrir Apresentação
                             </Button>
                           </div>
@@ -163,32 +162,34 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
             {presentations.length > 0 && (
               <div className="space-y-6 mt-8">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">Apresentações Interativas</h3>
-                  <Badge variant="secondary" className="text-sm px-3 py-1">
+                  <h3 className="text-xl font-semibold text-foreground">Apresentações Interativas</h3>
+                  <Badge variant="secondary" className="text-base px-4 py-2">
                     {presentations.length} {presentations.length === 1 ? "apresentação" : "apresentações"}
                   </Badge>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {presentations.map((presentation) => {
                     const isCompleted = completedIds.has(presentation.id)
 
                     return (
                       <Card
                         key={presentation.id}
-                        className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-orange-500/50"
+                        className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-orange-500/50"
                       >
-                        <div className="p-5">
+                        <div className="p-6">
                           <div className="flex items-start justify-between gap-4 mb-4">
                             <div className="flex-1">
-                              <h4 className="font-semibold text-base mb-1">{presentation.title}</h4>
+                              <h4 className="font-semibold text-xl mb-2">{presentation.title}</h4>
                               {presentation.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2">{presentation.description}</p>
+                                <p className="text-base text-muted-foreground line-clamp-2">
+                                  {presentation.description}
+                                </p>
                               )}
                             </div>
                             {isCompleted && (
-                              <Badge className="bg-green-600 text-white border-0 shadow-lg flex-shrink-0">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                              <Badge className="bg-green-600 text-white border-0 shadow-lg flex-shrink-0 px-3 py-1">
+                                <CheckCircle2 className="h-4 w-4 mr-1.5" />
                                 Concluído
                               </Badge>
                             )}
@@ -198,10 +199,10 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                               setSelectedPresentation(presentation)
                               setShowViewer(true)
                             }}
-                            className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 py-6 text-base"
                             size="lg"
                           >
-                            <Play className="h-4 w-4 mr-2" />
+                            <Play className="h-5 w-5 mr-2" />
                             {isCompleted ? "Revisar Apresentação" : "Iniciar Apresentação"}
                           </Button>
                         </div>
@@ -213,12 +214,12 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
             )}
 
             {pptFiles.length === 0 && presentations.length === 0 && (
-              <div className="py-16 text-center">
-                <div className="inline-flex p-4 bg-muted rounded-full mb-4">
-                  <GraduationCap className="h-12 w-12 text-muted-foreground" />
+              <div className="py-20 text-center">
+                <div className="inline-flex p-6 bg-muted rounded-full mb-6">
+                  <GraduationCap className="h-16 w-16 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Nenhum treinamento disponível</h3>
-                <p className="text-sm text-muted-foreground">Novos materiais serão adicionados em breve</p>
+                <h3 className="text-2xl font-semibold mb-3">Nenhum treinamento disponível</h3>
+                <p className="text-base text-muted-foreground">Novos materiais serão adicionados em breve</p>
               </div>
             )}
           </ScrollArea>
