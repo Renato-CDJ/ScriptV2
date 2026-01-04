@@ -117,7 +117,7 @@ export function PresentationSlideshowViewer({
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-[95vw] w-[95vw] h-[95vh]"}`}
+          className={`p-0 gap-0 ${isFullscreen ? "!max-w-full !w-screen !h-screen" : "!max-w-none !w-[95vw] !h-[95vh]"}`}
           showCloseButton={false}
         >
           <div className="flex flex-col h-full bg-background">
@@ -179,7 +179,7 @@ export function PresentationSlideshowViewer({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className={`p-0 gap-0 ${isFullscreen ? "max-w-full w-screen h-screen" : "max-w-[95vw] w-[95vw] h-[95vh]"}`}
+        className={`p-0 gap-0 ${isFullscreen ? "!max-w-full !w-screen !h-screen" : "!max-w-none !w-[95vw] !h-[95vh]"}`}
         showCloseButton={false}
       >
         <div className="flex flex-col h-full bg-background">
