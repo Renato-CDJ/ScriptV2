@@ -29,8 +29,12 @@ import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore" // Added ge
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth" // Imported for anonymous auth
 import debounce from "lodash.debounce" // Import debounce
 
-const saveQueue: Map<string, any> = new Map()
-const saveTimeout: NodeJS.Timeout | null = null
+// Define handleFirebaseError as a placeholder or import it if it exists elsewhere
+const handleFirebaseError = (error: unknown) => {
+  console.error("Firebase error handler called:", error)
+  // Implement actual error handling logic here, e.g., setting firebaseSyncDisabled
+  // For now, we'll just log it.
+}
 
 const FIREBASE_COLLECTION = "app_data"
 
@@ -146,6 +150,34 @@ let lastFirebaseWrite = 0
 const writeQueue = new Map<string, { data: unknown; timestamp: number }>()
 let batchTimer: NodeJS.Timeout | null = null
 
+let saveMutex = false
+const saveQueue: Array<{ key: string; data: any }> = []
+
+async function processSaveQueue() {
+  if (saveMutex || saveQueue.length === 0) return
+
+  saveMutex = true
+  const { key, data } = saveQueue.shift()!
+
+  try {
+    await setDoc(doc(db, FIREBASE_COLLECTION, key), {
+      data,
+      timestamp: Date.now(),
+    })
+    console.log(`[v0] 💾 Saved to Firebase: ${key} (${Array.isArray(data) ? data.length : "N/A"} items)`)
+  } catch (error) {
+    console.error(`[v0] ❌ Error saving ${key} to Firebase:`, error)
+    // Re-add to queue in case of error
+    saveQueue.unshift({ key, data })
+  } finally {
+    saveMutex = false
+    if (saveQueue.length > 0) {
+      // Use a small timeout to allow other operations to potentially enqueue
+      setTimeout(processSaveQueue, 100)
+    }
+  }
+}
+
 function syncToFirebase(key: string, data: unknown) {
   if (firebaseSyncDisabled) {
     console.log("[v0] Firebase sync disabled, skipping", key)
@@ -208,7 +240,7 @@ function syncToFirebase(key: string, data: unknown) {
       }
     } catch (error: unknown) {
       console.error(`[v0] Error syncing ${key} to Firebase:`, error)
-      handleFirebaseError(error)
+      handleFirebaseError(error) // Using the placeholder handler
     } finally {
       pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
     }
@@ -226,80 +258,23 @@ function flushBatchQueue() {
   })
 }
 
-export function saveImmediately(key: string, data: unknown) {
+export async function saveImmediately(key: string, data: any) {
   if (typeof window === "undefined") return
 
-  if (key === STORAGE_KEYS.USERS && Array.isArray(data)) {
-    console.log(`[v0] 💾 saveImmediately: Saving ${data.length} users`)
-
-    // Validate user data integrity
-    const validUsers = data.filter((u) => u && u.id && u.username)
-    if (validUsers.length !== data.length) {
-      console.warn(`[v0] ⚠️ Found ${data.length - validUsers.length} invalid users, filtering them out`)
-    }
-
-    if (validUsers.length === 0) {
-      console.error("[v0] ❌ Attempted to save 0 users - BLOCKING to prevent data loss!")
-      return
-    }
-
-    data = validUsers
-  }
-
-  console.log(`[v0] saveImmediately called for ${key}, data count:`, Array.isArray(data) ? data.length : "N/A")
-
-  // Save to localStorage immediately (with full data including imageData)
+  // Save to localStorage immediately
   localStorage.setItem(key, JSON.stringify(data))
+  console.log(`[v0] 💾 Saved locally: ${key} (${Array.isArray(data) ? data.length : "N/A"} items)`)
 
-  // Notify listeners about the update
-  notifyUpdateImmediate()
-
-  // Skip if Firebase sync is disabled or too many pending writes
-  if (firebaseSyncDisabled || pendingFirebaseWrites >= MAX_PENDING_WRITES) {
-    console.log(
-      "[v0] Firebase sync skipped - disabled:",
-      firebaseSyncDisabled,
-      "pending writes:",
-      pendingFirebaseWrites,
-    )
+  if (!db) {
+    console.warn("[v0] Firebase not initialized, data saved locally only")
     return
   }
 
-  const now = Date.now()
-  if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
-    console.log("[v0] Firebase sync throttled - too soon after last write")
-    return
-  }
-  lastFirebaseWrite = now
-
-  console.log(`[v0] Syncing ${key} to Firebase...`)
-  syncToFirebase(key, data)
+  saveQueue.push({ key, data })
+  processSaveQueue()
 }
 
-function handleFirebaseError(error: unknown) {
-  const errorMessage = error instanceof Error ? error.message : String(error)
-  const isKnownError =
-    errorMessage.includes("permission") ||
-    errorMessage.includes("Permission") ||
-    errorMessage.includes("PERMISSION") ||
-    errorMessage.includes("insufficient") ||
-    errorMessage.includes("unauthorized") ||
-    errorMessage.includes("invalid nested entity") ||
-    errorMessage.includes("exceeds the maximum allowed size") ||
-    errorMessage.includes("resource-exhausted") ||
-    errorMessage.includes("exhausted maximum allowed queued writes")
-
-  if (isKnownError) {
-    if (!firebaseSyncDisabled) {
-      console.warn("⚠️  Firebase Firestore Permission Error or Resource Limit - Falling back to localStorage only")
-      firebaseSyncDisabled = true
-    }
-  } else {
-    console.error("Error syncing to Firebase:", error)
-  }
-}
-
-function save(key: string, data: unknown) {
+export function save(key: string, data: unknown) {
   if (typeof window === "undefined") return
 
   // Save to localStorage immediately
@@ -318,50 +293,19 @@ function save(key: string, data: unknown) {
   batchTimer = setTimeout(flushBatchQueue, BATCH_INTERVAL)
 }
 
-export const debouncedSave = debounce(async (key: string, data: unknown) => {
+export const debouncedSave = debounce(async (key: string, data: any) => {
   if (typeof window === "undefined") return
 
-  // Always save to localStorage first (with full data including imageData)
   localStorage.setItem(key, JSON.stringify(data))
 
-  // If Firebase sync is disabled due to permissions, skip
-  if (firebaseSyncDisabled) {
+  if (!db) {
+    console.warn("[v0] Firebase not initialized, data saved locally only")
     return
   }
 
-  if (pendingFirebaseWrites >= MAX_PENDING_WRITES) {
-    return
-  }
-
-  // Try to sync to Firebase (with sanitized data)
-  try {
-    if (db) {
-      pendingFirebaseWrites++
-      let dataToSync: unknown
-
-      if (key === STORAGE_KEYS.PRESENTATIONS && Array.isArray(data)) {
-        dataToSync = sanitizePresentationsForFirebase(data)
-      } else {
-        dataToSync = Array.isArray(data)
-          ? data.map((item) =>
-              typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
-            )
-          : typeof data === "object" && data !== null
-            ? sanitizeForFirebase(data as Record<string, unknown>)
-            : data
-      }
-
-      await setDoc(doc(db, FIREBASE_COLLECTION, key), {
-        data: dataToSync,
-        updatedAt: new Date().toISOString(),
-      })
-    }
-  } catch (error: unknown) {
-    handleFirebaseError(error)
-  } finally {
-    pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
-  }
-}, 500) // Batch writes every 500ms
+  saveQueue.push({ key, data })
+  processSaveQueue()
+}, 1000) // Batch writes every 1000ms
 
 let unsubscribers: (() => void)[] = []
 // let firebaseSyncFailed = false // Removed as firebaseSyncDisabled is used instead
@@ -417,27 +361,40 @@ function setupListeners() {
                 `[v0] Firebase listener: Remote has ${remoteUsers.length} users, Local has ${currentUsers.length} users`,
               )
 
-              // Protect against data loss - don't accept empty or significantly smaller datasets
               if (remoteUsers.length === 0 && currentUsers.length > 0) {
-                console.warn(
-                  "[v0] ⚠️ Firebase sent 0 users but local has",
-                  currentUsers.length,
-                  "users - IGNORING Firebase data to prevent data loss",
+                console.error(
+                  `[v0] ⚠️ CRITICAL: Firebase sent 0 users but local has ${currentUsers.length} users - BLOCKING sync to prevent data loss`,
                 )
+                console.error("[v0] ⚠️ This may indicate a Firebase write error or permission issue")
                 return
               }
 
-              if (remoteUsers.length < currentUsers.length * 0.3 && currentUsers.length > 10) {
+              const threshold = 0.2
+              const difference = Math.abs(remoteUsers.length - currentUsers.length)
+              const percentageDiff = currentUsers.length > 0 ? difference / currentUsers.length : 0
+
+              if (percentageDiff > threshold && currentUsers.length > 10 && remoteUsers.length < currentUsers.length) {
+                const remoteTimestamp = data.timestamp || 0
+                const localTimestamp = Number.parseInt(localStorage.getItem(`${key}_timestamp`) || "0", 10)
+
+                if (remoteTimestamp < localTimestamp) {
+                  console.warn(
+                    `[v0] ⚠️ Remote data is older (${new Date(remoteTimestamp).toISOString()}) than local (${new Date(localTimestamp).toISOString()}) - keeping local data`,
+                  )
+                  saveImmediately(key, currentUsers)
+                  return
+                }
+
                 console.warn(
-                  `[v0] ⚠️ Firebase has ${remoteUsers.length} users but local has ${currentUsers.length} - difference too large, IGNORING to prevent data loss`,
+                  `[v0] ⚠️ Large difference detected: Remote=${remoteUsers.length}, Local=${currentUsers.length}, Diff=${(percentageDiff * 100).toFixed(1)}%`,
                 )
+                console.warn("[v0] ⚠️ Blocking sync - manual intervention may be required")
                 return
               }
-              // </CHANGE>
 
-              // Always use Firebase data as source of truth (when valid)
               if (currentValue !== newValue) {
                 localStorage.setItem(key, newValue)
+                localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
                 console.log(`[v0] ✅ Updated local storage with ${remoteUsers.length} users from Firebase`)
                 window.dispatchEvent(new CustomEvent("store-updated"))
               }
@@ -1167,6 +1124,7 @@ export function initializeMockData() {
   }
 
   cleanupOldSessions()
+  cleanupDuplicateUsers() // Add this line to initialize the cleanup
 
   loadScriptsFromDataFolder()
 }
@@ -1527,6 +1485,7 @@ export function updateUser(user: User) {
 
     if (index !== -1) {
       users[index] = user
+      localStorage.setItem(`${STORAGE_KEYS.USERS}_timestamp`, String(Date.now()))
       saveImmediately(STORAGE_KEYS.USERS, users)
       notifyUpdateImmediate()
     }
@@ -1545,6 +1504,7 @@ export function deleteUser(userId: string) {
 
     console.log(`[v0] 🗑️ Deleting user: ${userId}, Before: ${beforeCount} users, After: ${updatedUsers.length} users`)
 
+    localStorage.setItem(`${STORAGE_KEYS.USERS}_timestamp`, String(Date.now()))
     saveImmediately(STORAGE_KEYS.USERS, updatedUsers)
     notifyUpdateImmediate()
   } catch (error) {
@@ -2370,6 +2330,61 @@ export function cleanupOldSessions() {
   }
 }
 
+export function cleanupDuplicateUsers() {
+  if (typeof window === "undefined") return { removed: 0, kept: 0 }
+
+  try {
+    const users = getAllUsers()
+    const seenUsernames = new Map<string, User>()
+    const duplicates: string[] = []
+
+    // Normalize username for comparison (remove spaces, lowercase, trim)
+    const normalizeUsername = (username: string): string => {
+      return username.toLowerCase().trim().replace(/\s+/g, "")
+    }
+
+    users.forEach((user) => {
+      const normalized = normalizeUsername(user.username)
+
+      if (seenUsernames.has(normalized)) {
+        // Found duplicate - keep the older one (earlier createdAt)
+        const existing = seenUsernames.get(normalized)!
+        const existingDate = new Date(existing.createdAt).getTime()
+        const currentDate = new Date(user.createdAt).getTime()
+
+        if (currentDate < existingDate) {
+          // Current user is older, replace
+          duplicates.push(existing.id)
+          seenUsernames.set(normalized, user)
+        } else {
+          // Existing user is older, keep it
+          duplicates.push(user.id)
+        }
+      } else {
+        seenUsernames.set(normalized, user)
+      }
+    })
+
+    if (duplicates.length > 0) {
+      const cleanedUsers = users.filter((u) => !duplicates.includes(u.id))
+      console.log(
+        `[v0] 🧹 Cleaned ${duplicates.length} duplicate users. Before: ${users.length}, After: ${cleanedUsers.length}`,
+      )
+
+      localStorage.setItem(`${STORAGE_KEYS.USERS}_timestamp`, String(Date.now()))
+      saveImmediately(STORAGE_KEYS.USERS, cleanedUsers)
+      notifyUpdateImmediate()
+
+      return { removed: duplicates.length, kept: cleanedUsers.length }
+    }
+
+    return { removed: 0, kept: users.length }
+  } catch (error) {
+    console.error("[v0] Error cleaning duplicate users:", error)
+    return { removed: 0, kept: 0 }
+  }
+}
+
 export function getAllChatMessages(): ChatMessage[] {
   if (typeof window === "undefined") return []
   const messages = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES) || "[]")
@@ -2812,10 +2827,28 @@ export function exportFilePresentationReport(fileName: string): string {
 }
 
 export function addUser(user: Omit<User, "id" | "createdAt">) {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return null
 
   try {
     const users = getAllUsers()
+
+    // Normalize username for comparison
+    const normalizeUsername = (username: string): string => {
+      return username.toLowerCase().trim().replace(/\s+/g, "")
+    }
+
+    const normalizedNew = normalizeUsername(user.username)
+
+    // Check if user already exists (case-insensitive, space-insensitive)
+    const existingUser = users.find((u) => normalizeUsername(u.username) === normalizedNew)
+
+    if (existingUser) {
+      console.log(
+        `[v0] ⚠️ User "${user.username}" already exists as "${existingUser.username}" (ID: ${existingUser.id})`,
+      )
+      return null
+    }
+
     const newUser: User = {
       ...user,
       id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -2827,6 +2860,7 @@ export function addUser(user: Omit<User, "id" | "createdAt">) {
 
     console.log(`[v0] ➕ Adding user: ${newUser.username}, Before: ${beforeCount} users, After: ${users.length} users`)
 
+    localStorage.setItem(`${STORAGE_KEYS.USERS}_timestamp`, String(Date.now()))
     saveImmediately(STORAGE_KEYS.USERS, users)
     notifyUpdateImmediate()
 

@@ -362,7 +362,7 @@ export const ScriptCard = memo(function ScriptCard({
                 min={50}
                 max={120}
                 step={5}
-                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-orange-500 dark:[&_[role=slider]]:to-orange-600 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-orange-500 [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-orange-500 dark:[&_.bg-primary]:to-orange-600"
+                className="flex-1 w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-orange-500 [&_[role=slider]]:to-amber-500 dark:[&_[role=slider]]:from-orange-500 dark:[&_[role=slider]]:to-orange-600 [&_[role=slider]]:border-orange-600 dark:[&_[role=slider]]:border-orange-500 [&_[role=slider]]:h-5 [&_[role=slider]]:w-5 [&_[role=slider]]:shadow-md [&_.bg-primary]:bg-gradient-to-r [&_.bg-primary]:from-orange-400 [&_.bg-primary]:to-amber-400 dark:[&_.bg-primary]:from-orange-500 dark:[&_.bg-primary]:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 dark:text-white"
               />
               <span className="text-xs font-medium text-muted-foreground min-w-[2.5rem] text-right">
                 {textSize[0]}%
@@ -538,7 +538,7 @@ export const ScriptCard = memo(function ScriptCard({
               step.tabulations.map((tabulation, index) => (
                 <div
                   key={tabulation.id || index}
-                  className="group relative rounded-xl border-2 border-slate-600 dark:border-slate-600 bg-white dark:bg-slate-700 p-5 md:p-10 leading-relaxed min-h-[280px] md:min-h-[320px] border-2 border-orange-200/60 dark:border-orange-500/40 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden"
+                  className="group relative rounded-xl border-2 border-slate-600 dark:border-slate-600 bg-white dark:bg-slate-700 p-5 md:p-6 leading-relaxed border-2 border-orange-200/60 dark:border-orange-500/40 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.01] overflow-hidden"
                 >
                   <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
                     <CheckCircle2 className="h-12 w-12 text-orange-500 dark:text-orange-400" />
@@ -548,11 +548,11 @@ export const ScriptCard = memo(function ScriptCard({
                       <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
                         <CheckCircle2 className="h-4 w-4 text-white" />
                       </div>
-                      <h4 className="font-bold text-lg text-gray-900 dark:text-white leading-tight break-words">
+                      <h4 className="font-bold text-xl text-gray-900 dark:text-white leading-tight break-words">
                         {tabulation.name}
                       </h4>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-100 leading-relaxed whitespace-pre-wrap pl-9 break-words">
+                    <p className="text-base text-gray-700 dark:text-gray-100 leading-relaxed whitespace-pre-wrap pl-9 break-words">
                       {tabulation.description}
                     </p>
                   </div>

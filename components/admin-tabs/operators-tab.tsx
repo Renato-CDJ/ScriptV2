@@ -27,8 +27,9 @@ import {
   getTodayConnectedTime,
   getCurrentUser,
   isUserOnline,
-  saveImmediately, // Import saveImmediately instead of debouncedSave
+  saveImmediately,
   STORAGE_KEYS,
+  cleanupDuplicateUsers,
 } from "@/lib/store"
 import type { User } from "@/lib/types"
 import * as XLSX from "xlsx"
@@ -49,11 +50,20 @@ export function OperatorsTab() {
     const loadOperators = () => {
       const allUsers = getAllUsers()
       const ops = allUsers.filter((u) => u.role === "operator")
-      console.log("[v0] Operators tab loaded:", ops.length, "operators")
+      console.log("[v0] Operators tab loaded:", ops.length, "operators, Total users:", allUsers.length)
       setOperators(ops)
     }
 
     loadOperators()
+
+    const cleanup = cleanupDuplicateUsers()
+    if (cleanup.removed > 0) {
+      toast({
+        title: "Duplicatas Removidas",
+        description: `${cleanup.removed} usuário(s) duplicado(s) foram removidos automaticamente`,
+      })
+      loadOperators()
+    }
 
     const interval = setInterval(loadOperators, 5000)
 
@@ -107,7 +117,6 @@ export function OperatorsTab() {
 
     forceLogoutUser(operatorId)
 
-    // If the logged out user is the current user, redirect to login
     if (currentUser && currentUser.id === operatorId) {
       window.location.href = "/"
     }
@@ -128,8 +137,11 @@ export function OperatorsTab() {
       return
     }
 
+    const normalizeUsername = (username: string): string => {
+      return username.toLowerCase().trim().replace(/\s+/g, "")
+    }
+
     if (isEditMode && editingOperator) {
-      // Update existing operator
       const updatedOperator: User = {
         ...editingOperator,
         fullName: formData.fullName,
@@ -141,20 +153,23 @@ export function OperatorsTab() {
         description: "Operador atualizado com sucesso",
       })
     } else {
-      // Check if username already exists
-      if (operators.some((op) => op.username === formData.username)) {
+      const allUsers = getAllUsers()
+      const normalizedNew = normalizeUsername(formData.username)
+      const existingUser = allUsers.find((u) => normalizeUsername(u.username) === normalizedNew)
+
+      if (existingUser) {
         toast({
           title: "Erro",
-          description: "Este usuário já existe",
+          description: `Usuário "${existingUser.username}" já existe no sistema`,
           variant: "destructive",
         })
         return
       }
 
       const newOperator: User = {
-        id: `op-${Date.now()}`,
-        username: formData.username,
-        fullName: formData.fullName,
+        id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        username: formData.username.trim(),
+        fullName: formData.fullName.trim(),
         isOnline: false,
         role: "operator",
         createdAt: new Date(),
@@ -175,14 +190,12 @@ export function OperatorsTab() {
         },
       }
 
-      const allUsers = getAllUsers()
       allUsers.push(newOperator)
 
       console.log("[v0] Adding new operator:", newOperator.username, "Total users:", allUsers.length)
 
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
-      // Update local state immediately
       setOperators([...operators, newOperator])
 
       toast({
@@ -202,7 +215,6 @@ export function OperatorsTab() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Check file extension
     const fileName = file.name.toLowerCase()
     if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
       toast({
@@ -217,19 +229,15 @@ export function OperatorsTab() {
       let rows: string[][] = []
 
       if (fileName.endsWith(".csv")) {
-        // Parse CSV
         const text = await file.text()
         rows = text.split("\n").map((line) => line.split(",").map((cell) => cell.trim()))
       } else {
-        // Parse Excel file
         const arrayBuffer = await file.arrayBuffer()
         const workbook = XLSX.read(arrayBuffer, { type: "array" })
 
-        // Get first sheet
         const firstSheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[firstSheetName]
 
-        // Convert to array of arrays
         const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][]
         rows = data.map((row) => row.map((cell) => String(cell || "").trim()))
       }
@@ -240,25 +248,20 @@ export function OperatorsTab() {
       if (rows.length > 0) {
         const headerRow = rows[0].map((cell) => cell.toLowerCase())
 
-        // Look for "nome completo" or "nome" column
         nameColumnIndex = headerRow.findIndex((cell) => cell.includes("nome completo") || cell === "nome")
 
-        // Look for "usuario" or "usuário" column
         usernameColumnIndex = headerRow.findIndex(
           (cell) => cell.includes("usuario") || cell.includes("usuário") || cell === "usuario",
         )
 
-        // If headers found, remove header row
         if (nameColumnIndex !== -1 && usernameColumnIndex !== -1) {
           rows = rows.slice(1)
         } else {
-          // If no headers found, assume first two columns are name and username
           nameColumnIndex = 0
           usernameColumnIndex = 1
         }
       }
 
-      // Filter out empty rows
       rows = rows.filter(
         (row) =>
           row.length > Math.max(nameColumnIndex, usernameColumnIndex) &&
@@ -275,7 +278,10 @@ export function OperatorsTab() {
         return
       }
 
-      // Import operators
+      const normalizeUsername = (username: string): string => {
+        return username.toLowerCase().trim().replace(/\s+/g, "")
+      }
+
       const allUsers = getAllUsers()
       let importedCount = 0
       let skippedCount = 0
@@ -291,16 +297,17 @@ export function OperatorsTab() {
           return
         }
 
-        // Check if username already exists
-        if (allUsers.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
-          errors.push(`Linha ${index + 2}: Usuário "${username}" já existe`)
+        const normalizedNew = normalizeUsername(username)
+        const existingUser = allUsers.find((u) => normalizeUsername(u.username) === normalizedNew)
+
+        if (existingUser) {
+          errors.push(`Linha ${index + 2}: Usuário "${username}" já existe como "${existingUser.username}"`)
           skippedCount++
           return
         }
 
-        // Create new operator
         const newOperator: User = {
-          id: `op-${Date.now()}-${index}`,
+          id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${index}`,
           username: username,
           fullName: fullName,
           isOnline: false,
@@ -332,7 +339,6 @@ export function OperatorsTab() {
       setOperators(allUsers.filter((u) => u.role === "operator"))
       console.log("[v0] Imported", importedCount, "operators. Total users now:", allUsers.length)
 
-      // Show results
       if (importedCount > 0) {
         toast({
           title: "Importação Concluída",
@@ -357,7 +363,6 @@ export function OperatorsTab() {
       })
     }
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -375,7 +380,6 @@ export function OperatorsTab() {
   }
 
   const handleExportReport = () => {
-    // Prepare data for Excel
     const headers = ["Nome", "Quantidade Logins no Dia", "Tempo Conectado"]
     const rows = operators.map((operator) => {
       const todaySessions = getTodayLoginSessions(operator.id)
@@ -388,7 +392,6 @@ export function OperatorsTab() {
       ]
     })
 
-    // Create Excel-compatible HTML table
     const htmlTable = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
       <head>
@@ -429,7 +432,6 @@ export function OperatorsTab() {
       </html>
     `
 
-    // Create blob and download as Excel file
     const blob = new Blob([htmlTable], { type: "application/vnd.ms-excel" })
     const link = document.createElement("a")
     const url = URL.createObjectURL(blob)
@@ -453,7 +455,9 @@ export function OperatorsTab() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold">Gerenciar Operadores</h2>
-          <p className="text-muted-foreground mt-1">Visualize e gerencie os operadores do sistema</p>
+          <p className="text-muted-foreground mt-1">
+            Visualize e gerencie os operadores do sistema ({operators.length} operadores)
+          </p>
         </div>
         <div className="flex gap-3">
           <input
