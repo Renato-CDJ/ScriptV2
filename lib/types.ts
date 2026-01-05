@@ -279,3 +279,8 @@ export interface Contract {
   updatedAt: Date
   isActive: boolean
 }
+
+export interface SupervisorTeam {
+  supervisorId: string // User ID from access control
+  operatorIds: string[] // Array of operator IDs assigned to this supervisor
+}

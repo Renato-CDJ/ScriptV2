@@ -23,6 +23,7 @@ import type {
   PresentationProgress, // Imported for presentation progress
   Contract, // Imported for contracts
   FilePresentationProgress, // Added for file presentation progress
+  SupervisorTeam, // Import for supervisor teams
 } from "./types"
 import { db, auth } from "./firebase" // Updated import for auth
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore" // Added getDoc for loadFromFirebase
@@ -938,6 +939,7 @@ export const STORAGE_KEYS = {
   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
   CONTRACTS: "contracts", // Added storage key for contracts
   FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
+  SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
 } as const
 
 // Initialize mock data
@@ -1121,6 +1123,11 @@ export function initializeMockData() {
   // Initialize mock data for file presentation progress
   if (!localStorage.getItem(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS)) {
     localStorage.setItem(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS, JSON.stringify([]))
+  }
+
+  // Initialize mock data for supervisor teams
+  if (!localStorage.getItem(STORAGE_KEYS.SUPERVISOR_TEAMS)) {
+    localStorage.setItem(STORAGE_KEYS.SUPERVISOR_TEAMS, JSON.stringify([]))
   }
 
   cleanupOldSessions()
@@ -2869,4 +2876,148 @@ export function addUser(user: Omit<User, "id" | "createdAt">) {
     console.error("[v0] Error adding user:", error)
     return null
   }
+}
+
+// Supervisor Team management functions
+export function getSupervisorTeams(): SupervisorTeam[] {
+  if (typeof window === "undefined") return []
+  const data = localStorage.getItem(STORAGE_KEYS.SUPERVISOR_TEAMS)
+  return data ? JSON.parse(data) : []
+}
+
+export function getSupervisorTeam(supervisorId: string): SupervisorTeam | undefined {
+  const teams = getSupervisorTeams()
+  return teams.find((team) => team.supervisorId === supervisorId)
+}
+
+export function assignOperatorToSupervisor(supervisorId: string, operatorId: string) {
+  const teams = getSupervisorTeams()
+  const existingTeamIndex = teams.findIndex((team) => team.supervisorId === supervisorId)
+
+  // Remove operator from any other team first
+  teams.forEach((team) => {
+    team.operatorIds = team.operatorIds.filter((id) => id !== operatorId)
+  })
+
+  if (existingTeamIndex >= 0) {
+    if (!teams[existingTeamIndex].operatorIds.includes(operatorId)) {
+      teams[existingTeamIndex].operatorIds.push(operatorId)
+    }
+  } else {
+    teams.push({
+      supervisorId,
+      operatorIds: [operatorId],
+    })
+  }
+
+  save(STORAGE_KEYS.SUPERVISOR_TEAMS, teams)
+}
+
+export function removeOperatorFromSupervisor(supervisorId: string, operatorId: string) {
+  const teams = getSupervisorTeams()
+  const team = teams.find((t) => t.supervisorId === supervisorId)
+
+  if (team) {
+    team.operatorIds = team.operatorIds.filter((id) => id !== operatorId)
+    save(STORAGE_KEYS.SUPERVISOR_TEAMS, teams)
+  }
+}
+
+export function moveOperatorToSupervisor(operatorId: string, newSupervisorId: string) {
+  const teams = getSupervisorTeams()
+
+  // Remove from all teams
+  teams.forEach((team) => {
+    team.operatorIds = team.operatorIds.filter((id) => id !== operatorId)
+  })
+
+  // Add to new supervisor
+  const targetTeam = teams.find((t) => t.supervisorId === newSupervisorId)
+  if (targetTeam) {
+    targetTeam.operatorIds.push(operatorId)
+  } else {
+    teams.push({
+      supervisorId: newSupervisorId,
+      operatorIds: [operatorId],
+    })
+  }
+
+  save(STORAGE_KEYS.SUPERVISOR_TEAMS, teams)
+}
+
+export function getOperatorSupervisor(operatorId: string): string | null {
+  const teams = getSupervisorTeams()
+  const team = teams.find((t) => t.operatorIds.includes(operatorId))
+  return team ? team.supervisorId : null
+}
+
+export function createSupervisorTeam(team: Omit<SupervisorTeam, "id" | "createdAt" | "updatedAt">): SupervisorTeam {
+  if (typeof window === "undefined") return { ...team, id: "", createdAt: new Date(), updatedAt: new Date() }
+
+  const newTeam: SupervisorTeam = {
+    ...team,
+    id: `team-${Date.now()}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  const teams = getSupervisorTeams()
+  teams.push(newTeam)
+  debouncedSave(STORAGE_KEYS.SUPERVISOR_TEAMS, teams)
+  notifyUpdateImmediate()
+
+  return newTeam
+}
+
+export function updateSupervisorTeam(team: SupervisorTeam) {
+  if (typeof window === "undefined") return
+
+  const teams = getSupervisorTeams()
+  const index = teams.findIndex((t) => t.id === team.id)
+
+  if (index !== -1) {
+    teams[index] = { ...team, updatedAt: new Date() }
+    debouncedSave(STORAGE_KEYS.SUPERVISOR_TEAMS, teams)
+    notifyUpdateImmediate()
+  }
+}
+
+export function deleteSupervisorTeam(id: string) {
+  if (typeof window === "undefined") return
+
+  const teams = getSupervisorTeams().filter((t) => t.id !== id)
+  debouncedSave(STORAGE_KEYS.SUPERVISOR_TEAMS, teams)
+  notifyUpdateImmediate()
+}
+
+export function assignOperatorsToTeam(teamId: string, operatorIds: string[]) {
+  if (typeof window === "undefined") return
+
+  const teams = getSupervisorTeams()
+  const team = teams.find((t) => t.id === teamId)
+
+  if (team) {
+    team.operatorIds = Array.from(new Set([...(team.operatorIds || []), ...operatorIds])) // Add unique operator IDs
+    updateSupervisorTeam(team)
+  }
+}
+
+export function removeOperatorsFromTeam(teamId: string, operatorIds: string[]) {
+  if (typeof window === "undefined") return
+
+  const teams = getSupervisorTeams()
+  const team = teams.find((t) => t.id === teamId)
+
+  if (team) {
+    team.operatorIds = (team.operatorIds || []).filter((id) => !operatorIds.includes(id))
+    updateSupervisorTeam(team)
+  }
+}
+
+export function getOperatorsInTeam(teamId: string): User[] {
+  const team = getSupervisorTeams().find((t) => t.id === teamId)
+  if (!team || !team.operatorIds) return []
+
+  const allOperators = getAllUsers().filter((u) => u.role === "operator")
+  return allOperators.filter((operator) => team.operatorIds?.includes(operator.id))
 }

@@ -435,6 +435,20 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   className="text-sm sm:text-base md:text-lg leading-relaxed break-words hyphens-auto max-w-full prose prose-sm sm:prose-base md:prose-lg max-w-none dark:prose-invert"
                                   dangerouslySetInnerHTML={{ __html: message.content }}
                                 />
+
+                                {message.attachment && message.attachment.type === "image" && (
+                                  <div className="mt-4 sm:mt-6">
+                                    <img
+                                      src={message.attachment.url || "/placeholder.svg"}
+                                      alt={message.attachment.name}
+                                      className="max-w-full h-auto rounded-lg border-2 border-orange-500/20 shadow-md cursor-pointer hover:shadow-xl transition-shadow"
+                                      onClick={() => window.open(message.attachment!.url, "_blank")}
+                                    />
+                                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                                      {message.attachment.name}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                               {!seen && !showHistory && (
                                 <Button
@@ -1049,7 +1063,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
       {/* Expanded Message Dialog */}
       <Dialog open={!!expandedMessage} onOpenChange={(open) => !open && setExpandedMessage(null)}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[70vw] max-h-[90vh] flex flex-col p-6 sm:p-8 md:p-10 bg-gradient-to-br from-card via-card to-muted/30 border-2 border-orange-500/30 dark:border-primary/30 shadow-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[70vw] max-h-[90vh] flex flex-col p-6 sm:p-8 md:p-10 bg-gradient-to-br from-card to-muted/30 border-2 border-orange-500/30 dark:border-primary/30 shadow-2xl">
           <DialogHeader className="flex-shrink-0 pb-4 sm:pb-6 relative">
             <div className="absolute top-0 right-0 w-36 h-36 sm:w-48 sm:h-48 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl -z-10" />
             <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-orange-400/10 dark:bg-accent/10 rounded-full blur-2xl -z-10" />
@@ -1089,6 +1103,18 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   className="text-lg sm:text-xl md:text-2xl leading-relaxed break-words hyphens-auto text-foreground/90 max-w-full font-normal"
                   dangerouslySetInnerHTML={{ __html: expandedMessage?.content || "" }}
                 />
+
+                {expandedMessage?.attachment && expandedMessage.attachment.type === "image" && (
+                  <div className="mt-6 sm:mt-8">
+                    <img
+                      src={expandedMessage.attachment.url || "/placeholder.svg"}
+                      alt={expandedMessage.attachment.name}
+                      className="max-w-full h-auto rounded-lg border-2 border-orange-500/20 shadow-lg cursor-pointer hover:shadow-2xl transition-shadow"
+                      onClick={() => window.open(expandedMessage.attachment!.url, "_blank")}
+                    />
+                    <p className="text-sm sm:text-base text-muted-foreground mt-3">{expandedMessage.attachment.name}</p>
+                  </div>
+                )}
               </div>
             </div>
           </ScrollArea>

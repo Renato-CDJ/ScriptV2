@@ -108,7 +108,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                   </Badge>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 max-w-full overflow-hidden">
                   {pptFiles.map((file) => {
                     const isCompleted = getFileCompletionStatus(file.displayName)
 
@@ -117,14 +117,14 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                         key={file.name}
                         className="group relative overflow-hidden hover:shadow-xl transition-all duration-200 border-2 hover:border-orange-500/50"
                       >
-                        <div className="p-6 flex items-center gap-6">
+                        <div className="p-6 flex items-center gap-6 max-w-full">
                           <div className="flex-shrink-0 p-4 bg-orange-500/10 rounded-xl">
                             <GraduationCap className="h-8 w-8 text-orange-500" />
                           </div>
 
                           <div className="flex-1 min-w-0 pr-4">
-                            <h4 className="font-semibold text-xl mb-2 line-clamp-2">{file.displayName}</h4>
-                            <div className="flex items-center gap-3">
+                            <h4 className="font-semibold text-xl mb-2 line-clamp-2 break-words">{file.displayName}</h4>
+                            <div className="flex items-center gap-3 flex-wrap">
                               <Badge variant="outline" className="text-sm px-3 py-1">
                                 PowerPoint
                               </Badge>
@@ -168,7 +168,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                   </Badge>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 max-w-full overflow-hidden">
                   {presentations.map((presentation) => {
                     const isCompleted = completedIds.has(presentation.id)
 
@@ -177,12 +177,12 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
                         key={presentation.id}
                         className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-orange-500/50"
                       >
-                        <div className="p-6">
+                        <div className="p-6 max-w-full">
                           <div className="flex items-start justify-between gap-4 mb-4">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-xl mb-2">{presentation.title}</h4>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-xl mb-2 break-words">{presentation.title}</h4>
                               {presentation.description && (
-                                <p className="text-base text-muted-foreground line-clamp-2">
+                                <p className="text-base text-muted-foreground line-clamp-2 break-words">
                                   {presentation.description}
                                 </p>
                               )}

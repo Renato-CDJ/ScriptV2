@@ -46,6 +46,7 @@ const menuItems = [
   { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
   { id: "presentations", label: "Apresentações", icon: Presentation, permission: "messagesQuiz" },
   { id: "chat", label: "Chat", icon: MessageCircle, permission: "chat" },
+  { id: "supervision", label: "Supervisão", icon: Users, permission: "operators" },
   { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]
 
