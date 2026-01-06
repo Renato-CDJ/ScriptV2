@@ -23,30 +23,16 @@ export const LoginForm = memo(function LoginForm() {
   const { theme, setTheme } = useTheme()
   const { refreshUser } = useAuth()
 
-  const checkIfAdminUser = useCallback(async (inputUsername: string) => {
-    if (!inputUsername.trim()) {
-      setShowPasswordField(false)
-      return
-    }
-
-    // Load users from Firebase to get latest data
-    await loadFromFirebase()
-    const users = getAllUsers()
-    const normalizedUsername = inputUsername.toLowerCase().trim()
-    const user = users.find((u) => u.username.toLowerCase() === normalizedUsername)
-
-    // Show password field if user is admin (whether they have custom password or use master passwords)
-    if (user && user.role === "admin") {
-      setShowPasswordField(true)
-    } else {
-      setShowPasswordField(false)
-    }
+  const checkIfAdminUser = useCallback((inputUsername: string) => {
+    const adminPrefixes = ["admin", "monitoria"]
+    const lowerUsername = inputUsername.toLowerCase()
+    return adminPrefixes.some((prefix) => lowerUsername.startsWith(prefix))
   }, [])
 
   const handleUsernameChange = useCallback(
     (value: string) => {
       setUsername(value)
-      checkIfAdminUser(value)
+      setShowPasswordField(checkIfAdminUser(value))
       setError("")
     },
     [checkIfAdminUser],

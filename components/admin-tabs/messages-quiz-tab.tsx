@@ -621,12 +621,12 @@ export function MessagesQuizTab() {
                       Novo Recado
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-                    <DialogHeader className="flex-shrink-0">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
                       <DialogTitle>{editingMessage ? "Editar Recado" : "Novo Recado"}</DialogTitle>
                       <DialogDescription>Crie um recado formatado para ser exibido aos operadores</DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 overflow-y-auto min-h-0 space-y-4 pr-2">
+                    <div className="space-y-4">
                       <RichTextEditorWYSIWYG
                         value={messageContent}
                         onChange={(content) => {
@@ -663,7 +663,7 @@ export function MessagesQuizTab() {
                               />
                             </div>
 
-                            <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
+                            <div className="max-h-48 overflow-y-auto space-y-2">
                               {operators.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">Nenhum operador cadastrado.</p>
                               ) : filteredOperators.length === 0 ? (
@@ -692,14 +692,14 @@ export function MessagesQuizTab() {
                         <Switch id="message-active" checked={messageActive} onCheckedChange={setMessageActive} />
                         <Label htmlFor="message-active">Ativo</Label>
                       </div>
-                    </div>
-                    <div className="flex gap-2 justify-end pt-4 flex-shrink-0 border-t mt-4">
-                      <Button variant="outline" onClick={() => setShowMessageDialog(false)} disabled={isSaving}>
-                        Cancelar
-                      </Button>
-                      <Button onClick={handleSaveMessage} disabled={isSaving}>
-                        {isSaving ? "Salvando..." : "Salvar"}
-                      </Button>
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" onClick={() => setShowMessageDialog(false)} disabled={isSaving}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSaveMessage} disabled={isSaving}>
+                          {isSaving ? "Salvando..." : "Salvar"}
+                        </Button>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -714,14 +714,14 @@ export function MessagesQuizTab() {
                       Ver Histórico de Recados
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-                    <DialogHeader className="flex-shrink-0">
+                  <DialogContent className="max-w-4xl max-h-[85vh]">
+                    <DialogHeader>
                       <DialogTitle>Histórico de Recados Enviados</DialogTitle>
                       <DialogDescription>
                         Todos os recados enviados aos operadores ({messages.length} total)
                       </DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="flex-1 min-h-0 pr-4">
+                    <ScrollArea className="h-[60vh] pr-4">
                       <div className="space-y-3">
                         {messages.length === 0 ? (
                           <div className="py-12 text-center">
@@ -870,12 +870,12 @@ export function MessagesQuizTab() {
                       Novo Quiz
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-                    <DialogHeader className="flex-shrink-0">
+                  <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
                       <DialogTitle>{editingQuiz ? "Editar Quiz" : "Novo Quiz"}</DialogTitle>
                       <DialogDescription>Crie um quiz com 4 opções de resposta para os operadores</DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 overflow-y-auto min-h-0 space-y-4 pr-2">
+                    <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="quiz-question">Pergunta</Label>
                         <Textarea
@@ -946,14 +946,13 @@ export function MessagesQuizTab() {
                         <Switch id="quiz-active" checked={quizActive} onCheckedChange={setQuizActive} />
                         <Label htmlFor="quiz-active">Ativo</Label>
                       </div>
-                    </div>
-                    <div className="flex gap-2 justify-end pt-4 flex-shrink-0 border-t mt-4">
-                      <Button variant="outline" onClick={() => setShowQuizDialog(false)} disabled={isSaving}>
-                        Cancelar
-                      </Button>
-                      <Button onClick={handleSaveQuiz} disabled={isSaving}>
-                        {isSaving ? "Salvando..." : "Salvar"}
-                      </Button>
+
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" onClick={() => setShowQuizDialog(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSaveQuiz}>Salvar</Button>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -977,14 +976,14 @@ export function MessagesQuizTab() {
                       Ver Histórico de Quizzes
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-                    <DialogHeader className="flex-shrink-0">
+                  <DialogContent className="max-w-4xl max-h-[85vh]">
+                    <DialogHeader>
                       <DialogTitle>Histórico de Quizzes Enviados</DialogTitle>
                       <DialogDescription>
                         Todos os quizzes enviados aos operadores ({quizzes.length} total)
                       </DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="flex-1 min-h-0 pr-4">
+                    <ScrollArea className="h-[60vh] pr-4">
                       <div className="space-y-3">
                         {quizzes.length === 0 ? (
                           <div className="py-12 text-center">
