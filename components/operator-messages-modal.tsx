@@ -40,6 +40,7 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -265,8 +266,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
   return (
     <>
+      {/* Main Modal */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] h-[90vh] flex flex-col p-0">
+        {/* Improved responsive sizing to prevent overflow on smaller screens */}
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] h-[85vh] flex flex-col p-0">
           <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
             <DialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
               Recados e Quiz
@@ -1063,7 +1066,8 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
       {/* Expanded Message Dialog */}
       <Dialog open={!!expandedMessage} onOpenChange={(open) => !open && setExpandedMessage(null)}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[70vw] max-h-[90vh] flex flex-col p-6 sm:p-8 md:p-10 bg-gradient-to-br from-card to-muted/30 border-2 border-orange-500/30 dark:border-primary/30 shadow-2xl">
+        {/* Fixed expanded message modal to fit screen properly */}
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[70vw] h-[85vh] flex flex-col p-6 sm:p-8 md:p-10 bg-gradient-to-br from-card to-muted/30 border-2 border-orange-500/30 dark:border-primary/30 shadow-2xl">
           <DialogHeader className="flex-shrink-0 pb-4 sm:pb-6 relative">
             <div className="absolute top-0 right-0 w-36 h-36 sm:w-48 sm:h-48 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl -z-10" />
             <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-orange-400/10 dark:bg-accent/10 rounded-full blur-2xl -z-10" />
@@ -1094,7 +1098,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             </DialogDescription>
           </DialogHeader>
 
-          <Separator className="my-4 sm:my-6" />
+          <Separator className="my-4 sm:my-6 flex-shrink-0" />
 
           <ScrollArea className="flex-1 min-h-0">
             <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-6 sm:p-8 md:p-10 border-2 border-orange-500/20 dark:border-primary/20 shadow-inner">
@@ -1119,26 +1123,13 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             </div>
           </ScrollArea>
 
-          <div className="flex gap-3 sm:gap-4 pt-6 sm:pt-8 flex-shrink-0">
-            {expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory && (
-              <Button
-                size="lg"
-                onClick={() => {
-                  handleMarkAsSeen(expandedMessage.id)
-                  setExpandedMessage(null)
-                }}
-                className="flex-1 text-base sm:text-lg md:text-lg py-5 sm:py-6 md:py-7 bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
-              >
-                <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
-                Marcar como Visto
-              </Button>
-            )}
+          <div className="flex justify-center pt-4 sm:pt-6 flex-shrink-0 border-t mt-4">
             <Button
-              variant="outline"
-              size="lg"
               onClick={() => setExpandedMessage(null)}
-              className={`text-base sm:text-lg md:text-lg py-5 sm:py-6 md:py-7 hover:scale-105 transition-transform font-semibold ${expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory ? "flex-1" : "w-full"}`}
+              variant="outline"
+              className="gap-2 hover:bg-orange-500/10 dark:hover:bg-primary/10"
             >
+              <X className="h-4 w-4" />
               Fechar
             </Button>
           </div>

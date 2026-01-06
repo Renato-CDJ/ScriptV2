@@ -54,8 +54,10 @@ export function OperatorsTab() {
       setOperators(ops)
     }
 
+    // Initial load
     loadOperators()
 
+    // Cleanup duplicates on mount
     const cleanup = cleanupDuplicateUsers()
     if (cleanup.removed > 0) {
       toast({
@@ -65,9 +67,10 @@ export function OperatorsTab() {
       loadOperators()
     }
 
-    const interval = setInterval(loadOperators, 5000)
+    const interval = setInterval(loadOperators, 3000)
 
     const handleStoreUpdate = () => {
+      console.log("[v0] Store updated event received, reloading operators")
       loadOperators()
     }
 
@@ -77,7 +80,7 @@ export function OperatorsTab() {
       clearInterval(interval)
       window.removeEventListener("store-updated", handleStoreUpdate)
     }
-  }, [])
+  }, [toast])
 
   const handleOpenDialog = () => {
     setFormData({ fullName: "", username: "" })

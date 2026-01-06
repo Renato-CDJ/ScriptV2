@@ -447,7 +447,7 @@ export function loadScriptsFromDataFolder() {
 }
 
 // Mock data for demonstration
-const MOCK_USERS: User[] = [
+export const MOCK_USERS: User[] = [
   {
     id: "1",
     username: "admin",
@@ -474,7 +474,7 @@ const MOCK_USERS: User[] = [
     username: "Monitoria1",
     fullName: "Monitoria 1",
     role: "admin",
-    isOnline: true,
+    isOnline: false,
     createdAt: new Date(),
     permissions: {
       dashboard: true,
@@ -495,7 +495,7 @@ const MOCK_USERS: User[] = [
     username: "Monitoria2",
     fullName: "Monitoria 2",
     role: "admin",
-    isOnline: true,
+    isOnline: false,
     createdAt: new Date(),
     permissions: {
       dashboard: true,
@@ -516,7 +516,7 @@ const MOCK_USERS: User[] = [
     username: "Monitoria3",
     fullName: "Monitoria 3",
     role: "admin",
-    isOnline: true,
+    isOnline: false,
     createdAt: new Date(),
     permissions: {
       dashboard: true,
@@ -537,7 +537,49 @@ const MOCK_USERS: User[] = [
     username: "Monitoria4",
     fullName: "Monitoria 4",
     role: "admin",
-    isOnline: true,
+    isOnline: false,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "6",
+    username: "operacao",
+    fullName: "Operação",
+    role: "admin",
+    isOnline: false,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: true,
+      scripts: true,
+      products: true,
+      attendanceConfig: true,
+      tabulations: true,
+      situations: true,
+      channels: true,
+      notes: true,
+      operators: true,
+      messagesQuiz: true,
+      settings: true,
+    },
+  },
+  {
+    id: "7",
+    username: "operacional",
+    fullName: "Operacional",
+    role: "admin",
+    isOnline: false,
     createdAt: new Date(),
     permissions: {
       dashboard: true,
@@ -1480,7 +1522,9 @@ export function deleteProduct(id: string) {
 // Additional user management functions
 export function getAllUsers(): User[] {
   if (typeof window === "undefined") return []
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+  const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+  console.log("[v0] getAllUsers called, returning", users.length, "users")
+  return users
 }
 
 export function updateUser(user: User) {
