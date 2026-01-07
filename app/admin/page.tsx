@@ -41,9 +41,7 @@ const PresentationsTab = lazy(() =>
 const InitialGuideTab = lazy(() =>
   import("@/components/admin-tabs/initial-guide-tab").then((m) => ({ default: m.InitialGuideTab })),
 )
-const SupervisionTab = lazy(() =>
-  import("@/components/admin-tabs/supervision-tab").then((m) => ({ default: m.SupervisionTab })),
-)
+const FeedbackTab = lazy(() => import("@/components/admin-tabs/feedback-tab").then((m) => ({ default: m.FeedbackTab }))) // Added Feedback tab lazy import
 
 const LoadingFallback = memo(function LoadingFallback() {
   return (
@@ -128,16 +126,16 @@ const AdminContent = memo(function AdminContent() {
             <MessagesQuizTab />
           </Suspense>
         )
+      case "feedback":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <FeedbackTab />
+          </Suspense>
+        )
       case "chat":
         return (
           <Suspense fallback={<LoadingFallback />}>
             <ChatTab />
-          </Suspense>
-        )
-      case "supervision":
-        return (
-          <Suspense fallback={<LoadingFallback />}>
-            <SupervisionTab />
           </Suspense>
         )
       case "settings":

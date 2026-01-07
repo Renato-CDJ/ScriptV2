@@ -24,6 +24,7 @@ import type {
   Contract, // Imported for contracts
   FilePresentationProgress, // Added for file presentation progress
   SupervisorTeam, // Import for supervisor teams
+  Feedback, // Added Feedback import
 } from "./types"
 import { db, auth } from "./firebase" // Updated import for auth
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore" // Added getDoc for loadFromFirebase
@@ -362,11 +363,39 @@ function setupListeners() {
                 `[v0] Firebase listener: Remote has ${remoteUsers.length} users, Local has ${currentUsers.length} users`,
               )
 
+              const remoteOperators = remoteUsers.filter((u) => u.role === "operator")
+              const currentOperators = currentUsers.filter((u: User) => u.role === "operator")
+              const remoteAdmins = remoteUsers.filter((u) => u.role === "admin")
+              const currentAdmins = currentUsers.filter((u: User) => u.role === "admin")
+
+              console.log(`[v0] Operators - Remote: ${remoteOperators.length}, Local: ${currentOperators.length}`)
+              console.log(`[v0] Admins - Remote: ${remoteAdmins.length}, Local: ${currentAdmins.length}`)
+
               if (remoteUsers.length === 0 && currentUsers.length > 0) {
                 console.error(
-                  `[v0] ⚠️ CRITICAL: Firebase sent 0 users but local has ${currentUsers.length} users - BLOCKING sync to prevent data loss`,
+                  `[v0] ⚠️⚠️⚠️ CRITICAL: Firebase sent 0 users but local has ${currentUsers.length} users - BLOCKING sync to prevent data loss`,
                 )
                 console.error("[v0] ⚠️ This may indicate a Firebase write error or permission issue")
+                console.error("[v0] ⚠️ Re-saving local data to Firebase to recover...")
+                // Immediately re-save local data to Firebase to recover
+                saveImmediately(key, currentUsers)
+                return
+              }
+
+              if (currentOperators.length > 0 && remoteOperators.length < currentOperators.length) {
+                const missingOperators = currentOperators.filter(
+                  (localOp: User) => !remoteOperators.find((remoteOp) => remoteOp.id === localOp.id),
+                )
+
+                console.error(`[v0] ⚠️⚠️⚠️ CRITICAL: ${missingOperators.length} operator(s) missing from Firebase!`)
+                console.error(
+                  `[v0] Missing operators:`,
+                  missingOperators.map((op: User) => ({ id: op.id, username: op.username, name: op.fullName })),
+                )
+                console.error("[v0] ⚠️ BLOCKING sync and re-saving local data to Firebase to prevent data loss...")
+
+                // Re-save local data immediately to recover missing operators
+                saveImmediately(key, currentUsers)
                 return
               }
 
@@ -389,7 +418,8 @@ function setupListeners() {
                 console.warn(
                   `[v0] ⚠️ Large difference detected: Remote=${remoteUsers.length}, Local=${currentUsers.length}, Diff=${(percentageDiff * 100).toFixed(1)}%`,
                 )
-                console.warn("[v0] ⚠️ Blocking sync - manual intervention may be required")
+                console.warn("[v0] ⚠️ Blocking sync and re-saving local data to prevent potential data loss...")
+                saveImmediately(key, currentUsers)
                 return
               }
 
@@ -397,6 +427,7 @@ function setupListeners() {
                 localStorage.setItem(key, newValue)
                 localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
                 console.log(`[v0] ✅ Updated local storage with ${remoteUsers.length} users from Firebase`)
+                console.log(`[v0] ✅ Operators: ${remoteOperators.length}, Admins: ${remoteAdmins.length}`)
                 window.dispatchEvent(new CustomEvent("store-updated"))
               }
             } else {
@@ -429,7 +460,7 @@ function setupListeners() {
           console.error(`}\n`)
           console.error(`5. Click "Publish"\n`)
           console.error(`⚠️  The app will work with local storage only until Firebase is configured.\n`)
-          firebaseSyncDisabled = true // Use firebaseSyncDisabled
+          firebaseSyncDisabled = true
         }
       },
     )
@@ -437,7 +468,6 @@ function setupListeners() {
   })
 
   if (!firebaseSyncDisabled) {
-    // Use firebaseSyncDisabled
     console.log("[v0] Realtime sync enabled successfully")
   }
 }
@@ -938,8 +968,10 @@ export const STORAGE_KEYS = {
   PRESENTATIONS: "callcenter_presentations",
   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
   CONTRACTS: "contracts", // Added storage key for contracts
+  PPT_FILE_PROGRESS: "ppt_file_progress",
   FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
   SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
+  FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
 } as const
 
 // Initialize mock data
@@ -1128,6 +1160,10 @@ export function initializeMockData() {
   // Initialize mock data for supervisor teams
   if (!localStorage.getItem(STORAGE_KEYS.SUPERVISOR_TEAMS)) {
     localStorage.setItem(STORAGE_KEYS.SUPERVISOR_TEAMS, JSON.stringify([]))
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.FEEDBACKS)) {
+    localStorage.setItem(STORAGE_KEYS.FEEDBACKS, JSON.stringify([]))
   }
 
   cleanupOldSessions()
@@ -1443,14 +1479,15 @@ export function createProduct(product: Omit<Product, "id" | "createdAt">): Produ
 
   const newProduct: Product = {
     ...product,
-    id: `prod-${Date.now()}`,
+    id: product.id || `product-${Date.now()}`,
     createdAt: new Date(),
   }
 
   const products = getProducts()
   products.push(newProduct)
-  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
-  notifyUpdateImmediate() // Notify about update
+  saveImmediately(STORAGE_KEYS.PRODUCTS, products) // Using saveImmediately instead of debouncedSave
+  notifyUpdateImmediate()
+  clearCaches()
 
   return newProduct
 }
@@ -1463,9 +1500,9 @@ export function updateProduct(product: Product) {
 
   if (index !== -1) {
     products[index] = product
-    debouncedSave(STORAGE_KEYS.PRODUCTS, products)
-    clearCaches() // Clear cache
+    saveImmediately(STORAGE_KEYS.PRODUCTS, products) // Using saveImmediately instead of debouncedSave
     notifyUpdateImmediate()
+    clearCaches()
   }
 }
 
@@ -1473,8 +1510,12 @@ export function deleteProduct(id: string) {
   if (typeof window === "undefined") return
 
   const products = getProducts().filter((p) => p.id !== id)
-  debouncedSave(STORAGE_KEYS.PRODUCTS, products)
+  const steps = getScriptSteps().filter((s) => s.productId !== id)
+
+  saveImmediately(STORAGE_KEYS.PRODUCTS, products) // Using saveImmediately instead of debouncedSave
+  saveImmediately(STORAGE_KEYS.SCRIPT_STEPS, steps) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
+  clearCaches()
 }
 
 // Additional user management functions
@@ -1808,9 +1849,9 @@ export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "
     createdAt: new Date(),
   }
 
-  const options = getAttendanceTypes()
-  options.push(newOption)
-  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+  const types = getAttendanceTypes()
+  types.push(newOption)
+  saveImmediately(STORAGE_KEYS.ATTENDANCE_TYPES, types) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 
   return newOption
@@ -1819,12 +1860,12 @@ export function createAttendanceType(option: Omit<AttendanceTypeOption, "id" | "
 export function updateAttendanceType(option: AttendanceTypeOption) {
   if (typeof window === "undefined") return
 
-  const options = getAttendanceTypes()
-  const index = options.findIndex((o) => o.id === option.id)
+  const types = getAttendanceTypes()
+  const index = types.findIndex((t) => t.id === option.id)
 
   if (index !== -1) {
-    options[index] = option
-    debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+    types[index] = option
+    saveImmediately(STORAGE_KEYS.ATTENDANCE_TYPES, types) // Using saveImmediately instead of debouncedSave
     notifyUpdateImmediate()
   }
 }
@@ -1832,8 +1873,8 @@ export function updateAttendanceType(option: AttendanceTypeOption) {
 export function deleteAttendanceType(id: string) {
   if (typeof window === "undefined") return
 
-  const options = getAttendanceTypes().filter((o) => o.id !== id)
-  debouncedSave(STORAGE_KEYS.ATTENDANCE_TYPES, options)
+  const types = getAttendanceTypes().filter((t) => t.id !== id)
+  saveImmediately(STORAGE_KEYS.ATTENDANCE_TYPES, types) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 }
 
@@ -1901,14 +1942,14 @@ export function createMessage(message: Omit<Message, "id" | "createdAt" | "seenB
 
   const newMessage: Message = {
     ...message,
-    id: `msg-${Date.now()}`,
+    id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     createdAt: new Date(),
     seenBy: [],
   }
 
   const messages = getMessages()
-  messages.push(newMessage) // Corrected: used 'newMessage' instead of 'newMemo'
-  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+  messages.push(newMessage)
+  saveImmediately(STORAGE_KEYS.MESSAGES, messages) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 
   return newMessage
@@ -1922,7 +1963,7 @@ export function updateMessage(message: Message) {
 
   if (index !== -1) {
     messages[index] = message
-    debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+    saveImmediately(STORAGE_KEYS.MESSAGES, messages) // Using saveImmediately instead of debouncedSave
     notifyUpdateImmediate()
   }
 }
@@ -1931,7 +1972,7 @@ export function deleteMessage(id: string) {
   if (typeof window === "undefined") return
 
   const messages = getMessages().filter((m) => m.id !== id)
-  debouncedSave(STORAGE_KEYS.MESSAGES, messages)
+  saveImmediately(STORAGE_KEYS.MESSAGES, messages) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 }
 
@@ -2006,13 +2047,13 @@ export function createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Quiz {
 
   const newQuiz: Quiz = {
     ...quiz,
-    id: `quiz-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // More unique IDs to avoid collisions
+    id: `quiz-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     createdAt: new Date(),
   }
 
   const quizzes = getQuizzes()
   quizzes.push(newQuiz)
-  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+  saveImmediately(STORAGE_KEYS.QUIZZES, quizzes) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 
   return newQuiz
@@ -2026,7 +2067,7 @@ export function updateQuiz(quiz: Quiz) {
 
   if (index !== -1) {
     quizzes[index] = quiz
-    debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+    saveImmediately(STORAGE_KEYS.QUIZZES, quizzes) // Using saveImmediately instead of debouncedSave
     notifyUpdateImmediate()
   }
 }
@@ -2035,7 +2076,7 @@ export function deleteQuiz(id: string) {
   if (typeof window === "undefined") return
 
   const quizzes = getQuizzes().filter((q) => q.id !== id)
-  debouncedSave(STORAGE_KEYS.QUIZZES, quizzes)
+  saveImmediately(STORAGE_KEYS.QUIZZES, quizzes) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 }
 
@@ -2104,7 +2145,7 @@ export function createQuizAttempt(attempt: Omit<QuizAttempt, "id" | "attemptedAt
 
   const attempts = getQuizAttempts()
   attempts.push(newAttempt)
-  debouncedSave(STORAGE_KEYS.QUIZ_ATTEMPTS, attempts)
+  saveImmediately(STORAGE_KEYS.QUIZ_ATTEMPTS, attempts) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 
   return newAttempt
@@ -2511,6 +2552,12 @@ export function deleteChatMessage(messageId: string) {
   notifyUpdateImmediate()
 }
 
+export function saveChatMessages(messages: ChatMessage[]) {
+  if (typeof window === "undefined") return
+  saveImmediately(STORAGE_KEYS.CHAT_MESSAGES, messages) // Using saveImmediately instead of debouncedSave
+  notifyUpdateImmediate()
+}
+
 export function getPresentations(): Presentation[] {
   if (typeof window === "undefined") return []
   return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRESENTATIONS) || "[]")
@@ -2529,19 +2576,18 @@ export function getActivePresentationsForOperator(operatorId: string): Presentat
   })
 }
 
-export function createPresentation(presentation: Omit<Presentation, "id" | "createdAt" | "updatedAt">): Presentation {
-  if (typeof window === "undefined") return { ...presentation, id: "", createdAt: new Date(), updatedAt: new Date() }
+export function createPresentation(presentation: Omit<Presentation, "id" | "uploadedAt">): Presentation {
+  if (typeof window === "undefined") return { ...presentation, id: "", uploadedAt: new Date() }
 
   const newPresentation: Presentation = {
     ...presentation,
     id: `pres-${Date.now()}`,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    uploadedAt: new Date(),
   }
 
   const presentations = getPresentations()
   presentations.push(newPresentation)
-  debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+  saveImmediately(STORAGE_KEYS.PRESENTATIONS, presentations) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 
   return newPresentation
@@ -2554,8 +2600,8 @@ export function updatePresentation(presentation: Presentation) {
   const index = presentations.findIndex((p) => p.id === presentation.id)
 
   if (index !== -1) {
-    presentations[index] = { ...presentation, updatedAt: new Date() }
-    debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+    presentations[index] = presentation
+    saveImmediately(STORAGE_KEYS.PRESENTATIONS, presentations) // Using saveImmediately instead of debouncedSave
     notifyUpdateImmediate()
   }
 }
@@ -2564,7 +2610,7 @@ export function deletePresentation(id: string) {
   if (typeof window === "undefined") return
 
   const presentations = getPresentations().filter((p) => p.id !== id)
-  debouncedSave(STORAGE_KEYS.PRESENTATIONS, presentations)
+  saveImmediately(STORAGE_KEYS.PRESENTATIONS, presentations) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 }
 
@@ -2608,6 +2654,30 @@ export function markPresentationAsSeen(presentationId: string, operatorId: strin
   notifyUpdateImmediate()
 }
 
+export function savePresentationProgress(progress: Omit<PresentationProgress, "id">) {
+  if (typeof window === "undefined") return
+
+  const allProgress = getPresentationProgress()
+  const existingIndex = allProgress.findIndex(
+    (p) => p.presentationId === progress.presentationId && p.operatorId === progress.operatorId,
+  )
+
+  if (existingIndex !== -1) {
+    allProgress[existingIndex] = {
+      ...allProgress[existingIndex],
+      ...progress,
+    }
+  } else {
+    allProgress.push({
+      id: `prog-${Date.now()}`,
+      ...progress,
+    })
+  }
+
+  saveImmediately(STORAGE_KEYS.PRESENTATION_PROGRESS, allProgress) // Using saveImmediately instead of debouncedSave
+  notifyUpdateImmediate()
+}
+
 export function exportPresentationReport(presentationId: string): string {
   const presentation = getPresentations().find((p) => p.id === presentationId)
   const progressList = getPresentationProgressByPresentation(presentationId)
@@ -2640,33 +2710,35 @@ export function exportPresentationReport(presentationId: string): string {
   return csvContent
 }
 
-// Contract management functions
+export function saveContracts(contracts: Contract[]) {
+  if (typeof window === "undefined") return
+  saveImmediately(STORAGE_KEYS.CONTRACTS, contracts) // Using saveImmediately instead of debouncedSave
+  notifyUpdateImmediate()
+}
+
 export function getContracts(): Contract[] {
   if (typeof window === "undefined") return []
   return JSON.parse(localStorage.getItem(STORAGE_KEYS.CONTRACTS) || "[]")
 }
 
-export function addContract(contract: Omit<Contract, "id" | "createdAt" | "updatedAt">): Contract {
-  if (typeof window === "undefined")
-    return {
-      ...contract,
-      id: crypto.randomUUID(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
+export function addContract(contract: Omit<Contract, "id" | "createdAt">): Contract {
+  return createContract(contract)
+}
 
-  const contracts = getContracts()
+export function createContract(contract: Omit<Contract, "id" | "createdAt">): Contract {
+  if (typeof window === "undefined") return { ...contract, id: "", createdAt: new Date() }
+
   const newContract: Contract = {
     ...contract,
-    id: crypto.randomUUID(),
+    id: `contract-${Date.now()}`,
     createdAt: new Date(),
-    updatedAt: new Date(),
   }
+
+  const contracts = getContracts()
   contracts.push(newContract)
-  // Using debouncedSave for consistency with other save operations
-  debouncedSave(STORAGE_KEYS.CONTRACTS, contracts)
-  // syncToFirebase("contracts", contracts) // Removed direct syncToFirebase call, debouncedSave handles it.
+  saveImmediately(STORAGE_KEYS.CONTRACTS, contracts) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
+
   return newContract
 }
 
@@ -2681,7 +2753,7 @@ export function updateContract(id: string, updates: Partial<Omit<Contract, "id" 
       ...updates,
       updatedAt: new Date(),
     }
-    debouncedSave(STORAGE_KEYS.CONTRACTS, contracts)
+    saveImmediately(STORAGE_KEYS.CONTRACTS, contracts) // Using saveImmediately instead of debouncedSave
     notifyUpdateImmediate()
   }
 }
@@ -2690,7 +2762,7 @@ export function deleteContract(id: string): void {
   if (typeof window === "undefined") return
 
   const contracts = getContracts().filter((c) => c.id !== id)
-  debouncedSave(STORAGE_KEYS.CONTRACTS, contracts)
+  saveImmediately(STORAGE_KEYS.CONTRACTS, contracts) // Using saveImmediately instead of debouncedSave
   notifyUpdateImmediate()
 }
 
@@ -2800,6 +2872,32 @@ export function markFilePresentationAsRead(fileName: string, operatorId: string,
   saveImmediately(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS, progress)
   notifyUpdateImmediate()
   console.log("[v0] Progress saved and notified")
+}
+
+export function saveFilePresentationProgress(progress: Omit<FilePresentationProgress, "id">) {
+  if (typeof window === "undefined") return
+
+  const allProgress = getFilePresentationProgress()
+  const existingIndex = allProgress.findIndex(
+    (p) => p.fileName === progress.fileName && p.operatorId === progress.operatorId,
+  )
+
+  if (existingIndex !== -1) {
+    allProgress[existingIndex] = {
+      ...allProgress[existingIndex],
+      ...progress,
+      last_accessed: new Date(),
+    }
+  } else {
+    allProgress.push({
+      id: `fprog-${Date.now()}`,
+      ...progress,
+      last_accessed: new Date(),
+    })
+  }
+
+  saveImmediately(STORAGE_KEYS.FILE_PRESENTATION_PROGRESS, allProgress) // Using saveImmediately instead of debouncedSave
+  notifyUpdateImmediate()
 }
 
 export function exportFilePresentationReport(fileName: string): string {
@@ -3020,4 +3118,81 @@ export function getOperatorsInTeam(teamId: string): User[] {
 
   const allOperators = getAllUsers().filter((u) => u.role === "operator")
   return allOperators.filter((operator) => team.operatorIds?.includes(operator.id))
+}
+
+export function getFeedbacks(): Feedback[] {
+  if (typeof window === "undefined") return []
+  const data = localStorage.getItem(STORAGE_KEYS.FEEDBACKS)
+  if (!data) return []
+  const feedbacks = JSON.parse(data)
+  return feedbacks.map((f: any) => ({
+    ...f,
+    createdAt: convertFirestoreTimestamp(f.createdAt),
+    callDate: convertFirestoreTimestamp(f.callDate),
+    readAt: f.readAt ? convertFirestoreTimestamp(f.readAt) : undefined,
+  }))
+}
+
+export function getFeedbacksByOperator(operatorId: string): Feedback[] {
+  return getFeedbacks()
+    .filter((f) => f.operatorId === operatorId)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+}
+
+export function getActiveFeedbacksForOperator(operatorId: string): Feedback[] {
+  return getFeedbacks()
+    .filter((f) => f.operatorId === operatorId && f.isActive && !f.isRead)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+}
+
+export function getHistoricalFeedbacksForOperator(operatorId: string): Feedback[] {
+  return getFeedbacks()
+    .filter((f) => f.operatorId === operatorId && f.isRead)
+    .sort((a, b) => b.readAt!.getTime() - a.readAt!.getTime())
+}
+
+export function addFeedback(feedback: Omit<Feedback, "id" | "createdAt">): Feedback {
+  const feedbacks = getFeedbacks()
+  const newFeedback: Feedback = {
+    ...feedback,
+    id: `feedback-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    createdAt: new Date(),
+  }
+  feedbacks.push(newFeedback)
+  saveImmediately(STORAGE_KEYS.FEEDBACKS, feedbacks)
+  notifyUpdateImmediate()
+  return newFeedback
+}
+
+export function updateFeedback(id: string, updates: Partial<Feedback>): void {
+  const feedbacks = getFeedbacks()
+  const index = feedbacks.findIndex((f) => f.id === id)
+  if (index !== -1) {
+    feedbacks[index] = { ...feedbacks[index], ...updates }
+    saveImmediately(STORAGE_KEYS.FEEDBACKS, feedbacks)
+    notifyUpdateImmediate()
+  }
+}
+
+export function markFeedbackAsRead(feedbackId: string, operatorId: string): void {
+  const feedbacks = getFeedbacks()
+  const index = feedbacks.findIndex((f) => f.id === feedbackId && f.operatorId === operatorId)
+  if (index !== -1) {
+    if (!feedbacks[index].readBy) {
+      feedbacks[index].readBy = []
+    }
+    if (!feedbacks[index].readBy.includes(operatorId)) {
+      feedbacks[index].readBy.push(operatorId)
+      feedbacks[index].readAt = new Date()
+    }
+    saveImmediately(STORAGE_KEYS.FEEDBACKS, feedbacks)
+    notifyUpdateImmediate()
+  }
+}
+
+export function deleteFeedback(id: string): void {
+  const feedbacks = getFeedbacks()
+  const filtered = feedbacks.filter((f) => f.id !== id)
+  saveImmediately(STORAGE_KEYS.FEEDBACKS, filtered)
+  notifyUpdateImmediate()
 }

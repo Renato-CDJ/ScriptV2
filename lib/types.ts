@@ -284,3 +284,23 @@ export interface SupervisorTeam {
   supervisorId: string // User ID from access control
   operatorIds: string[] // Array of operator IDs assigned to this supervisor
 }
+
+export interface Feedback {
+  id: string
+  operatorId: string
+  operatorName: string
+  createdBy: string // admin user id
+  createdByName: string // admin user name
+  createdAt: Date
+  callDate: Date // Data e hora da ligação
+  ecNumber: string // EC da Ligação
+  feedbackType: "positive" | "negative"
+  severity: "elogio" | "leve" | "medio" | "grave" // Added severity level field
+  score: number // Pontuação de 0 a 100
+  details: string // Detalhes do feedback
+  positivePoints: string // Pontos positivos
+  improvementPoints: string // Pontos a melhorar
+  isRead: boolean // Se o operador marcou como lido
+  readAt?: Date // Quando foi marcado como lido
+  isActive: boolean
+}

@@ -39,22 +39,27 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
+    let rafId: number
 
     const handleStoreUpdate = () => {
       clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => {
+      if (rafId) cancelAnimationFrame(rafId)
+
+      // Use requestAnimationFrame for smoother updates
+      rafId = requestAnimationFrame(() => {
         if (open && user) {
           loadMessages()
           const settings = getChatSettings()
           setChatEnabled(settings.isEnabled)
         }
-      }, 100)
+      })
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => {
       window.removeEventListener("store-updated", handleStoreUpdate)
       clearTimeout(timeoutId)
+      if (rafId) cancelAnimationFrame(rafId)
     }
   }, [open, user])
 

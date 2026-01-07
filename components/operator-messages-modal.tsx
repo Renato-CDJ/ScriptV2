@@ -1,5 +1,7 @@
 "use client"
 
+import { TooltipContent } from "@/components/ui/tooltip"
+
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -19,8 +21,11 @@ import {
   createQuizAttempt,
   hasOperatorAnsweredQuiz,
   getMonthlyQuizRanking,
+  getQuizAttemptsByOperator,
+  getFeedbacksByOperator,
+  markFeedbackAsRead,
 } from "@/lib/store"
-import type { Message, Quiz } from "@/lib/types"
+import type { Message, Quiz, Feedback } from "@/lib/types"
 import {
   MessageSquare,
   Brain,
@@ -40,10 +45,16 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  MessageCircle,
+  ThumbsUp,
+  ThumbsDown,
+  CheckCheck,
+  ClipboardList,
+  CheckCircle,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface OperatorMessagesModalProps {
   open: boolean
@@ -53,9 +64,10 @@ interface OperatorMessagesModalProps {
 export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesModalProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [sidebarView, setSidebarView] = useState<"messages" | "quiz" | "ranking">("messages")
+  const [sidebarView, setSidebarView] = useState<"messages" | "quiz" | "ranking" | "feedback">("messages")
   const [activeTab, setActiveTab] = useState<"messages" | "quiz">("messages")
   const [showHistory, setShowHistory] = useState(false)
+  const [showFeedbackHistory, setShowFeedbackHistory] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [historicalMessages, setHistoricalMessages] = useState<Message[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
@@ -66,6 +78,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   const [isCorrect, setIsCorrect] = useState(false)
   const [expandedMessage, setExpandedMessage] = useState<Message | null>(null)
   const [resultTimeout, setResultTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [userPreviousAnswer, setUserPreviousAnswer] = useState<string | null>(null)
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
+
+  const [fadingFeedbackId, setFadingFeedbackId] = useState<string | null>(null)
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
@@ -79,6 +95,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
         setHistoricalMessages(getHistoricalMessagesForOperator(user.id))
         setQuizzes(getActiveQuizzesForOperator())
         setHistoricalQuizzes(getHistoricalQuizzes())
+        setFeedbacks(getFeedbacksByOperator(user.id))
       })
     } else {
       setTimeout(() => {
@@ -86,6 +103,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
         setHistoricalMessages(getHistoricalMessagesForOperator(user.id))
         setQuizzes(getActiveQuizzesForOperator())
         setHistoricalQuizzes(getHistoricalQuizzes())
+        setFeedbacks(getFeedbacksByOperator(user.id))
       }, 0)
     }
   }, [user])
@@ -117,6 +135,11 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     if (!user) return 0
     return messages.filter((m) => !m.seenBy.includes(user.id)).length
   }, [messages, user])
+
+  const unreadFeedbackCount = useMemo(() => {
+    if (!user) return 0
+    return feedbacks.filter((f) => !f.readBy?.includes(user.id)).length
+  }, [feedbacks, user])
 
   const hasSeenMessage = useCallback(
     (message: Message) => {
@@ -153,6 +176,18 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     setSelectedAnswer("")
     setShowResult(false)
     setIsCorrect(false)
+
+    if (showHistory && user) {
+      const attempts = getQuizAttemptsByOperator(user.id).filter((a) => a.quizId === quiz.id)
+      if (attempts.length > 0) {
+        const lastAttempt = attempts[attempts.length - 1]
+        setUserPreviousAnswer(lastAttempt.selectedAnswer)
+      } else {
+        setUserPreviousAnswer(null)
+      }
+    } else {
+      setUserPreviousAnswer(null)
+    }
   }
 
   const handleSubmitQuiz = useCallback(() => {
@@ -177,6 +212,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
       setShowResult(false)
       setSelectedQuiz(null)
       setSelectedAnswer("")
+      setUserPreviousAnswer(null) // Clear previous answer on quiz completion
     }, 5000)
     setResultTimeout(timeout)
 
@@ -201,6 +237,15 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   const displayQuizzes = useMemo(() => {
     return showHistory ? historicalQuizzes : quizzes
   }, [showHistory, historicalQuizzes, quizzes])
+
+  // Filter feedbacks to only show those relevant to the current user if user is logged in
+  const displayedFeedbacks = useMemo(() => {
+    if (!user) return []
+    if (showFeedbackHistory) {
+      return feedbacks
+    }
+    return feedbacks.filter((f) => !f.readBy?.includes(user.id))
+  }, [feedbacks, user, showFeedbackHistory])
 
   const getMonthName = (month: number) => {
     const months = [
@@ -251,23 +296,75 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     return selectedYear === now.getFullYear() && selectedMonth === now.getMonth()
   }
 
-  const handleSidebarChange = (view: "messages" | "quiz" | "ranking") => {
+  const handleSidebarChange = (view: "messages" | "quiz" | "ranking" | "feedback") => {
     setSidebarView(view)
     if (view === "messages") {
       setActiveTab("messages")
+      setShowHistory(false) // Reset history when switching views
     } else if (view === "quiz") {
       setActiveTab("quiz")
+      setShowHistory(false) // Reset history when switching views
     } else if (view === "ranking") {
-      setActiveTab("quiz")
+      setActiveTab("quiz") // Ranking uses quiz tab styling for consistency
+    } else if (view === "feedback") {
+      setShowFeedbackHistory(false) // Reset feedback history when switching views
     }
-    setShowHistory(false)
+    setSelectedQuiz(null)
+    setUserPreviousAnswer(null)
+  }
+
+  const handleMarkFeedbackAsRead = useCallback(
+    (feedbackId: string) => {
+      if (!user) return
+
+      setFadingFeedbackId(feedbackId)
+
+      // Wait for animation to complete before marking as read
+      setTimeout(() => {
+        markFeedbackAsRead(feedbackId, user.id)
+        // Force immediate state update
+        setFeedbacks(getFeedbacksByOperator(user.id))
+        setFadingFeedbackId(null)
+
+        toast({
+          title: "Feedback marcado como lido",
+          description: "Você confirmou a leitura deste feedback.",
+        })
+      }, 300) // Match animation duration
+    },
+    [user, toast, loadDataDebounced],
+  )
+
+  // Determine if feedback is positive based on score
+  const isPositive = (feedback: Feedback) => feedback.score >= 70 // Example threshold, adjust as needed
+
+  // Determine severity badge based on score
+  const getSeverityBadge = (feedback: Feedback) => {
+    if (feedback.score >= 90) {
+      return {
+        label: "Excelente",
+        className: "bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700",
+      }
+    } else if (feedback.score >= 70) {
+      return {
+        label: "Bom",
+        className: "bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700",
+      }
+    } else if (feedback.score >= 50) {
+      return {
+        label: "Médio",
+        className: "bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700",
+      }
+    } else {
+      return { label: "Crítico", className: "bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700" }
+    }
   }
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] h-[90vh] flex flex-col p-0">
-          <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
+        <DialogContent className="max-w-[95vw] h-[90vh] sm:max-w-6xl p-0 gap-0 flex flex-col">
+          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b flex-shrink-0">
             <DialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
               Recados e Quiz
             </DialogTitle>
@@ -276,79 +373,80 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-1 min-h-0 gap-0 overflow-hidden">
-            {/* Sidebar */}
-            <div className="w-64 border-r bg-muted/30 flex flex-col flex-shrink-0">
-              <ScrollArea className="flex-1">
-                <div className="p-4 space-y-2">
-                  <Button
-                    variant={sidebarView === "messages" ? "default" : "ghost"}
-                    onClick={() => handleSidebarChange("messages")}
-                    className={`w-full justify-start text-left transition-all duration-300 ${
-                      sidebarView === "messages"
-                        ? "bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white shadow-lg"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <MessageSquare className="h-5 w-5 mr-3" />
-                    <span className="flex-1">Recados</span>
-                    {unseenCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="ml-2 h-6 w-6 p-0 flex items-center justify-center text-xs"
-                      >
-                        {unseenCount}
-                      </Badge>
-                    )}
-                  </Button>
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            <div className="w-48 border-r bg-muted/30 p-3 flex-shrink-0 overflow-y-auto">
+              <nav className="space-y-2">
+                <Button
+                  variant={sidebarView === "messages" ? "default" : "ghost"}
+                  className="w-full justify-start gap-2 text-sm"
+                  onClick={() => {
+                    setSidebarView("messages")
+                    setShowHistory(false)
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Recados
+                  {unseenCount > 0 && (
+                    <Badge className="ml-auto bg-orange-500 text-white" variant="secondary">
+                      {unseenCount}
+                    </Badge>
+                  )}
+                </Button>
 
-                  <Button
-                    variant={sidebarView === "quiz" ? "default" : "ghost"}
-                    onClick={() => handleSidebarChange("quiz")}
-                    className={`w-full justify-start text-left transition-all duration-300 ${
-                      sidebarView === "quiz"
-                        ? "bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white shadow-lg"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Brain className="h-5 w-5 mr-3" />
-                    <span className="flex-1">Quiz</span>
-                  </Button>
+                <Button
+                  variant={sidebarView === "quiz" ? "default" : "ghost"}
+                  className="w-full justify-start gap-2 text-sm"
+                  onClick={() => setSidebarView("quiz")}
+                >
+                  <ClipboardList className="h-4 w-4" />
+                  Quiz
+                </Button>
 
-                  <Button
-                    variant={sidebarView === "ranking" ? "default" : "ghost"}
-                    onClick={() => handleSidebarChange("ranking")}
-                    className={`w-full justify-start text-left transition-all duration-300 ${
-                      sidebarView === "ranking"
-                        ? "bg-orange-500 hover:bg-orange-600 dark:bg-primary dark:hover:bg-primary/90 text-white shadow-lg"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Trophy className="h-5 w-5 mr-3" />
-                    <span className="flex-1">Ranking</span>
-                  </Button>
-                </div>
-              </ScrollArea>
+                <Button
+                  variant={sidebarView === "ranking" ? "default" : "ghost"}
+                  className="w-full justify-start gap-2 text-sm"
+                  onClick={() => setSidebarView("ranking")}
+                >
+                  <Trophy className="h-4 w-4" />
+                  Ranking
+                </Button>
 
-              {sidebarView !== "ranking" && (
-                <div className="p-4 border-t">
-                  <Button
-                    variant={showHistory ? "default" : "outline"}
-                    onClick={() => setShowHistory(!showHistory)}
-                    className="w-full justify-start"
-                  >
-                    <History className="h-5 w-5 mr-3" />
-                    Histórico
-                  </Button>
-                </div>
-              )}
+                <Button
+                  variant={sidebarView === "feedback" ? "default" : "ghost"}
+                  className="w-full justify-start gap-2 text-sm"
+                  onClick={() => {
+                    setSidebarView("feedback")
+                    setShowFeedbackHistory(false)
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Feedback
+                  {unreadFeedbackCount > 0 && (
+                    <Badge className="ml-auto bg-orange-500 text-white" variant="secondary">
+                      {unreadFeedbackCount}
+                    </Badge>
+                  )}
+                </Button>
+              </nav>
             </div>
 
-            {/* Content Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-4 sm:px-6 py-4 overflow-y-auto">
+              <ScrollArea className="flex-1">
                 {sidebarView === "messages" && (
                   <div className="space-y-4 sm:space-y-6 py-2 px-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-2xl font-bold">{showHistory ? "Histórico de Recados" : "Recados"}</h2>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowHistory(!showHistory)}
+                        className="gap-2"
+                      >
+                        <History className="h-4 w-4" />
+                        {showHistory ? "Recados Novos" : "Ver Histórico"}
+                      </Button>
+                    </div>
+                    {/* </CHANGE> */}
                     {displayMessages.length === 0 ? (
                       <div className="text-center py-16 sm:py-24 md:py-32">
                         <MessageSquare className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
@@ -472,6 +570,19 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   <div className="space-y-4 sm:space-y-6 py-2 px-1">
                     {!selectedQuiz ? (
                       <>
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-2xl font-bold">{showHistory ? "Histórico de Quiz" : "Quiz"}</h2>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowHistory(!showHistory)}
+                            className="gap-2"
+                          >
+                            <History className="h-4 w-4" />
+                            {showHistory ? "Quiz Novos" : "Ver Histórico"}
+                          </Button>
+                        </div>
+                        {/* </CHANGE> */}
                         {displayQuizzes.length === 0 ? (
                           <div className="text-center py-16 sm:py-24 md:py-32">
                             <Brain className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
@@ -586,20 +697,29 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6 sm:space-y-8">
-                          <RadioGroup value={selectedAnswer} onValueChange={setSelectedAnswer} disabled={showResult}>
+                          {/* Modify quiz selection to handle history view and previous answers */}
+                          <RadioGroup
+                            value={selectedAnswer}
+                            onValueChange={setSelectedAnswer}
+                            disabled={showResult || showHistory}
+                          >
                             {selectedQuiz.options.map((option, index) => (
                               <div
                                 key={option.id}
                                 className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-5 rounded-xl border-2 transition-all duration-300 transform animate-in slide-in-from-left ${
-                                  !showResult ? "hover:bg-muted/50 cursor-pointer hover:shadow-md" : ""
+                                  !showResult && !showHistory ? "hover:bg-muted/50 cursor-pointer hover:shadow-md" : ""
                                 } ${
-                                  selectedAnswer === option.id && !showResult
+                                  selectedAnswer === option.id && !showResult && !showHistory
                                     ? "border-chart-1 bg-muted/50 shadow-md"
                                     : showResult && option.id === selectedQuiz.correctAnswer
                                       ? "border-green-500 dark:border-green-600 bg-green-500/10 shadow-lg shadow-green-500/20"
                                       : showResult && option.id === selectedAnswer && !isCorrect
                                         ? "border-red-500 dark:border-red-600 bg-red-500/10 shadow-lg shadow-red-500/20"
-                                        : "border-border"
+                                        : showHistory && option.id === userPreviousAnswer && !isCorrect
+                                          ? "border-red-500 dark:border-red-600 bg-red-500/10 shadow-lg shadow-red-500/20"
+                                          : showHistory && option.id === userPreviousAnswer && isCorrect
+                                            ? "border-green-500 dark:border-green-600 bg-green-500/10 shadow-lg shadow-green-500/20"
+                                            : "border-border"
                                 }`}
                                 style={{ animationDelay: `${index * 100}ms` }}
                               >
@@ -607,6 +727,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   value={option.id}
                                   id={option.id}
                                   className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 mt-1"
+                                  disabled={showResult || showHistory}
                                 />
                                 <Label
                                   htmlFor={option.id}
@@ -615,9 +736,13 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       ? "text-green-600 dark:text-green-400 font-semibold"
                                       : showResult && option.id === selectedAnswer && !isCorrect
                                         ? "text-red-600 dark:text-red-400"
-                                        : selectedAnswer === option.id && !showResult
+                                        : selectedAnswer === option.id && !showResult && !showHistory
                                           ? "font-semibold"
-                                          : ""
+                                          : showHistory && option.id === userPreviousAnswer && isCorrect
+                                            ? "text-green-600 dark:text-green-400 font-semibold"
+                                            : showHistory && option.id === userPreviousAnswer && !isCorrect
+                                              ? "text-red-600 dark:text-red-400"
+                                              : ""
                                   }`}
                                 >
                                   <span className="font-bold mr-2 sm:mr-3 text-base sm:text-lg md:text-xl bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent inline-block flex-shrink-0">
@@ -708,6 +833,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                         setShowResult(false)
                                         setSelectedQuiz(null)
                                         setSelectedAnswer("")
+                                        setUserPreviousAnswer(null)
                                         setIsCorrect(false)
                                       }}
                                       className="flex-1 min-w-[140px] px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-chart-1 dark:via-chart-4 dark:to-chart-5 dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
@@ -724,6 +850,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                           setShowResult(false)
                                           setSelectedQuiz(null)
                                           setSelectedAnswer("")
+                                          setUserPreviousAnswer(null)
                                           setIsCorrect(false)
                                         }}
                                         className="flex-1 min-w-[140px] px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg hover:scale-105 transition-all duration-300 font-semibold"
@@ -742,17 +869,21 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             </div>
                           )}
 
-                          {!showResult && <Separator className="my-4 sm:my-6" />}
+                          {/* Modify button visibility and functionality for history mode */}
+                          <Separator className="my-4 sm:my-6" />
 
                           <div className={`flex gap-2 sm:gap-4 ${showResult ? "hidden" : ""}`}>
                             <Button
                               variant="outline"
-                              onClick={() => setSelectedQuiz(null)}
+                              onClick={() => {
+                                setSelectedQuiz(null)
+                                setUserPreviousAnswer(null)
+                              }}
                               className="flex-1 text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 hover:scale-105 transition-transform"
                             >
                               Voltar
                             </Button>
-                            {!showResult && (
+                            {!showResult && !showHistory && (
                               <Button
                                 onClick={handleSubmitQuiz}
                                 disabled={!selectedAnswer}
@@ -1055,6 +1186,192 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                     </Card>
                   </div>
                 )}
+
+                {sidebarView === "feedback" && (
+                  <div className="p-4 sm:p-6 space-y-4">
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground">
+                        {showFeedbackHistory ? "Histórico de Feedbacks" : "Feedbacks Recebidos"}
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowFeedbackHistory(!showFeedbackHistory)}
+                        className="flex items-center gap-2"
+                      >
+                        <History className="h-4 w-4" />
+                        {showFeedbackHistory ? "Feedbacks Novos" : "Ver Histórico"}
+                      </Button>
+                    </div>
+
+                    {displayedFeedbacks.length === 0 ? (
+                      <div className="text-center py-12">
+                        <MessageCircle className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-lg text-muted-foreground">
+                          {showFeedbackHistory ? "Nenhum feedback no histórico" : "Nenhum feedback novo"}
+                        </p>
+                      </div>
+                    ) : (
+                      // Added wrapping div with animation classes
+                      <div className="space-y-4">
+                        {displayedFeedbacks.map((feedback) => {
+                          const isPositiveFeedback = isPositive(feedback)
+                          const severityBadge = getSeverityBadge(feedback)
+                          return (
+                            <div
+                              key={feedback.id}
+                              className={`transition-all duration-300 ${
+                                fadingFeedbackId === feedback.id
+                                  ? "opacity-0 scale-95 translate-x-4"
+                                  : "opacity-100 scale-100 translate-x-0"
+                              }`}
+                            >
+                              <Card className="border-2 hover:border-primary/50 transition-all">
+                                <CardHeader className="pb-3 bg-muted/30">
+                                  <div className="flex items-start justify-between gap-2 sm:gap-4">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="space-y-2 sm:space-y-3">
+                                        <div className="flex items-center gap-2 flex-wrap pb-2">
+                                          <Badge
+                                            className={`${
+                                              isPositiveFeedback
+                                                ? "bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+                                                : "bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                                            } text-white border-0 text-xs sm:text-sm`}
+                                          >
+                                            Pontuação: {feedback.score}/100
+                                          </Badge>
+                                          {!feedback.readBy?.includes(user?.id || "") && (
+                                            <Badge className="bg-orange-500 dark:bg-gradient-to-r dark:from-primary dark:to-accent text-white border-0 animate-pulse text-xs sm:text-sm">
+                                              <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                              Novo
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <CardDescription className="text-sm sm:text-base md:text-lg break-words text-foreground dark:text-muted-foreground">
+                                          <strong className="text-foreground">Data da Ligação:</strong>{" "}
+                                          {new Date(feedback.callDate).toLocaleDateString("pt-BR")} às{" "}
+                                          {new Date(feedback.callDate).toLocaleTimeString("pt-BR", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}
+                                        </CardDescription>
+                                        <CardDescription className="text-sm sm:text-base break-words text-foreground dark:text-muted-foreground">
+                                          <strong className="text-foreground">EC da Ligação:</strong>{" "}
+                                          {feedback.ecNumber}
+                                        </CardDescription>
+                                        <CardDescription className="text-sm sm:text-base break-words text-foreground dark:text-muted-foreground">
+                                          <strong className="text-foreground">Aplicado Por:</strong>{" "}
+                                          {feedback.createdByName}
+                                        </CardDescription>
+                                        <div className="flex items-center gap-2 flex-wrap pt-2">
+                                          <span className="text-sm sm:text-base font-semibold text-foreground">
+                                            Tipo de Feedback:
+                                          </span>
+                                          <Badge
+                                            className={`${
+                                              isPositiveFeedback
+                                                ? "bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+                                                : "bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                                            } text-white border-0 text-xs sm:text-sm`}
+                                          >
+                                            {isPositiveFeedback ? (
+                                              <>
+                                                <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Positivo
+                                              </>
+                                            ) : (
+                                              <>
+                                                <ThumbsDown className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Negativo
+                                              </>
+                                            )}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-sm sm:text-base font-semibold text-foreground">
+                                            Nível de Gravidade:
+                                          </span>
+                                          <Badge className={`${severityBadge.className} border-0 text-xs sm:text-sm`}>
+                                            {severityBadge.label}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                                      {feedback.readBy?.includes(user?.id || "") && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="px-2 sm:px-3 md:px-4 py-1 sm:py-2 text-xs sm:text-sm md:text-base"
+                                        >
+                                          <CheckCheck className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 sm:mr-2" />
+                                          <span className="hidden sm:inline">Lido</span>
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </CardHeader>
+
+                                <CardContent className="pt-4 space-y-4">
+                                  <div className="bg-gradient-to-br from-muted/30 to-muted/20 dark:from-muted/20 dark:to-muted/10 rounded-xl p-4 sm:p-5 md:p-6 border-2 border-primary/20 dark:border-primary/30 shadow-sm space-y-4">
+                                    <div>
+                                      <h4 className="font-semibold text-base sm:text-lg mb-2 text-foreground">
+                                        Detalhes do Feedback:
+                                      </h4>
+                                      <p className="text-sm sm:text-base leading-relaxed break-words text-foreground dark:text-muted-foreground">
+                                        {feedback.details}
+                                      </p>
+                                    </div>
+
+                                    {feedback.positivePoints && feedback.positivePoints.trim().length > 0 && (
+                                      <div>
+                                        <h4 className="font-semibold text-base sm:text-lg mb-2 text-green-600 dark:text-green-400">
+                                          Pontos Positivos:
+                                        </h4>
+                                        <div className="bg-transparent rounded-lg p-3 border border-green-600/30 dark:border-green-500/30">
+                                          <p className="text-sm sm:text-base leading-relaxed break-words whitespace-pre-wrap text-foreground dark:text-green-100">
+                                            {feedback.positivePoints}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {feedback.improvementPoints && feedback.improvementPoints.trim().length > 0 && (
+                                      <div>
+                                        <h4 className="font-semibold text-base sm:text-lg mb-2 text-orange-600 dark:text-orange-400">
+                                          Pontos a Melhorar:
+                                        </h4>
+                                        <div className="bg-transparent rounded-lg p-3 border border-orange-600/30 dark:border-orange-500/30">
+                                          <p className="text-sm sm:text-base leading-relaxed break-words whitespace-pre-wrap text-foreground dark:text-orange-100">
+                                            {feedback.improvementPoints}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </CardContent>
+
+                                {!feedback.readBy?.includes(user?.id || "") && (
+                                  <div className="p-4 pt-0">
+                                    <Button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleMarkFeedbackAsRead(feedback.id)
+                                      }}
+                                      className="w-full py-3 sm:py-4 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 pointer-events-auto cursor-pointer"
+                                      size="lg"
+                                    >
+                                      <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+                                      Marcar como Lido
+                                    </Button>
+                                  </div>
+                                )}
+                              </Card>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </ScrollArea>
             </div>
           </div>
@@ -1063,14 +1380,11 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
       {/* Expanded Message Dialog */}
       <Dialog open={!!expandedMessage} onOpenChange={(open) => !open && setExpandedMessage(null)}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[70vw] max-h-[90vh] flex flex-col p-6 sm:p-8 md:p-10 bg-gradient-to-br from-card to-muted/30 border-2 border-orange-500/30 dark:border-primary/30 shadow-2xl">
-          <DialogHeader className="flex-shrink-0 pb-4 sm:pb-6 relative">
-            <div className="absolute top-0 right-0 w-36 h-36 sm:w-48 sm:h-48 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl -z-10" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-orange-400/10 dark:bg-accent/10 rounded-full blur-2xl -z-10" />
-
-            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <DialogContent className="w-[96vw] max-w-5xl h-[92vh] max-h-[92vh] flex flex-col p-4 sm:p-6 md:p-8 bg-card border border-border shadow-2xl">
+          <DialogHeader className="flex-shrink-0 pb-3 sm:pb-4">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <div className="flex-1 min-w-0">
-                <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 dark:from-primary dark:to-accent text-white border-0 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-shrink-0 mb-2">
+                <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 dark:from-primary dark:to-accent text-white border-0 px-3 py-1.5 text-xs sm:text-sm flex-shrink-0 mb-2">
                   <Maximize2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
                   Visualização Ampliada
                 </Badge>
@@ -1094,32 +1408,32 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             </DialogDescription>
           </DialogHeader>
 
-          <Separator className="my-4 sm:my-6" />
+          <Separator className="my-3 sm:my-4" />
 
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-6 sm:p-8 md:p-10 border-2 border-orange-500/20 dark:border-primary/20 shadow-inner">
-              <div className="prose prose-lg sm:prose-xl md:prose-2xl max-w-none dark:prose-invert">
+          <ScrollArea className="flex-1 min-h-0 pr-2 sm:pr-4">
+            <div className="bg-muted/30 rounded-xl p-4 sm:p-6 md:p-8 border border-border">
+              <div className="prose prose-base sm:prose-lg md:prose-xl max-w-none dark:prose-invert">
                 <div
-                  className="text-lg sm:text-xl md:text-2xl leading-relaxed break-words hyphens-auto text-foreground/90 max-w-full font-normal"
+                  className="text-base sm:text-lg md:text-xl leading-relaxed break-words hyphens-auto max-w-full"
                   dangerouslySetInnerHTML={{ __html: expandedMessage?.content || "" }}
                 />
 
                 {expandedMessage?.attachment && expandedMessage.attachment.type === "image" && (
-                  <div className="mt-6 sm:mt-8">
+                  <div className="mt-4 sm:mt-6">
                     <img
                       src={expandedMessage.attachment.url || "/placeholder.svg"}
                       alt={expandedMessage.attachment.name}
-                      className="max-w-full h-auto rounded-lg border-2 border-orange-500/20 shadow-lg cursor-pointer hover:shadow-2xl transition-shadow"
+                      className="max-w-full h-auto rounded-lg border border-border shadow-md cursor-pointer hover:shadow-xl transition-shadow"
                       onClick={() => window.open(expandedMessage.attachment!.url, "_blank")}
                     />
-                    <p className="text-sm sm:text-base text-muted-foreground mt-3">{expandedMessage.attachment.name}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{expandedMessage.attachment.name}</p>
                   </div>
                 )}
               </div>
             </div>
           </ScrollArea>
 
-          <div className="flex gap-3 sm:gap-4 pt-6 sm:pt-8 flex-shrink-0">
+          <div className="flex gap-2 sm:gap-3 pt-4 sm:pt-6 flex-shrink-0">
             {expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory && (
               <Button
                 size="lg"
@@ -1127,9 +1441,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   handleMarkAsSeen(expandedMessage.id)
                   setExpandedMessage(null)
                 }}
-                className="flex-1 text-base sm:text-lg md:text-lg py-5 sm:py-6 md:py-7 bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
+                className="flex-1 text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
               >
-                <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Marcar como Visto
               </Button>
             )}
@@ -1137,7 +1451,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
               variant="outline"
               size="lg"
               onClick={() => setExpandedMessage(null)}
-              className={`text-base sm:text-lg md:text-lg py-5 sm:py-6 md:py-7 hover:scale-105 transition-transform font-semibold ${expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory ? "flex-1" : "w-full"}`}
+              className={`text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 hover:scale-105 transition-transform font-semibold ${expandedMessage && !hasSeenMessage(expandedMessage) && !showHistory ? "flex-1" : "w-full"}`}
             >
               Fechar
             </Button>

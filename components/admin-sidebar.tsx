@@ -21,6 +21,7 @@ import {
   MessageCircle,
   Presentation,
   BookOpen,
+  Megaphone,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -45,8 +46,8 @@ const menuItems = [
   { id: "operators", label: "Operadores", icon: Users, permission: "operators" },
   { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
   { id: "presentations", label: "Apresentações", icon: Presentation, permission: "messagesQuiz" },
+  { id: "feedback", label: "Feedback", icon: Megaphone, permission: "messagesQuiz" }, // Added Feedback menu item
   { id: "chat", label: "Chat", icon: MessageCircle, permission: "chat" },
-  { id: "supervision", label: "Supervisão", icon: Users, permission: "operators" },
   { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]
 

@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Circle, UserX, Plus, Edit, Trash2, Download, Upload } from "lucide-react"
+import { UserX, Plus, Edit, Trash2, Download, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   getAllUsers,
@@ -26,7 +26,6 @@ import {
   getTodayLoginSessions,
   getTodayConnectedTime,
   getCurrentUser,
-  isUserOnline,
   saveImmediately,
   STORAGE_KEYS,
   cleanupDuplicateUsers,
@@ -65,7 +64,7 @@ export function OperatorsTab() {
       loadOperators()
     }
 
-    const interval = setInterval(loadOperators, 5000)
+    const interval = setInterval(loadOperators, 3000)
 
     const handleStoreUpdate = () => {
       loadOperators()
@@ -334,6 +333,7 @@ export function OperatorsTab() {
         importedCount++
       })
 
+      console.log("[v0] Saving", importedCount, "imported operators to Firebase immediately")
       saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
       setOperators(allUsers.filter((u) => u.role === "operator"))
@@ -486,7 +486,6 @@ export function OperatorsTab() {
         {operators.map((operator) => {
           const todaySessions = getTodayLoginSessions(operator.id)
           const loggedInToday = hasLoggedInToday(operator)
-          const online = isUserOnline(operator.id)
 
           return (
             <Card key={operator.id}>
@@ -495,19 +494,12 @@ export function OperatorsTab() {
                   <div>
                     <CardTitle className="flex items-center gap-3">
                       {operator.fullName}
-                      {online ? (
-                        <Badge variant="outline" className="gap-1 text-green-600 border-green-600">
-                          <Circle className="h-2 w-2 fill-current animate-pulse" />
-                          Online
-                        </Badge>
-                      ) : loggedInToday ? (
-                        <Badge variant="outline" className="gap-1 text-gray-600 border-gray-600">
-                          <Circle className="h-2 w-2 fill-current" />
-                          Offline
+                      {loggedInToday ? (
+                        <Badge variant="outline" className="gap-1 text-blue-600 border-blue-600">
+                          Logou Hoje
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="gap-1 text-gray-400 border-gray-400">
-                          <Circle className="h-2 w-2 fill-current" />
                           Não Logou Hoje
                         </Badge>
                       )}
