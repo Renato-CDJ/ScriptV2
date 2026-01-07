@@ -49,6 +49,7 @@ export function OperatorsTab() {
     const loadOperators = () => {
       const allUsers = getAllUsers()
       const ops = allUsers.filter((u) => u.role === "operator")
+      console.log("[v0] Operators tab loaded:", ops.length, "operators, Total users:", allUsers.length)
       setOperators(ops)
     }
 

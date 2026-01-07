@@ -80,28 +80,28 @@ export function convertFirestoreTimestamp(value: any): Date {
 function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {}
 
-  for (const [key, value] of Object.entries(data)) {
-    if (value === undefined) {
-      continue
-    }
+  for (const key in data) {
+    const value = data[key]
 
-    if (value instanceof Date) {
+    if (value === undefined || value === null) {
+      // Skip undefined/null values
+      continue
+    } else if (value instanceof Date) {
       sanitized[key] = value.toISOString()
     } else if (Array.isArray(value)) {
-      sanitized[key] = value.map((item: unknown) => {
-        if (item instanceof Date) {
-          return (item as Date).toISOString()
-        } else if (typeof item === "object" && item !== null) {
+      // For arrays, sanitize each element and limit large base64 strings
+      sanitized[key] = value.map((item) => {
+        if (typeof item === "object" && item !== null) {
           const sanitizedItem: Record<string, unknown> = {}
-          for (const [itemKey, itemValue] of Object.entries(item as Record<string, unknown>)) {
-            if (itemValue === undefined) {
-              continue
-            } else if (itemKey === "imageData" && typeof itemValue === "string") {
+          for (const itemKey in item as Record<string, unknown>) {
+            const itemValue = (item as Record<string, unknown>)[itemKey]
+            // Always skip imageData fields for Firebase - they're stored in localStorage only
+            if (itemKey === "imageData" && typeof itemValue === "string") {
               sanitizedItem[itemKey] = "[LOCAL_STORAGE_ONLY]"
+            } else if (itemValue === undefined) {
+              continue
             } else if (itemValue instanceof Date) {
               sanitizedItem[itemKey] = (itemValue as Date).toISOString()
-            } else if (typeof itemValue === "object" && itemValue !== null) {
-              sanitizedItem[itemKey] = sanitizeForFirebase(itemValue as Record<string, unknown>)
             } else {
               sanitizedItem[itemKey] = itemValue
             }
@@ -110,7 +110,7 @@ function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unkn
         }
         return item
       })
-    } else if (typeof value === "object" && value !== null) {
+    } else if (typeof value === "object") {
       sanitized[key] = sanitizeForFirebase(value as Record<string, unknown>)
     } else {
       sanitized[key] = value
@@ -162,10 +162,8 @@ async function processSaveQueue() {
   const { key, data } = saveQueue.shift()!
 
   try {
-    const sanitizedData = sanitizeForFirebase({ data })
-
     await setDoc(doc(db, FIREBASE_COLLECTION, key), {
-      data: sanitizedData.data,
+      data,
       timestamp: Date.now(),
     })
     console.log(`[v0] 💾 Saved to Firebase: ${key} (${Array.isArray(data) ? data.length : "N/A"} items)`)
@@ -226,6 +224,11 @@ function syncToFirebase(key: string, data: unknown) {
         }
 
         if (key === STORAGE_KEYS.USERS && Array.isArray(dataToSync)) {
+          console.log(`[v0] Writing ${dataToSync.length} users to Firebase (${key})`)
+          console.log(
+            "[v0] User roles:",
+            dataToSync.map((u: any) => ({ username: u.username, role: u.role })),
+          )
         }
 
         await setDoc(doc(db, FIREBASE_COLLECTION, key), {
@@ -423,6 +426,8 @@ function setupListeners() {
               if (currentValue !== newValue) {
                 localStorage.setItem(key, newValue)
                 localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
+                console.log(`[v0] ✅ Updated local storage with ${remoteUsers.length} users from Firebase`)
+                console.log(`[v0] ✅ Operators: ${remoteOperators.length}, Admins: ${remoteAdmins.length}`)
                 window.dispatchEvent(new CustomEvent("store-updated"))
               }
             } else {

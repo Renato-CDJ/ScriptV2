@@ -110,8 +110,10 @@ export default function PresentationPage() {
       const decodedFilename = decodeURIComponent(filename)
         .replace(/\.(pptx?|PPTX?)$/, "")
         .replace(/\.+$/, "")
+      console.log("[v0] Marking presentation as read:", decodedFilename, user.id, user.fullName || user.username)
       markFilePresentationAsRead(decodedFilename, user.id, user.fullName || user.username)
       setHasMarkedAsRead(true)
+      console.log("[v0] Marked as read successfully")
     }
   }
 
