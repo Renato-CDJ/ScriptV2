@@ -131,20 +131,20 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     }
   }, [loadDataDebounced])
 
-  const unseenCount = useMemo(() => {
+  const unreadMessageCount = useMemo(() => {
     if (!user) return 0
-    return messages.filter((m) => !m.seenBy.includes(user.id)).length
+    return messages.filter((m) => Array.isArray(m.seenBy) && !m.seenBy.includes(user.id)).length
   }, [messages, user])
 
   const unreadFeedbackCount = useMemo(() => {
     if (!user) return 0
-    return feedbacks.filter((f) => !f.readBy?.includes(user.id)).length
+    return feedbacks.filter((f) => Array.isArray(f.readBy) && !f.readBy.includes(user.id)).length
   }, [feedbacks, user])
 
   const hasSeenMessage = useCallback(
     (message: Message) => {
       if (!user) return false
-      return message.seenBy.includes(user.id)
+      return Array.isArray(message.seenBy) && message.seenBy.includes(user.id)
     },
     [user],
   )
@@ -386,9 +386,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                 >
                   <MessageSquare className="h-4 w-4" />
                   Recados
-                  {unseenCount > 0 && (
+                  {unreadMessageCount > 0 && (
                     <Badge className="ml-auto bg-orange-500 text-white" variant="secondary">
-                      {unseenCount}
+                      {unreadMessageCount}
                     </Badge>
                   )}
                 </Button>
@@ -446,7 +446,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                         {showHistory ? "Recados Novos" : "Ver Histórico"}
                       </Button>
                     </div>
-                    {/* </CHANGE> */}
                     {displayMessages.length === 0 ? (
                       <div className="text-center py-16 sm:py-24 md:py-32">
                         <MessageSquare className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
@@ -582,7 +581,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             {showHistory ? "Quiz Novos" : "Ver Histórico"}
                           </Button>
                         </div>
-                        {/* </CHANGE> */}
                         {displayQuizzes.length === 0 ? (
                           <div className="text-center py-16 sm:py-24 md:py-32">
                             <Brain className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
@@ -697,7 +695,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6 sm:space-y-8">
-                          {/* Modify quiz selection to handle history view and previous answers */}
                           <RadioGroup
                             value={selectedAnswer}
                             onValueChange={setSelectedAnswer}
@@ -707,10 +704,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                               <div
                                 key={option.id}
                                 className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 md:p-5 rounded-xl border-2 transition-all duration-300 transform animate-in slide-in-from-left ${
-                                  !showResult && !showHistory ? "hover:bg-muted/50 cursor-pointer hover:shadow-md" : ""
+                                  !showResult && !showHistory ? "hover:bg-muted/50" : ""
                                 } ${
                                   selectedAnswer === option.id && !showResult && !showHistory
-                                    ? "border-chart-1 bg-muted/50 shadow-md"
+                                    ? "border-chart-1 bg-muted/50 shadow-md cursor-pointer"
                                     : showResult && option.id === selectedQuiz.correctAnswer
                                       ? "border-green-500 dark:border-green-600 bg-green-500/10 shadow-lg shadow-green-500/20"
                                       : showResult && option.id === selectedAnswer && !isCorrect
@@ -760,7 +757,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             ))}
                           </RadioGroup>
 
-                          {/* Display inline result alert below quiz */}
                           {showResult && (
                             <div
                               className={`mt-8 p-6 sm:p-8 rounded-2xl border-2 transition-all duration-500 transform animate-in fade-in zoom-in-95 ${
@@ -869,7 +865,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             </div>
                           )}
 
-                          {/* Modify button visibility and functionality for history mode */}
                           <Separator className="my-4 sm:my-6" />
 
                           <div className={`flex gap-2 sm:gap-4 ${showResult ? "hidden" : ""}`}>
@@ -951,7 +946,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           </div>
                         ) : (
                           <>
-                            {/* Top 3 Section */}
                             <div className="space-y-4 sm:space-y-6">
                               <div className="text-center">
                                 <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 via-chart-4 to-chart-5 bg-clip-text text-transparent mb-2 sm:mb-3">
@@ -961,7 +955,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                               </div>
 
                               <div className="flex flex-col sm:flex-row items-center sm:items-end justify-center gap-6 sm:gap-3 px-2 sm:px-4 py-6 sm:px-8 md:px-12">
-                                {/* 2nd Place - Left */}
                                 {rankings[1] && (
                                   <div className="flex flex-col items-center w-full sm:flex-1 animate-in fade-in slide-in-from-left duration-700">
                                     <div className="mb-3 text-center">
@@ -991,7 +984,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   </div>
                                 )}
 
-                                {/* 1st Place - Center (Highest) */}
                                 {rankings[0] && (
                                   <div className="flex flex-col items-center w-full sm:flex-1 animate-in fade-in zoom-in-95 duration-700 order-first sm:order-none">
                                     <div className="mb-3 text-center">
@@ -1021,7 +1013,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   </div>
                                 )}
 
-                                {/* 3rd Place - Right */}
                                 {rankings[2] && (
                                   <div className="flex flex-col items-center w-full sm:flex-1 animate-in fade-in slide-in-from-right duration-700">
                                     <div className="mb-3 text-center">
@@ -1212,7 +1203,6 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                         </p>
                       </div>
                     ) : (
-                      // Added wrapping div with animation classes
                       <div className="space-y-4">
                         {displayedFeedbacks.map((feedback) => {
                           const isPositiveFeedback = isPositive(feedback)

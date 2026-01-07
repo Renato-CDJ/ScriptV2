@@ -45,33 +45,18 @@ export const LoginForm = memo(function LoginForm() {
       setIsLoading(true)
 
       try {
-        console.log("[v0] Attempting login for:", username)
-
-        console.log("[v0] Loading users from Firebase before login...")
         await loadFromFirebase()
 
         const users = getAllUsers()
-        console.log("[v0] Total users loaded:", users.length)
-        console.log(
-          "[v0] User roles:",
-          users.map((u) => `${u.username}:${u.role}`),
-        )
 
         const normalizedUsername = username.toLowerCase().trim()
         const user = users.find((u) => u.username.toLowerCase() === normalizedUsername)
 
         if (!user) {
-          console.log("[v0] User not found:", normalizedUsername)
-          console.log(
-            "[v0] Available usernames:",
-            users.map((u) => u.username),
-          )
           setError("Usuário não encontrado")
           setIsLoading(false)
           return
         }
-
-        console.log("[v0] User found:", user.username, "role:", user.role)
 
         // Check password for admin users
         if (user.role === "admin") {

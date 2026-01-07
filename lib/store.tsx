@@ -226,11 +226,6 @@ function syncToFirebase(key: string, data: unknown) {
         }
 
         if (key === STORAGE_KEYS.USERS && Array.isArray(dataToSync)) {
-          console.log(`[v0] Writing ${dataToSync.length} users to Firebase (${key})`)
-          console.log(
-            "[v0] User roles:",
-            dataToSync.map((u: any) => ({ username: u.username, role: u.role })),
-          )
         }
 
         await setDoc(doc(db, FIREBASE_COLLECTION, key), {
@@ -428,8 +423,6 @@ function setupListeners() {
               if (currentValue !== newValue) {
                 localStorage.setItem(key, newValue)
                 localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
-                console.log(`[v0] ✅ Updated local storage with ${remoteUsers.length} users from Firebase`)
-                console.log(`[v0] ✅ Operators: ${remoteOperators.length}, Admins: ${remoteAdmins.length}`)
                 window.dispatchEvent(new CustomEvent("store-updated"))
               }
             } else {
