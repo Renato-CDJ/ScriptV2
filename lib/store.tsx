@@ -80,28 +80,28 @@ export function convertFirestoreTimestamp(value: any): Date {
 function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {}
 
-  for (const key in data) {
-    const value = data[key]
-
-    if (value === undefined || value === null) {
-      // Skip undefined/null values
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) {
       continue
-    } else if (value instanceof Date) {
+    }
+
+    if (value instanceof Date) {
       sanitized[key] = value.toISOString()
     } else if (Array.isArray(value)) {
-      // For arrays, sanitize each element and limit large base64 strings
-      sanitized[key] = value.map((item) => {
-        if (typeof item === "object" && item !== null) {
+      sanitized[key] = value.map((item: unknown) => {
+        if (item instanceof Date) {
+          return (item as Date).toISOString()
+        } else if (typeof item === "object" && item !== null) {
           const sanitizedItem: Record<string, unknown> = {}
-          for (const itemKey in item as Record<string, unknown>) {
-            const itemValue = (item as Record<string, unknown>)[itemKey]
-            // Always skip imageData fields for Firebase - they're stored in localStorage only
-            if (itemKey === "imageData" && typeof itemValue === "string") {
-              sanitizedItem[itemKey] = "[LOCAL_STORAGE_ONLY]"
-            } else if (itemValue === undefined) {
+          for (const [itemKey, itemValue] of Object.entries(item as Record<string, unknown>)) {
+            if (itemValue === undefined) {
               continue
+            } else if (itemKey === "imageData" && typeof itemValue === "string") {
+              sanitizedItem[itemKey] = "[LOCAL_STORAGE_ONLY]"
             } else if (itemValue instanceof Date) {
               sanitizedItem[itemKey] = (itemValue as Date).toISOString()
+            } else if (typeof itemValue === "object" && itemValue !== null) {
+              sanitizedItem[itemKey] = sanitizeForFirebase(itemValue as Record<string, unknown>)
             } else {
               sanitizedItem[itemKey] = itemValue
             }
@@ -110,7 +110,7 @@ function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unkn
         }
         return item
       })
-    } else if (typeof value === "object") {
+    } else if (typeof value === "object" && value !== null) {
       sanitized[key] = sanitizeForFirebase(value as Record<string, unknown>)
     } else {
       sanitized[key] = value
@@ -162,8 +162,10 @@ async function processSaveQueue() {
   const { key, data } = saveQueue.shift()!
 
   try {
+    const sanitizedData = sanitizeForFirebase({ data })
+
     await setDoc(doc(db, FIREBASE_COLLECTION, key), {
-      data,
+      data: sanitizedData.data,
       timestamp: Date.now(),
     })
     console.log(`[v0] 💾 Saved to Firebase: ${key} (${Array.isArray(data) ? data.length : "N/A"} items)`)
