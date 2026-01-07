@@ -430,9 +430,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             </div>
 
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              <ScrollArea className="flex-1 h-full">
+              <ScrollArea className="flex-1">
                 {sidebarView === "messages" && (
-                  <div className="space-y-4 sm:space-y-6 py-2 px-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+                  <div className="space-y-4 sm:space-y-6 py-2 px-1">
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-2xl font-bold">{showHistory ? "Histórico de Recados" : "Recados"}</h2>
                       <Button
@@ -445,16 +445,17 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                         {showHistory ? "Recados Novos" : "Ver Histórico"}
                       </Button>
                     </div>
+                    {/* </CHANGE> */}
                     {displayMessages.length === 0 ? (
                       <div className="text-center py-16 sm:py-24 md:py-32">
                         <MessageSquare className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
                         <p className="text-muted-foreground text-lg sm:text-xl md:text-2xl">
-                          {showHistory ? "Nenhuma mensagem no histórico." : "Nenhum recado disponível no momento."}
+                          {showHistory ? "Nenhum recado no histórico." : "Nenhum recado disponível no momento."}
                         </p>
                       </div>
                     ) : (
                       displayMessages.map((message, index) => {
-                        const seen = Array.isArray(message.seenBy) && message.seenBy.includes(user.id)
+                        const seen = hasSeenMessage(message)
 
                         return (
                           <Card
@@ -462,20 +463,20 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             className={`transition-all duration-300 overflow-hidden ${
                               seen
                                 ? "opacity-60 bg-muted"
-                                : "bg-gradient-to-br from-card to-muted/30 hover:shadow-xl hover:shadow-orange-500/10 border-2 border-transparent hover:border-orange-500/30 dark:hover:border-primary/30"
+                                : "bg-gradient-to-br from-card to-muted/30 hover:shadow-xl hover:shadow-primary/10 border-2 border-transparent hover:border-primary/30"
                             } animate-in fade-in slide-in-from-bottom-4`}
                             style={{ animationDelay: `${index * 100}ms` }}
                           >
                             <CardHeader className="pb-3 sm:pb-4 relative overflow-hidden">
                               {!seen && (
                                 <>
-                                  <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl -z-10" />
-                                  <div className="absolute bottom-0 left-0 w-20 h-20 sm:w-24 sm:h-24 bg-orange-400/10 dark:bg-accent/10 rounded-full blur-2xl -z-10" />
+                                  <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
+                                  <div className="absolute bottom-0 left-0 w-20 h-20 sm:w-24 sm:h-24 bg-accent/20 rounded-full blur-2xl -z-10" />
                                 </>
                               )}
                               <div className="flex items-start justify-between gap-2 sm:gap-4">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-wrap">
+                                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
@@ -525,8 +526,8 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                 </div>
                               </div>
                             </CardHeader>
-                            <CardContent className="pb-4">
-                              <div className="bg-gradient-to-br from-muted/30 to-muted/20 rounded-xl p-4 sm:p-5 md:p-6 border-2 border-orange-500/20 dark:border-primary/20 shadow-sm max-h-[400px] overflow-y-auto">
+                            <CardContent>
+                              <div className="bg-gradient-to-br from-muted/30 to-muted/20 rounded-xl p-4 sm:p-5 md:p-6 border-2 border-orange-500/20 dark:border-primary/20 mb-4 sm:mb-6 shadow-sm">
                                 <div
                                   className="text-sm sm:text-base md:text-lg leading-relaxed break-words hyphens-auto max-w-full prose prose-sm sm:prose-base md:prose-lg max-w-none dark:prose-invert"
                                   dangerouslySetInnerHTML={{ __html: message.content }}
@@ -550,7 +551,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                 <Button
                                   size="lg"
                                   onClick={() => handleMarkAsSeen(message.id)}
-                                  className="w-auto px-6 sm:px-8 md:px-10 mx-auto block text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center mt-4"
+                                  className="w-auto px-6 sm:px-8 md:px-10 mx-auto block text-sm sm:text-base md:text-lg py-4 sm:py-5 md:py-6 bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-primary dark:via-accent dark:to-primary dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center"
                                 >
                                   <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 mr-2" />
                                   Marcar como Visto
@@ -565,7 +566,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                 )}
 
                 {sidebarView === "quiz" && (
-                  <div className="space-y-4 sm:space-y-6 py-2 px-4">
+                  <div className="space-y-4 sm:space-y-6 py-2 px-1">
                     {!selectedQuiz ? (
                       <>
                         <div className="flex items-center justify-between mb-4">
@@ -580,6 +581,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                             {showHistory ? "Quiz Novos" : "Ver Histórico"}
                           </Button>
                         </div>
+                        {/* </CHANGE> */}
                         {displayQuizzes.length === 0 ? (
                           <div className="text-center py-16 sm:py-24 md:py-32">
                             <Brain className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 text-muted-foreground mx-auto mb-4 sm:mb-6 opacity-50" />
@@ -658,7 +660,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                         ? "bg-orange-500 hover:bg-orange-600 text-white dark:bg-gradient-to-r dark:from-chart-1 dark:via-chart-4 dark:to-chart-5 dark:hover:opacity-90 dark:text-white shadow-lg hover:shadow-xl hover:scale-105"
                                         : ""
                                     }`}
-                                    disabled={answered && !showHistory}
+                                    disabled={answered || showHistory}
                                   >
                                     {answered ? "Já Respondido" : showHistory ? "Visualizar" : "Responder Quiz"}
                                     {!answered && !showHistory && (
@@ -750,7 +752,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                     <CheckCircle2 className="inline h-5 w-5 sm:h-6 sm:w-6 ml-2 sm:ml-3 text-green-600 dark:text-green-400 animate-in zoom-in-50 spin-in-180 flex-shrink-0" />
                                   )}
                                   {showResult && option.id === selectedAnswer && !isCorrect && (
-                                    <XCircle className="inline h-5 w-5 sm:h-6 sm:w-6 ml-2 sm:ml-3 text-red-600 dark:text-red-600 animate-in zoom-in-50 flex-shrink-0" />
+                                    <XCircle className="inline h-5 w-5 sm:h-6 sm:w-6 ml-2 sm:ml-3 text-red-600 dark:text-red-400 animate-in zoom-in-50 flex-shrink-0" />
                                   )}
                                 </Label>
                               </div>
