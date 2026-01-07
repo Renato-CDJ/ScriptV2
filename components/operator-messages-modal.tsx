@@ -48,9 +48,8 @@ import {
   MessageCircle,
   ThumbsUp,
   ThumbsDown,
-  CheckCheck,
   ClipboardList,
-  CheckCircle,
+  Flame,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -138,7 +137,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
   const unreadFeedbackCount = useMemo(() => {
     if (!user) return 0
-    return feedbacks.filter((f) => !f.readBy?.includes(user.id)).length
+    return feedbacks.filter((f) => !f.isRead).length
   }, [feedbacks, user])
 
   const hasSeenMessage = useCallback(
@@ -244,7 +243,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     if (showFeedbackHistory) {
       return feedbacks
     }
-    return feedbacks.filter((f) => !f.readBy?.includes(user.id))
+    return feedbacks.filter((f) => !f.isRead)
   }, [feedbacks, user, showFeedbackHistory])
 
   const getMonthName = (month: number) => {
@@ -1241,9 +1240,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                           >
                                             Pontuação: {feedback.score}/100
                                           </Badge>
-                                          {!feedback.readBy?.includes(user?.id || "") && (
-                                            <Badge className="bg-orange-500 dark:bg-gradient-to-r dark:from-primary dark:to-accent text-white border-0 animate-pulse text-xs sm:text-sm">
-                                              <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                          {!feedback.isRead && (
+                                            <Badge variant="secondary" className="bg-orange-500">
+                                              <Flame className="mr-1 h-3 w-3" />
                                               Novo
                                             </Badge>
                                           )}
@@ -1297,13 +1296,10 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                                      {feedback.readBy?.includes(user?.id || "") && (
-                                        <Badge
-                                          variant="secondary"
-                                          className="px-2 sm:px-3 md:px-4 py-1 sm:py-2 text-xs sm:text-sm md:text-base"
-                                        >
-                                          <CheckCheck className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 sm:mr-2" />
-                                          <span className="hidden sm:inline">Lido</span>
+                                      {feedback.isRead && (
+                                        <Badge variant="outline" className="border-green-500/50 text-green-500">
+                                          <CheckCircle2 className="mr-1 h-3 w-3" />
+                                          Lido
                                         </Badge>
                                       )}
                                     </div>
@@ -1349,17 +1345,18 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   </div>
                                 </CardContent>
 
-                                {!feedback.readBy?.includes(user?.id || "") && (
+                                {!feedback.isRead && (
                                   <div className="p-4 pt-0">
                                     <Button
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         handleMarkFeedbackAsRead(feedback.id)
                                       }}
-                                      className="w-full py-3 sm:py-4 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 pointer-events-auto cursor-pointer"
+                                      variant="default"
+                                      className="w-full pointer-events-auto cursor-pointer bg-orange-500 hover:bg-orange-600"
                                       size="lg"
                                     >
-                                      <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+                                      <CheckCircle2 className="mr-2 h-4 w-4" />
                                       Marcar como Lido
                                     </Button>
                                   </div>

@@ -3178,13 +3178,8 @@ export function markFeedbackAsRead(feedbackId: string, operatorId: string): void
   const feedbacks = getFeedbacks()
   const index = feedbacks.findIndex((f) => f.id === feedbackId && f.operatorId === operatorId)
   if (index !== -1) {
-    if (!feedbacks[index].readBy) {
-      feedbacks[index].readBy = []
-    }
-    if (!feedbacks[index].readBy.includes(operatorId)) {
-      feedbacks[index].readBy.push(operatorId)
-      feedbacks[index].readAt = new Date()
-    }
+    feedbacks[index].isRead = true
+    feedbacks[index].readAt = new Date()
     saveImmediately(STORAGE_KEYS.FEEDBACKS, feedbacks)
     notifyUpdateImmediate()
   }
