@@ -141,8 +141,8 @@ let duplicateCleaningInProgress = false // Add flag to prevent duplicate cleanin
 let pendingFirebaseWrites = 0
 const MAX_PENDING_WRITES = 5 // Reduced from 10 to 5 to prevent overload
 
-const BATCH_INTERVAL = 500 // Increased from 200ms
-const MIN_WRITE_INTERVAL = 1000 // Increased from 500ms to reduce Firebase load
+const BATCH_INTERVAL = 5000 // Increased from 500ms to 5 seconds
+const MIN_WRITE_INTERVAL = 10000 // Increased from 1 second to 10 seconds
 let lastFirebaseWrite = 0
 const writeQueue = new Map<string, { data: unknown; timestamp: number }>()
 let batchTimer: NodeJS.Timeout | null = null
@@ -194,7 +194,6 @@ async function processSaveQueue() {
 
 function syncToFirebase(key: string, data: unknown) {
   if (firebaseSyncDisabled) {
-    console.log("[v0] Firebase sync disabled, skipping", key)
     return
   }
 
@@ -202,27 +201,23 @@ function syncToFirebase(key: string, data: unknown) {
   const isUserData = key === STORAGE_KEYS.USERS
 
   if (isUserData && currentUser?.role !== "admin") {
-    // Operators should not write user data to Firebase
     return
   }
 
-  if (!isUserData) {
-    if (pendingFirebaseWrites >= MAX_PENDING_WRITES) {
-      console.log("[v0] Too many pending writes, skipping", key)
-      return
-    }
+  if (pendingFirebaseWrites >= MAX_PENDING_WRITES) {
+    console.log("[v0] ⚠️ Too many pending writes, Firebase sync temporarily disabled")
+    return
+  }
 
-    const now = Date.now()
-    if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
-      console.log("[v0] Too soon since last write, skipping", key)
-      return
-    }
+  const now = Date.now()
+  if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
+    return
   }
 
   lastFirebaseWrite = Date.now()
   pendingFirebaseWrites++
 
-  const syncDelay = isUserData ? 0 : BATCH_INTERVAL
+  const syncDelay = isUserData ? 0 : BATCH_INTERVAL * 2 // Doubled batch interval
 
   setTimeout(async () => {
     try {
@@ -258,8 +253,17 @@ function syncToFirebase(key: string, data: unknown) {
           `[v0] Successfully synced ${key} to Firebase with ${Array.isArray(dataToSync) ? dataToSync.length : 1} items`,
         )
       }
-    } catch (error: unknown) {
-      console.error(`[v0] Error syncing ${key} to Firebase:`, error)
+    } catch (error: any) {
+      if (error?.code === "resource-exhausted" || error?.message?.includes("Quota exceeded")) {
+        console.error("\n⚠️  Firebase Quota Exceeded\n")
+        console.error("Your Firebase project has reached its quota limit.")
+        console.error("\nThe app will continue working with localStorage only.\n")
+        console.error("To fix this:")
+        console.error("1. Wait for the quota to reset (usually 24 hours)")
+        console.error("2. Or upgrade your Firebase plan at: https://console.firebase.google.com/\n")
+        firebaseSyncDisabled = true
+      }
+      console.error(`[v0] Error syncing ${key} to Firebase:`, error?.message || error)
       handleFirebaseError(error) // Using the placeholder handler
     } finally {
       pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
@@ -360,6 +364,11 @@ async function enableFirebaseSync() {
 }
 
 function setupListeners() {
+  if (firebaseSyncDisabled) {
+    console.log("[v0] Firebase sync is disabled, skipping listeners setup")
+    return
+  }
+
   let firstPermissionError = true
 
   // Unsubscribe existing listeners if any
@@ -515,7 +524,16 @@ function setupListeners() {
           }
         }
       },
-      (error) => {
+      (error: any) => {
+        if (error?.code === "resource-exhausted" || error?.message?.includes("Quota exceeded")) {
+          if (!firebaseSyncDisabled) {
+            console.error("\n⚠️  Firebase Quota Exceeded - Listeners Disabled\n")
+            firebaseSyncDisabled = true
+            cleanupRealtimeSync()
+          }
+          return
+        }
+
         if (!firebaseSyncDisabled && firstPermissionError) {
           console.error(`\n⚠️  Firebase Firestore Permission Error\n`)
           console.error(`Your Firestore Security Rules are blocking access.`)
@@ -3257,6 +3275,7 @@ export function markFeedbackAsRead(feedbackId: string, operatorId: string): void
     feedbacks[index].isRead = true
     feedbacks[index].readAt = new Date()
     saveImmediately(STORAGE_KEYS.FEEDBACKS, feedbacks)
+    notifyUpdateImmediate()
   }
 }
 
