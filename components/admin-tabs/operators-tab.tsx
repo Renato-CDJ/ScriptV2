@@ -3,8 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,7 +48,6 @@ export function OperatorsTab() {
     const loadOperators = () => {
       const allUsers = getAllUsers()
       const ops = allUsers.filter((u) => u.role === "operator")
-      console.log("[v0] Operators tab loaded:", ops.length, "operators, Total users:", allUsers.length)
       setOperators(ops)
     }
 
@@ -64,7 +62,7 @@ export function OperatorsTab() {
       loadOperators()
     }
 
-    const interval = setInterval(loadOperators, 3000)
+    const interval = setInterval(loadOperators, 10000)
 
     const handleStoreUpdate = () => {
       loadOperators()
@@ -374,11 +372,6 @@ export function OperatorsTab() {
     return `${hours}h ${minutes}min`
   }
 
-  const hasLoggedInToday = (operator: User): boolean => {
-    const sessions = getTodayLoginSessions(operator.id)
-    return sessions.length > 0
-  }
-
   const handleExportReport = () => {
     const headers = ["Nome", "Quantidade Logins no Dia", "Tempo Conectado"]
     const rows = operators.map((operator) => {
@@ -484,26 +477,12 @@ export function OperatorsTab() {
 
       <div className="grid gap-4">
         {operators.map((operator) => {
-          const todaySessions = getTodayLoginSessions(operator.id)
-          const loggedInToday = hasLoggedInToday(operator)
-
           return (
             <Card key={operator.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-3">
-                      {operator.fullName}
-                      {loggedInToday ? (
-                        <Badge variant="outline" className="gap-1 text-blue-600 border-blue-600">
-                          Logou Hoje
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="gap-1 text-gray-400 border-gray-400">
-                          Não Logou Hoje
-                        </Badge>
-                      )}
-                    </CardTitle>
+                    <CardTitle className="flex items-center gap-3">{operator.fullName}</CardTitle>
                     <CardDescription className="mt-1">@{operator.username}</CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -522,12 +501,6 @@ export function OperatorsTab() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-sm">
-                  <p className="text-muted-foreground">Logins Hoje</p>
-                  <p className="font-semibold">{todaySessions.length}</p>
-                </div>
-              </CardContent>
             </Card>
           )
         })}

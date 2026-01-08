@@ -26,9 +26,9 @@ import type {
   SupervisorTeam, // Import for supervisor teams
   Feedback, // Added Feedback import
 } from "./types"
-import { db, auth } from "./firebase" // Updated import for auth
-import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore" // Added getDoc for loadFromFirebase
-import { signInAnonymously, onAuthStateChanged } from "firebase/auth" // Imported for anonymous auth
+import { db, auth } from "./firebase"
+import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
+import { signInAnonymously } from "firebase/auth"
 import debounce from "lodash.debounce" // Import debounce
 
 // Define handleFirebaseError as a placeholder or import it if it exists elsewhere
@@ -40,9 +40,61 @@ const handleFirebaseError = (error: unknown) => {
 
 const FIREBASE_COLLECTION = "app_data"
 
-const notifyUpdateTimeout: NodeJS.Timeout | null = null
-const NOTIFY_DEBOUNCE_MS = 300
+const memoryCache = new Map<string, any>()
+const cacheInitialized = false
 
+function notifyUpdate() {
+  if (typeof window === "undefined") return
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
+
+function sanitizeForFirebase(data: any): any {
+  if (data === null || data === undefined) return null
+  if (data instanceof Date) return data.toISOString()
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeForFirebase(item)).filter((item) => item !== null && item !== undefined)
+  }
+  if (typeof data === "object") {
+    const sanitized: any = {}
+    for (const key in data) {
+      const value = sanitizeForFirebase(data[key])
+      if (value !== null && value !== undefined) {
+        sanitized[key] = value
+      }
+    }
+    return sanitized
+  }
+  return data
+}
+
+export const STORAGE_KEYS = {
+  USERS: "callcenter_users",
+  CURRENT_USER: "callcenter_current_user",
+  SCRIPT_STEPS: "callcenter_script_steps",
+  TABULATIONS: "callcenter_tabulations",
+  SITUATIONS: "callcenter_situations",
+  CHANNELS: "callcenter_channels",
+  NOTES: "callcenter_notes",
+  SESSIONS: "callcenter_sessions", // This key is likely for CallSession, renamed for clarity later.
+  PRODUCTS: "callcenter_products",
+  LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
+  ATTENDANCE_TYPES: "callcenter_attendance_types",
+  PERSON_TYPES: "callcenter_person_types",
+  MESSAGES: "callcenter_messages",
+  QUIZZES: "callcenter_quizzes",
+  QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
+  CHAT_MESSAGES: "callcenter_chat_messages",
+  CHAT_SETTINGS: "callcenter_chat_settings",
+  PRESENTATIONS: "callcenter_presentations",
+  PRESENTATION_PROGRESS: "callcenter_presentation_progress",
+  CONTRACTS: "contracts", // Added storage key for contracts
+  PPT_FILE_PROGRESS: "ppt_file_progress",
+  FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
+  SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
+  FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
+} as const
+
+// Moved the following functions to be Firebase-only
 // Removed redeclared notifyUpdate function
 // export function notifyUpdate() {
 //   if (typeof window === "undefined") return
@@ -58,12 +110,12 @@ const NOTIFY_DEBOUNCE_MS = 300
 //   }, NOTIFY_DEBOUNCE_MS)
 // }
 
-function notifyUpdateImmediate() {
-  if (typeof window === "undefined") return
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
+// function notifyUpdateImmediate() {
+//   if (typeof window === "undefined") return
+//   window.dispatchEvent(new CustomEvent("store-updated"))
+// }
 
-export function convertFirestoreTimestamp(value: any): Date {
+function convertFirestoreTimestamp(value: any): Date {
   // If it's a Firestore timestamp object
   if (value && typeof value === "object" && "seconds" in value && "nanoseconds" in value) {
     return new Date(value.seconds * 1000 + value.nanoseconds / 1000000)
@@ -77,48 +129,38 @@ export function convertFirestoreTimestamp(value: any): Date {
 }
 
 // Helper function to sanitize data for Firebase by handling large strings and invalid nested entities
-function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unknown> {
-  const sanitized: Record<string, unknown> = {}
+// function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unknown> {
+//   const sanitized: Record<string, unknown> = {}
 
-  for (const key in data) {
-    const value = data[key]
+//   for (const key in data) {
+//     const value = data[key]
 
-    if (value === undefined || value === null) {
-      // Skip undefined/null values
-      continue
-    } else if (value instanceof Date) {
-      sanitized[key] = value.toISOString()
-    } else if (Array.isArray(value)) {
-      // For arrays, sanitize each element and limit large base64 strings
-      sanitized[key] = value.map((item) => {
-        if (typeof item === "object" && item !== null) {
-          const sanitizedItem: Record<string, unknown> = {}
-          for (const itemKey in item as Record<string, unknown>) {
-            const itemValue = (item as Record<string, unknown>)[itemKey]
-            // Always skip imageData fields for Firebase - they're stored in localStorage only
-            if (itemKey === "imageData" && typeof itemValue === "string") {
-              sanitizedItem[itemKey] = "[LOCAL_STORAGE_ONLY]"
-            } else if (itemValue === undefined) {
-              continue
-            } else if (itemValue instanceof Date) {
-              sanitizedItem[itemKey] = (itemValue as Date).toISOString()
-            } else {
-              sanitizedItem[itemKey] = itemValue
-            }
-          }
-          return sanitizedItem
-        }
-        return item
-      })
-    } else if (typeof value === "object") {
-      sanitized[key] = sanitizeForFirebase(value as Record<string, unknown>)
-    } else {
-      sanitized[key] = value
-    }
-  }
+//     if (value === undefined || value === null) {
+//       // Skip undefined/null values
+//       continue
+//     } else if (value instanceof Date) {
+//       sanitized[key] = value.toISOString()
+//     } else if (Array.isArray(value)) {
+//       // For arrays, sanitize each element and limit large base64 strings
+//       sanitized[key] = value
+//         .map((item) => {
+//           if (typeof item === "object" && item !== null) {
+//             // Recursively sanitize objects in arrays
+//             return sanitizeForFirebase(item as Record<string, unknown>)
+//           }
+//           // Skip undefined values in arrays
+//           return item === undefined ? null : item
+//         })
+//         .filter((item) => item !== null) // Remove nulls that were undefined
+//     } else if (typeof value === "object") {
+//       sanitized[key] = sanitizeForFirebase(value as Record<string, unknown>)
+//     } else {
+//       sanitized[key] = value
+//     }
+//   }
 
-  return sanitized
-}
+//   return sanitized
+// }
 
 // Helper function to strip imageData from presentations for Firebase sync
 function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
@@ -130,11 +172,15 @@ function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
       if (slides && Array.isArray(slides)) {
         return {
           ...presentation,
-          slides: slides.map((slide) => ({
-            ...slide,
-            // Replace imageData with a placeholder indicator
-            imageData: slide.imageData ? "[IMAGE_STORED_LOCALLY]" : undefined,
-          })),
+          slides: slides.map((slide) => {
+            const sanitizedSlide: Record<string, unknown> = { ...slide }
+            if (slide.imageData) {
+              sanitizedSlide.imageData = "[IMAGE_STORED_LOCALLY]"
+            } else {
+              delete sanitizedSlide.imageData
+            }
+            return sanitizedSlide
+          }),
         }
       }
     }
@@ -142,7 +188,8 @@ function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
   })
 }
 
-let firebaseSyncDisabled = false // Renamed from firebaseSyncFailed for clarity
+let firebaseSyncDisabled = false
+let duplicateCleaningInProgress = false // Add flag to prevent duplicate cleaning loop
 let pendingFirebaseWrites = 0
 const MAX_PENDING_WRITES = 5 // Reduced from 10 to 5 to prevent overload
 
@@ -162,15 +209,32 @@ async function processSaveQueue() {
   const { key, data } = saveQueue.shift()!
 
   try {
+    const sanitizedData = Array.isArray(data)
+      ? data.map((item) =>
+          typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
+        )
+      : typeof data === "object" && data !== null
+        ? sanitizeForFirebase(data as Record<string, unknown>)
+        : data
+
     await setDoc(doc(db, FIREBASE_COLLECTION, key), {
-      data,
+      data: sanitizedData,
       timestamp: Date.now(),
     })
     console.log(`[v0] 💾 Saved to Firebase: ${key} (${Array.isArray(data) ? data.length : "N/A"} items)`)
-  } catch (error) {
-    console.error(`[v0] ❌ Error saving ${key} to Firebase:`, error)
-    // Re-add to queue in case of error
-    saveQueue.unshift({ key, data })
+  } catch (error: any) {
+    const isPermissionError =
+      error?.code === "permission-denied" || error?.message?.includes("Missing or insufficient permissions")
+
+    if (isPermissionError) {
+      // Firebase authentication is anonymous, so write permissions are expected to fail
+      // Data flows: Firebase (source of truth) -> localStorage (read-only sync)
+      return
+    } else {
+      console.error(`[v0] ❌ Error saving ${key} to Firebase:`, error)
+      // Only re-add to queue if it's not a permissions error
+      saveQueue.unshift({ key, data })
+    }
   } finally {
     saveMutex = false
     if (saveQueue.length > 0) {
@@ -186,7 +250,13 @@ function syncToFirebase(key: string, data: unknown) {
     return
   }
 
+  const currentUser = getCurrentUser()
   const isUserData = key === STORAGE_KEYS.USERS
+
+  if (isUserData && currentUser?.role !== "admin") {
+    // Operators should not write user data to Firebase
+    return
+  }
 
   if (!isUserData) {
     if (pendingFirebaseWrites >= MAX_PENDING_WRITES) {
@@ -260,12 +330,16 @@ function flushBatchQueue() {
   })
 }
 
-export async function saveImmediately(key: string, data: any) {
+// Adding saveImmediately function that was missing
+export function saveImmediately(key: string, data: unknown) {
   if (typeof window === "undefined") return
 
   // Save to localStorage immediately
   localStorage.setItem(key, JSON.stringify(data))
-  console.log(`[v0] 💾 Saved locally: ${key} (${Array.isArray(data) ? data.length : "N/A"} items)`)
+  const itemCount = Array.isArray(data) ? data.length : "1"
+  console.log(`[v0] 💾 Saved ${key}: ${itemCount} item(s)`)
+
+  notifyUpdateImmediate()
 
   if (!db) {
     console.warn("[v0] Firebase not initialized, data saved locally only")
@@ -314,31 +388,32 @@ let unsubscribers: (() => void)[] = []
 
 let syncEnabled = false
 
-export function enableRealtimeSync() {
-  if (typeof window === "undefined" || syncEnabled) return
-
-  syncEnabled = true
+async function enableFirebaseSync() {
   console.log("[v0] Attempting to enable Firebase realtime sync...")
-  console.log("[v0] If you see permission errors, update your Firestore Security Rules in the Firebase Console")
 
-  // Ensure user is authenticated anonymously to bypass basic security rules
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      setupListeners()
-    } else {
-      signInAnonymously(auth)
-        .then(() => {
-          console.log("[v0] Signed in anonymously to Firebase")
-        })
-        .catch((error) => {
-          console.error("Error signing in anonymously:", error)
-          firebaseSyncDisabled = true // Use firebaseSyncDisabled
-        })
-    }
-  })
+  try {
+    // Sign in anonymously to Firebase
+    await signInAnonymously(auth)
+    console.log("[v0] ✅ Signed in anonymously to Firebase")
+
+    // Now setup listeners
+    setupListeners()
+  } catch (error: any) {
+    console.error("[v0] ❌ Failed to authenticate with Firebase:", error.message)
+    console.error("\n⚠️  Firebase Authentication Error\n")
+    console.error("To fix this:")
+    console.error("1. Go to Firebase Console: https://console.firebase.google.com/")
+    console.error("2. Select your project: banco-de-dados-roteiro")
+    console.error("3. Go to Authentication > Sign-in method")
+    console.error("4. Enable 'Anonymous' provider")
+    console.error("5. Save changes\n")
+    firebaseSyncDisabled = true
+  }
 }
 
 function setupListeners() {
+  let firstPermissionError = true
+
   // Unsubscribe existing listeners if any
   unsubscribers.forEach((unsub) => unsub())
   unsubscribers = []
@@ -353,72 +428,102 @@ function setupListeners() {
           const data = docSnapshot.data()
           if (data && data.data) {
             const currentValue = localStorage.getItem(key)
-            const newValue = JSON.stringify(data.data)
 
-            if (key === STORAGE_KEYS.USERS) {
+            if (key === STORAGE_KEYS.USERS && !duplicateCleaningInProgress) {
+              // Skip duplicate detection if cleaning is already in progress
               const remoteUsers = data.data as User[]
+              const seenUsernames = new Map<string, User>()
+              const duplicateIds: string[] = []
+
+              remoteUsers.forEach((user) => {
+                const normalized = user.username.toLowerCase().trim() // Correctly use username for normalization
+                const existing = seenUsernames.get(normalized)
+
+                if (existing) {
+                  const existingDate = new Date(existing.createdAt).getTime()
+                  const currentDate = new Date(user.createdAt).getTime()
+
+                  if (currentDate < existingDate) {
+                    duplicateIds.push(existing.id)
+                    seenUsernames.set(normalized, user)
+                  } else {
+                    duplicateIds.push(user.id)
+                  }
+                } else {
+                  seenUsernames.set(normalized, user)
+                }
+              })
+
+              let cleanedRemoteUsers = remoteUsers
+              if (duplicateIds.length > 0) {
+                duplicateCleaningInProgress = true
+
+                cleanedRemoteUsers = remoteUsers.filter((u) => !duplicateIds.includes(u.id))
+                console.log(
+                  `[v0] 🧹 Cleaned ${duplicateIds.length} duplicate users from Firebase. Before: ${remoteUsers.length}, After: ${cleanedRemoteUsers.length}`,
+                )
+
+                // Save cleaned data back to Firebase immediately
+                localStorage.setItem(key, JSON.stringify(cleanedRemoteUsers))
+                localStorage.setItem(`${key}_timestamp`, String(Date.now()))
+                saveImmediately(key, cleanedRemoteUsers)
+                window.dispatchEvent(new CustomEvent("store-updated"))
+
+                setTimeout(() => {
+                  duplicateCleaningInProgress = false
+                }, 5000)
+
+                return
+              }
+
+              duplicateCleaningInProgress = false
+
+              const newValue = JSON.stringify(cleanedRemoteUsers) // Use cleanedRemoteUsers
               const currentUsers = currentValue ? JSON.parse(currentValue) : []
-
-              console.log(
-                `[v0] Firebase listener: Remote has ${remoteUsers.length} users, Local has ${currentUsers.length} users`,
-              )
-
-              const remoteOperators = remoteUsers.filter((u) => u.role === "operator")
-              const currentOperators = currentUsers.filter((u: User) => u.role === "operator")
-              const remoteAdmins = remoteUsers.filter((u) => u.role === "admin")
-              const currentAdmins = currentUsers.filter((u: User) => u.role === "admin")
-
-              console.log(`[v0] Operators - Remote: ${remoteOperators.length}, Local: ${currentOperators.length}`)
-              console.log(`[v0] Admins - Remote: ${remoteAdmins.length}, Local: ${currentAdmins.length}`)
 
               if (remoteUsers.length === 0 && currentUsers.length > 0) {
                 console.error(
-                  `[v0] ⚠️⚠️⚠️ CRITICAL: Firebase sent 0 users but local has ${currentUsers.length} users - BLOCKING sync to prevent data loss`,
+                  `[v0] ⚠️ CRITICAL: Firebase sent 0 users but local has ${currentUsers.length} users - re-saving local data`,
                 )
-                console.error("[v0] ⚠️ This may indicate a Firebase write error or permission issue")
-                console.error("[v0] ⚠️ Re-saving local data to Firebase to recover...")
-                // Immediately re-save local data to Firebase to recover
                 saveImmediately(key, currentUsers)
                 return
               }
+
+              const remoteOperators = cleanedRemoteUsers.filter((u) => u.role === "operator") // Use cleanedRemoteUsers
+              const currentOperators = currentUsers.filter((u: User) => u.role === "operator")
 
               if (currentOperators.length > 0 && remoteOperators.length < currentOperators.length) {
                 const missingOperators = currentOperators.filter(
                   (localOp: User) => !remoteOperators.find((remoteOp) => remoteOp.id === localOp.id),
                 )
 
-                console.error(`[v0] ⚠️⚠️⚠️ CRITICAL: ${missingOperators.length} operator(s) missing from Firebase!`)
-                console.error(
-                  `[v0] Missing operators:`,
-                  missingOperators.map((op: User) => ({ id: op.id, username: op.username, name: op.fullName })),
-                )
-                console.error("[v0] ⚠️ BLOCKING sync and re-saving local data to Firebase to prevent data loss...")
-
-                // Re-save local data immediately to recover missing operators
+                console.log(`[v0] 🔄 Syncing ${missingOperators.length} missing operator(s) to Firebase...`)
                 saveImmediately(key, currentUsers)
                 return
               }
 
               const threshold = 0.2
-              const difference = Math.abs(remoteUsers.length - currentUsers.length)
+              const difference = Math.abs(cleanedRemoteUsers.length - currentUsers.length) // Use cleanedRemoteUsers
               const percentageDiff = currentUsers.length > 0 ? difference / currentUsers.length : 0
 
-              if (percentageDiff > threshold && currentUsers.length > 10 && remoteUsers.length < currentUsers.length) {
+              if (
+                percentageDiff > threshold &&
+                currentUsers.length > 10 &&
+                cleanedRemoteUsers.length < currentUsers.length
+              ) {
+                // Use cleanedRemoteUsers
                 const remoteTimestamp = data.timestamp || 0
                 const localTimestamp = Number.parseInt(localStorage.getItem(`${key}_timestamp`) || "0", 10)
 
                 if (remoteTimestamp < localTimestamp) {
-                  console.warn(
-                    `[v0] ⚠️ Remote data is older (${new Date(remoteTimestamp).toISOString()}) than local (${new Date(localTimestamp).toISOString()}) - keeping local data`,
-                  )
+                  console.warn(`[v0] ⚠️ Remote data is older than local - keeping local data`)
                   saveImmediately(key, currentUsers)
                   return
                 }
 
                 console.warn(
-                  `[v0] ⚠️ Large difference detected: Remote=${remoteUsers.length}, Local=${currentUsers.length}, Diff=${(percentageDiff * 100).toFixed(1)}%`,
+                  `[v0] ⚠️ Large difference detected (${(percentageDiff * 100).toFixed(1)}%) - re-saving local data`,
                 )
-                console.warn("[v0] ⚠️ Blocking sync and re-saving local data to prevent potential data loss...")
                 saveImmediately(key, currentUsers)
                 return
               }
@@ -426,11 +531,33 @@ function setupListeners() {
               if (currentValue !== newValue) {
                 localStorage.setItem(key, newValue)
                 localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
-                console.log(`[v0] ✅ Updated local storage with ${remoteUsers.length} users from Firebase`)
-                console.log(`[v0] ✅ Operators: ${remoteOperators.length}, Admins: ${remoteAdmins.length}`)
+                if (cleanedRemoteUsers.length !== currentUsers.length) {
+                  // Use cleanedRemoteUsers for logging length
+                  console.log(`[v0] ✅ Synced ${cleanedRemoteUsers.length} users from Firebase`) // Use cleanedRemoteUsers
+                }
+                window.dispatchEvent(new CustomEvent("store-updated"))
+              }
+            } else if (key === STORAGE_KEYS.FEEDBACKS) {
+              const remoteFeedbacks = data.data as Feedback[]
+              const currentFeedbacks = currentValue ? JSON.parse(currentValue) : []
+              const newValue = JSON.stringify(remoteFeedbacks) // Fixed the undeclared variable issue
+
+              if (currentValue !== newValue) {
+                localStorage.setItem(key, newValue)
+                localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
+                console.log(`[v0] ✅ Synced ${remoteFeedbacks.length} feedback(s) from Firebase`)
+                console.log(
+                  `[v0] 📋 Feedback details:`,
+                  remoteFeedbacks.map((f) => ({
+                    id: f.id,
+                    operatorId: f.operatorId,
+                    operatorName: f.operatorName,
+                  })),
+                )
                 window.dispatchEvent(new CustomEvent("store-updated"))
               }
             } else {
+              const newValue = JSON.stringify(data.data)
               // For other data, simple sync
               if (currentValue !== newValue) {
                 localStorage.setItem(key, newValue)
@@ -441,26 +568,18 @@ function setupListeners() {
         }
       },
       (error) => {
-        console.error(`[v0] Error in ${key} listener:`, error.message)
-        if (!firebaseSyncDisabled) {
+        if (!firebaseSyncDisabled && firstPermissionError) {
           console.error(`\n⚠️  Firebase Firestore Permission Error\n`)
           console.error(`Your Firestore Security Rules are blocking access.`)
           console.error(`\nTo fix this:\n`)
           console.error(`1. Go to Firebase Console: https://console.firebase.google.com/`)
           console.error(`2. Select your project: banco-de-dados-roteiro`)
           console.error(`3. Go to Firestore Database > Rules`)
-          console.error(`4. Update your rules to:\n`)
-          console.error(`rules_version = '2';`)
-          console.error(`service cloud.firestore {`)
-          console.error(`  match /databases/{database}/documents {`)
-          console.error(`    match /{document=**} {`)
-          console.error(`      allow read, write: if request.auth != null;`)
-          console.error(`    }`)
-          console.error(`  }`)
-          console.error(`}\n`)
+          console.error(`4. Update your rules to allow authenticated access`)
           console.error(`5. Click "Publish"\n`)
           console.error(`⚠️  The app will work with local storage only until Firebase is configured.\n`)
           firebaseSyncDisabled = true
+          firstPermissionError = false
         }
       },
     )
@@ -793,7 +912,7 @@ const MOCK_SITUATIONS: ServiceSituation[] = [
     id: "sit-1",
     name: "EM CASOS DE FALÊNCIA/CONCORDATA",
     description:
-      "É necessário que o sócio ou responsável entre em contato com a CAIXA acessando www.caixa.gov.br/negociar e pelo WhatsApp 0800 104 0104.\n\nTabulação correta: Recado com terceiro",
+      "É necessário que o sócio ou responsável entre em contato com a CAIXA acessando www.caixa.gov.br/negociar e pelo WhatsApp 0800 101 0104.\n\nTabulação correta: Recado com terceiro",
     isActive: true,
     createdAt: new Date(),
   },
@@ -947,38 +1066,38 @@ const MOCK_CHANNELS: Channel[] = [
   },
 ]
 
-export const STORAGE_KEYS = {
-  USERS: "callcenter_users",
-  CURRENT_USER: "callcenter_current_user",
-  SCRIPT_STEPS: "callcenter_script_steps",
-  TABULATIONS: "callcenter_tabulations",
-  SITUATIONS: "callcenter_situations",
-  CHANNELS: "callcenter_channels",
-  NOTES: "callcenter_notes",
-  SESSIONS: "callcenter_sessions",
-  PRODUCTS: "callcenter_products",
-  LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
-  ATTENDANCE_TYPES: "callcenter_attendance_types",
-  PERSON_TYPES: "callcenter_person_types",
-  MESSAGES: "callcenter_messages",
-  QUIZZES: "callcenter_quizzes",
-  QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
-  CHAT_MESSAGES: "callcenter_chat_messages",
-  CHAT_SETTINGS: "callcenter_chat_settings",
-  PRESENTATIONS: "callcenter_presentations",
-  PRESENTATION_PROGRESS: "callcenter_presentation_progress",
-  CONTRACTS: "contracts", // Added storage key for contracts
-  PPT_FILE_PROGRESS: "ppt_file_progress",
-  FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
-  SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
-  FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
-} as const
+// export const STORAGE_KEYS = {
+//   USERS: "callcenter_users",
+//   CURRENT_USER: "callcenter_current_user",
+//   SCRIPT_STEPS: "callcenter_script_steps",
+//   TABULATIONS: "callcenter_tabulations",
+//   SITUATIONS: "callcenter_situations",
+//   CHANNELS: "callcenter_channels",
+//   NOTES: "callcenter_notes",
+//   SESSIONS: "callcenter_sessions",
+//   PRODUCTS: "callcenter_products",
+//   LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
+//   ATTENDANCE_TYPES: "callcenter_attendance_types",
+//   PERSON_TYPES: "callcenter_person_types",
+//   MESSAGES: "callcenter_messages",
+//   QUIZZES: "callcenter_quizzes",
+//   QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
+//   CHAT_MESSAGES: "callcenter_chat_messages",
+//   CHAT_SETTINGS: "callcenter_chat_settings",
+//   PRESENTATIONS: "callcenter_presentations",
+//   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
+//   CONTRACTS: "contracts", // Added storage key for contracts
+//   PPT_FILE_PROGRESS: "ppt_file_progress",
+//   FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
+//   SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
+//   FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
+// } as const
 
 // Initialize mock data
 export function initializeMockData() {
   if (typeof window === "undefined") return
 
-  enableRealtimeSync()
+  enableFirebaseSync()
 
   const existingUsers = localStorage.getItem(STORAGE_KEYS.USERS)
   if (!existingUsers) {
@@ -1654,7 +1773,7 @@ let updateTimeout: NodeJS.Timeout | null = null
 
 // The previous notifyUpdate function was redeclared here.
 // This version is kept for clarity to fix the linting error.
-export function notifyUpdate() {
+export function notifyUpdateImmediate() {
   if (typeof window === "undefined") return
 
   if (updateTimeout) {
@@ -3134,9 +3253,9 @@ export function getFeedbacks(): Feedback[] {
 }
 
 export function getFeedbacksByOperator(operatorId: string): Feedback[] {
-  return getFeedbacks()
-    .filter((f) => f.operatorId === operatorId)
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  const allFeedbacks = getFeedbacks()
+  const filtered = allFeedbacks.filter((f) => f.operatorId === operatorId)
+  return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 }
 
 export function getActiveFeedbacksForOperator(operatorId: string): Feedback[] {
@@ -3153,14 +3272,24 @@ export function getHistoricalFeedbacksForOperator(operatorId: string): Feedback[
 
 export function addFeedback(feedback: Omit<Feedback, "id" | "createdAt">): Feedback {
   const feedbacks = getFeedbacks()
+
+  const cleanFeedback: Record<string, unknown> = {}
+  for (const key in feedback) {
+    const value = (feedback as Record<string, unknown>)[key]
+    if (value !== undefined) {
+      cleanFeedback[key] = value
+    }
+  }
+
   const newFeedback: Feedback = {
-    ...feedback,
+    ...(cleanFeedback as Omit<Feedback, "id" | "createdAt">),
     id: `feedback-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     createdAt: new Date(),
   }
+
   feedbacks.push(newFeedback)
+  console.log(`[v0] ✅ Created feedback for ${newFeedback.operatorName} (Total: ${feedbacks.length})`)
   saveImmediately(STORAGE_KEYS.FEEDBACKS, feedbacks)
-  notifyUpdateImmediate()
   return newFeedback
 }
 
@@ -3170,7 +3299,6 @@ export function updateFeedback(id: string, updates: Partial<Feedback>): void {
   if (index !== -1) {
     feedbacks[index] = { ...feedbacks[index], ...updates }
     saveImmediately(STORAGE_KEYS.FEEDBACKS, feedbacks)
-    notifyUpdateImmediate()
   }
 }
 
@@ -3181,7 +3309,6 @@ export function markFeedbackAsRead(feedbackId: string, operatorId: string): void
     feedbacks[index].isRead = true
     feedbacks[index].readAt = new Date()
     saveImmediately(STORAGE_KEYS.FEEDBACKS, feedbacks)
-    notifyUpdateImmediate()
   }
 }
 

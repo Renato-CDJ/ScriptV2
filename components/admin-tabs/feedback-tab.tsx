@@ -42,6 +42,7 @@ export function FeedbackTab() {
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null)
   const [filterType, setFilterType] = useState<"all" | "positive" | "negative">("all")
   const [filterOperator, setFilterOperator] = useState<string>("all")
+  const [operatorSearch, setOperatorSearch] = useState("")
 
   const [formData, setFormData] = useState({
     operatorId: "",
@@ -49,12 +50,20 @@ export function FeedbackTab() {
     callTime: "",
     ecNumber: "",
     feedbackType: "positive" as "positive" | "negative",
-    severity: "leve" as "elogio" | "leve" | "medio" | "grave", // Added severity field
+    severity: "leve" as "elogio" | "leve" | "medio" | "grave",
     score: 50,
     details: "",
     positivePoints: "",
     improvementPoints: "",
   })
+
+  const filteredOperators = operators.filter((op) => {
+    if (!operatorSearch) return true
+    const searchLower = operatorSearch.toLowerCase()
+    return op.fullName.toLowerCase().includes(searchLower) || op.username.toLowerCase().includes(searchLower)
+  })
+
+  const displayedOperators = filteredOperators.slice(0, 50)
 
   const loadData = () => {
     const allFeedbacks = getFeedbacks()
@@ -476,16 +485,36 @@ export function FeedbackTab() {
           <div className="space-y-4">
             <div>
               <Label>Operador *</Label>
+              <Input
+                type="text"
+                placeholder="Buscar por nome ou usuário..."
+                value={operatorSearch}
+                onChange={(e) => setOperatorSearch(e.target.value)}
+                className="mb-2"
+              />
               <Select value={formData.operatorId} onValueChange={(v) => setFormData({ ...formData, operatorId: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o operador" />
                 </SelectTrigger>
                 <SelectContent>
-                  {operators.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.fullName} (@{op.username})
-                    </SelectItem>
-                  ))}
+                  {displayedOperators.length === 0 ? (
+                    <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                      Nenhum operador encontrado
+                    </div>
+                  ) : (
+                    <>
+                      {displayedOperators.map((op) => (
+                        <SelectItem key={op.id} value={op.id}>
+                          {op.fullName} (@{op.username})
+                        </SelectItem>
+                      ))}
+                      {filteredOperators.length > 50 && (
+                        <div className="px-2 py-2 text-center text-xs text-muted-foreground border-t">
+                          Mostrando 50 de {filteredOperators.length} operadores. Continue digitando para refinar.
+                        </div>
+                      )}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
