@@ -40,61 +40,9 @@ const handleFirebaseError = (error: unknown) => {
 
 const FIREBASE_COLLECTION = "app_data"
 
-const memoryCache = new Map<string, any>()
-const cacheInitialized = false
+const notifyUpdateTimeout: NodeJS.Timeout | null = null
+const NOTIFY_DEBOUNCE_MS = 300
 
-function notifyUpdate() {
-  if (typeof window === "undefined") return
-  window.dispatchEvent(new CustomEvent("store-updated"))
-}
-
-function sanitizeForFirebase(data: any): any {
-  if (data === null || data === undefined) return null
-  if (data instanceof Date) return data.toISOString()
-  if (Array.isArray(data)) {
-    return data.map((item) => sanitizeForFirebase(item)).filter((item) => item !== null && item !== undefined)
-  }
-  if (typeof data === "object") {
-    const sanitized: any = {}
-    for (const key in data) {
-      const value = sanitizeForFirebase(data[key])
-      if (value !== null && value !== undefined) {
-        sanitized[key] = value
-      }
-    }
-    return sanitized
-  }
-  return data
-}
-
-export const STORAGE_KEYS = {
-  USERS: "callcenter_users",
-  CURRENT_USER: "callcenter_current_user",
-  SCRIPT_STEPS: "callcenter_script_steps",
-  TABULATIONS: "callcenter_tabulations",
-  SITUATIONS: "callcenter_situations",
-  CHANNELS: "callcenter_channels",
-  NOTES: "callcenter_notes",
-  SESSIONS: "callcenter_sessions", // This key is likely for CallSession, renamed for clarity later.
-  PRODUCTS: "callcenter_products",
-  LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
-  ATTENDANCE_TYPES: "callcenter_attendance_types",
-  PERSON_TYPES: "callcenter_person_types",
-  MESSAGES: "callcenter_messages",
-  QUIZZES: "callcenter_quizzes",
-  QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
-  CHAT_MESSAGES: "callcenter_chat_messages",
-  CHAT_SETTINGS: "callcenter_chat_settings",
-  PRESENTATIONS: "callcenter_presentations",
-  PRESENTATION_PROGRESS: "callcenter_presentation_progress",
-  CONTRACTS: "contracts", // Added storage key for contracts
-  PPT_FILE_PROGRESS: "ppt_file_progress",
-  FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
-  SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
-  FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
-} as const
-
-// Moved the following functions to be Firebase-only
 // Removed redeclared notifyUpdate function
 // export function notifyUpdate() {
 //   if (typeof window === "undefined") return
@@ -110,12 +58,12 @@ export const STORAGE_KEYS = {
 //   }, NOTIFY_DEBOUNCE_MS)
 // }
 
-// function notifyUpdateImmediate() {
-//   if (typeof window === "undefined") return
-//   window.dispatchEvent(new CustomEvent("store-updated"))
-// }
+function notifyUpdateImmediate() {
+  if (typeof window === "undefined") return
+  window.dispatchEvent(new CustomEvent("store-updated"))
+}
 
-function convertFirestoreTimestamp(value: any): Date {
+export function convertFirestoreTimestamp(value: any): Date {
   // If it's a Firestore timestamp object
   if (value && typeof value === "object" && "seconds" in value && "nanoseconds" in value) {
     return new Date(value.seconds * 1000 + value.nanoseconds / 1000000)
@@ -129,38 +77,38 @@ function convertFirestoreTimestamp(value: any): Date {
 }
 
 // Helper function to sanitize data for Firebase by handling large strings and invalid nested entities
-// function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unknown> {
-//   const sanitized: Record<string, unknown> = {}
+function sanitizeForFirebase(data: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {}
 
-//   for (const key in data) {
-//     const value = data[key]
+  for (const key in data) {
+    const value = data[key]
 
-//     if (value === undefined || value === null) {
-//       // Skip undefined/null values
-//       continue
-//     } else if (value instanceof Date) {
-//       sanitized[key] = value.toISOString()
-//     } else if (Array.isArray(value)) {
-//       // For arrays, sanitize each element and limit large base64 strings
-//       sanitized[key] = value
-//         .map((item) => {
-//           if (typeof item === "object" && item !== null) {
-//             // Recursively sanitize objects in arrays
-//             return sanitizeForFirebase(item as Record<string, unknown>)
-//           }
-//           // Skip undefined values in arrays
-//           return item === undefined ? null : item
-//         })
-//         .filter((item) => item !== null) // Remove nulls that were undefined
-//     } else if (typeof value === "object") {
-//       sanitized[key] = sanitizeForFirebase(value as Record<string, unknown>)
-//     } else {
-//       sanitized[key] = value
-//     }
-//   }
+    if (value === undefined || value === null) {
+      // Skip undefined/null values
+      continue
+    } else if (value instanceof Date) {
+      sanitized[key] = value.toISOString()
+    } else if (Array.isArray(value)) {
+      // For arrays, sanitize each element and limit large base64 strings
+      sanitized[key] = value
+        .map((item) => {
+          if (typeof item === "object" && item !== null) {
+            // Recursively sanitize objects in arrays
+            return sanitizeForFirebase(item as Record<string, unknown>)
+          }
+          // Skip undefined values in arrays
+          return item === undefined ? null : item
+        })
+        .filter((item) => item !== null) // Remove nulls that were undefined
+    } else if (typeof value === "object") {
+      sanitized[key] = sanitizeForFirebase(value as Record<string, unknown>)
+    } else {
+      sanitized[key] = value
+    }
+  }
 
-//   return sanitized
-// }
+  return sanitized
+}
 
 // Helper function to strip imageData from presentations for Firebase sync
 function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
@@ -1066,32 +1014,32 @@ const MOCK_CHANNELS: Channel[] = [
   },
 ]
 
-// export const STORAGE_KEYS = {
-//   USERS: "callcenter_users",
-//   CURRENT_USER: "callcenter_current_user",
-//   SCRIPT_STEPS: "callcenter_script_steps",
-//   TABULATIONS: "callcenter_tabulations",
-//   SITUATIONS: "callcenter_situations",
-//   CHANNELS: "callcenter_channels",
-//   NOTES: "callcenter_notes",
-//   SESSIONS: "callcenter_sessions",
-//   PRODUCTS: "callcenter_products",
-//   LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
-//   ATTENDANCE_TYPES: "callcenter_attendance_types",
-//   PERSON_TYPES: "callcenter_person_types",
-//   MESSAGES: "callcenter_messages",
-//   QUIZZES: "callcenter_quizzes",
-//   QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
-//   CHAT_MESSAGES: "callcenter_chat_messages",
-//   CHAT_SETTINGS: "callcenter_chat_settings",
-//   PRESENTATIONS: "callcenter_presentations",
-//   PRESENTATION_PROGRESS: "callcenter_presentation_progress",
-//   CONTRACTS: "contracts", // Added storage key for contracts
-//   PPT_FILE_PROGRESS: "ppt_file_progress",
-//   FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
-//   SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
-//   FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
-// } as const
+export const STORAGE_KEYS = {
+  USERS: "callcenter_users",
+  CURRENT_USER: "callcenter_current_user",
+  SCRIPT_STEPS: "callcenter_script_steps",
+  TABULATIONS: "callcenter_tabulations",
+  SITUATIONS: "callcenter_situations",
+  CHANNELS: "callcenter_channels",
+  NOTES: "callcenter_notes",
+  SESSIONS: "callcenter_sessions",
+  PRODUCTS: "callcenter_products",
+  LAST_UPDATE: "callcenter_last_update", // Track last update for real-time sync
+  ATTENDANCE_TYPES: "callcenter_attendance_types",
+  PERSON_TYPES: "callcenter_person_types",
+  MESSAGES: "callcenter_messages",
+  QUIZZES: "callcenter_quizzes",
+  QUIZ_ATTEMPTS: "callcenter_quiz_attempts",
+  CHAT_MESSAGES: "callcenter_chat_messages",
+  CHAT_SETTINGS: "callcenter_chat_settings",
+  PRESENTATIONS: "callcenter_presentations",
+  PRESENTATION_PROGRESS: "callcenter_presentation_progress",
+  CONTRACTS: "contracts", // Added storage key for contracts
+  PPT_FILE_PROGRESS: "ppt_file_progress",
+  FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
+  SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
+  FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
+} as const
 
 // Initialize mock data
 export function initializeMockData() {
@@ -1773,7 +1721,7 @@ let updateTimeout: NodeJS.Timeout | null = null
 
 // The previous notifyUpdate function was redeclared here.
 // This version is kept for clarity to fix the linting error.
-export function notifyUpdateImmediate() {
+export function notifyUpdate() {
   if (typeof window === "undefined") return
 
   if (updateTimeout) {
