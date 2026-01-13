@@ -362,23 +362,33 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
 
   // Determine severity badge based on score
   const getSeverityBadge = (feedback: Feedback) => {
-    if (feedback.score >= 90) {
-      return {
-        label: "Excelente",
-        className: "bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700",
-      }
-    } else if (feedback.score >= 70) {
-      return {
-        label: "Bom",
-        className: "bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700",
-      }
-    } else if (feedback.score >= 50) {
-      return {
-        label: "Médio",
-        className: "bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700",
-      }
-    } else {
-      return { label: "Crítico", className: "bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700" }
+    const severity = feedback.severity || "leve"
+    switch (severity) {
+      case "elogio":
+        return {
+          label: "Elogio",
+          className: "bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700",
+        }
+      case "leve":
+        return {
+          label: "Leve",
+          className: "bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700",
+        }
+      case "medio":
+        return {
+          label: "Médio",
+          className: "bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700",
+        }
+      case "grave":
+        return {
+          label: "Grave",
+          className: "bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700",
+        }
+      default:
+        return {
+          label: "Leve",
+          className: "bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700",
+        }
     }
   }
 

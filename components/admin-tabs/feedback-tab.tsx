@@ -369,100 +369,104 @@ export function FeedbackTab() {
           <CardDescription>{filteredFeedbacks.length} feedback(s) encontrado(s)</CardDescription>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[500px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Operador</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Gravidade</TableHead>
-                  <TableHead>Pontuação</TableHead>
-                  <TableHead>EC</TableHead>
-                  <TableHead>Data Ligação</TableHead>
-                  <TableHead>Aplicado Por</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredFeedbacks.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground">
-                      Nenhum feedback encontrado
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredFeedbacks.map((feedback) => {
-                    const severityBadge = getSeverityBadge(feedback.severity || "leve")
-                    return (
-                      <TableRow key={feedback.id}>
-                        <TableCell className="font-medium">{feedback.operatorName}</TableCell>
-                        <TableCell>
-                          <Badge variant={feedback.feedbackType === "positive" ? "default" : "destructive"}>
-                            {feedback.feedbackType === "positive" ? (
-                              <>
-                                <TrendingUp className="mr-1 h-3 w-3" />
-                                Positivo
-                              </>
-                            ) : (
-                              <>
-                                <TrendingDown className="mr-1 h-3 w-3" />
-                                Negativo
-                              </>
-                            )}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={severityBadge.className}>{severityBadge.label}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Star className="h-4 w-4 text-yellow-500" />
-                            <span className="font-semibold">{feedback.score}/100</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{feedback.ecNumber}</TableCell>
-                        <TableCell>{format(feedback.callDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{feedback.createdByName}</TableCell>
-                        <TableCell>
-                          {feedback.isRead ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
-                            >
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Lido
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800"
-                            >
-                              <XCircle className="mr-1 h-3 w-3" />
-                              Não Lido
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleView(feedback)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(feedback)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(feedback.id)}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
+          <div className="overflow-x-auto">
+            <ScrollArea className="h-[500px]">
+              <div className="min-w-[1000px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Operador</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Gravidade</TableHead>
+                      <TableHead>Pontuação</TableHead>
+                      <TableHead>EC</TableHead>
+                      <TableHead>Data Ligação</TableHead>
+                      <TableHead>Aplicado Por</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFeedbacks.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center text-muted-foreground">
+                          Nenhum feedback encontrado
                         </TableCell>
                       </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+                    ) : (
+                      filteredFeedbacks.map((feedback) => {
+                        const severityBadge = getSeverityBadge(feedback.severity || "leve")
+                        return (
+                          <TableRow key={feedback.id}>
+                            <TableCell className="font-medium">{feedback.operatorName}</TableCell>
+                            <TableCell>
+                              <Badge variant={feedback.feedbackType === "positive" ? "default" : "destructive"}>
+                                {feedback.feedbackType === "positive" ? (
+                                  <>
+                                    <TrendingUp className="mr-1 h-3 w-3" />
+                                    Positivo
+                                  </>
+                                ) : (
+                                  <>
+                                    <TrendingDown className="mr-1 h-3 w-3" />
+                                    Negativo
+                                  </>
+                                )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={severityBadge.className}>{severityBadge.label}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Star className="h-4 w-4 text-yellow-500" />
+                                <span className="font-semibold">{feedback.score}/100</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{feedback.ecNumber}</TableCell>
+                            <TableCell>{format(feedback.callDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{feedback.createdByName}</TableCell>
+                            <TableCell>
+                              {feedback.isRead ? (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+                                >
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                  Lido
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800"
+                                >
+                                  <XCircle className="mr-1 h-3 w-3" />
+                                  Não Lido
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="icon" onClick={() => handleView(feedback)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(feedback)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDelete(feedback.id)}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 

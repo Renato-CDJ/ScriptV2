@@ -85,7 +85,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="!w-[95vw] !h-[95vh] !max-w-[95vw] flex flex-col p-0">
+        <DialogContent className="!w-[95vw] !max-h-[95vh] !max-w-[95vw] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="border-b px-8 py-6 flex-shrink-0">
             <DialogTitle className="text-3xl font-bold flex items-center gap-4">
               <div className="p-3 bg-orange-500/10 rounded-xl">
@@ -98,7 +98,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
             </p>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-8 py-6">
+          <ScrollArea className="flex-1 max-h-full px-8 py-6">
             {pptFiles.length > 0 && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
