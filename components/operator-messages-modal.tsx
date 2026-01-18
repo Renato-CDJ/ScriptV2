@@ -395,7 +395,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] h-[90vh] sm:max-w-6xl p-0 gap-0 flex flex-col">
+        <DialogContent className="!max-w-[95vw] !max-h-[90vh] sm:!max-w-6xl p-0 gap-0 flex flex-col overflow-hidden">
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b flex-shrink-0">
             <DialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
               Recados e Quiz
@@ -463,9 +463,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
             </div>
 
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              <ScrollArea className="flex-1 h-full">
+              <ScrollArea className="flex-1">
                 {sidebarView === "messages" && (
-                  <div className="space-y-4 sm:space-y-6 py-2 px-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+                  <div className="space-y-4 sm:space-y-6 p-4">
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-2xl font-bold">{showHistory ? "Histórico de Recados" : "Recados"}</h2>
                       <Button
