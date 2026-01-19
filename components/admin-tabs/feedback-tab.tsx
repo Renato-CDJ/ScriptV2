@@ -29,7 +29,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 
 export function FeedbackTab() {
   const { user } = useAuth()
@@ -465,6 +465,7 @@ export function FeedbackTab() {
                   </TableBody>
                 </Table>
               </div>
+              <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </div>
         </CardContent>
