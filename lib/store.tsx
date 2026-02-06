@@ -25,6 +25,7 @@ import type {
   FilePresentationProgress, // Added for file presentation progress
   SupervisorTeam, // Import for supervisor teams
   Feedback, // Added Feedback import
+  ResultCode,
 } from "./types"
 import { db, auth } from "./firebase"
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
@@ -1057,6 +1058,7 @@ export const STORAGE_KEYS = {
   FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
   SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
   FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
+  RESULT_CODES: "callcenter_result_codes",
 } as const
 
 // Initialize mock data
@@ -2074,14 +2076,10 @@ export function markMessageAsSeen(messageId: string, operatorId: string) {
 }
 
 export function getActiveMessagesForOperator(operatorId: string): Message[] {
-  const now = new Date()
-  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-
-  return getMessages().filter((m) => {
+  const allMessages = getMessages()
+  
+  return allMessages.filter((m) => {
     if (!m.isActive) return false
-
-    const messageDate = new Date(m.createdAt)
-    if (messageDate < twentyFourHoursAgo) return false
 
     // Check if message is for this operator
     if (m.recipients && m.recipients.length > 0) {
@@ -2094,12 +2092,8 @@ export function getActiveMessagesForOperator(operatorId: string): Message[] {
 }
 
 export function getHistoricalMessagesForOperator(operatorId: string): Message[] {
-  const now = new Date()
-  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-
   return getMessages().filter((m) => {
-    const messageDate = new Date(m.createdAt)
-    if (messageDate >= twentyFourHoursAgo) return false
+    if (m.isActive) return false
 
     // Check if message is for this operator
     if (m.recipients && m.recipients.length > 0) {
@@ -3283,5 +3277,56 @@ export function deleteFeedback(id: string): void {
   const feedbacks = getFeedbacks()
   const filtered = feedbacks.filter((f) => f.id !== id)
   saveImmediately(STORAGE_KEYS.FEEDBACKS, filtered)
+  notifyUpdateImmediate()
+}
+
+// ===== Result Codes (Codigos de Resultado) =====
+export function getResultCodes(): ResultCode[] {
+  if (typeof window === "undefined") return []
+  const codes = JSON.parse(localStorage.getItem(STORAGE_KEYS.RESULT_CODES) || "[]")
+  return codes.map((c: ResultCode) => ({
+    ...c,
+    createdAt: convertFirestoreTimestamp(c.createdAt),
+  }))
+}
+
+export function getActiveResultCodes(): ResultCode[] {
+  return getResultCodes().filter((c) => c.isActive)
+}
+
+export function getResultCodesByPhase(phase: "before" | "after"): ResultCode[] {
+  return getActiveResultCodes().filter((c) => c.phase === phase)
+}
+
+export function createResultCode(code: Omit<ResultCode, "id" | "createdAt">): ResultCode {
+  if (typeof window === "undefined") return { ...code, id: "", createdAt: new Date() }
+
+  const newCode: ResultCode = {
+    ...code,
+    id: `rc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date(),
+  }
+
+  const codes = getResultCodes()
+  codes.push(newCode)
+  saveImmediately(STORAGE_KEYS.RESULT_CODES, codes)
+  notifyUpdateImmediate()
+
+  return newCode
+}
+
+export function updateResultCode(id: string, updates: Partial<ResultCode>): void {
+  const codes = getResultCodes()
+  const index = codes.findIndex((c) => c.id === id)
+  if (index !== -1) {
+    codes[index] = { ...codes[index], ...updates }
+    saveImmediately(STORAGE_KEYS.RESULT_CODES, codes)
+    notifyUpdateImmediate()
+  }
+}
+
+export function deleteResultCode(id: string): void {
+  const codes = getResultCodes().filter((c) => c.id !== id)
+  saveImmediately(STORAGE_KEYS.RESULT_CODES, codes)
   notifyUpdateImmediate()
 }

@@ -271,6 +271,15 @@ export interface OperatorRanking {
 
 export type Ranking = OperatorRanking
 
+export interface ResultCode {
+  id: string
+  name: string
+  description: string
+  phase: "before" | "after" // before = Antes da Identificacao Positiva, after = Apos Identificacao Positiva
+  createdAt: Date
+  isActive: boolean
+}
+
 export interface Contract {
   id: string
   name: string

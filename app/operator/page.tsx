@@ -285,7 +285,7 @@ const OperatorContent = memo(function OperatorContent() {
           </div>
         </main>
 
-        {isSessionActive && <OperatorSidebar isOpen={isSidebarOpen} productCategory={currentProductCategory} />}
+        {isSessionActive && <OperatorSidebar isOpen={isSidebarOpen} productCategory={currentProductCategory} currentStep={currentStep} />}
       </div>
 
       <OperatorChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />

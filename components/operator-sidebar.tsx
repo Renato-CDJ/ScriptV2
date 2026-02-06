@@ -5,17 +5,18 @@ import type React from "react"
 import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { getTabulations, getSituations, getChannels } from "@/lib/store"
-import { StickyNote, Tags, AlertCircle, Radio, List, Search, CalendarIcon } from "lucide-react"
+import { CheckCircle2, Tags, AlertCircle, Radio, List, Search, CalendarIcon, Maximize2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PromiseCalendarInline } from "@/components/promise-calendar"
+import type { ScriptStep } from "@/lib/types"
 
 interface OperatorSidebarProps {
   isOpen: boolean
   productCategory?: "habitacional" | "comercial" | "cartao" | "outros"
+  currentStep?: ScriptStep | null
 }
 
 const FilteredList = memo(function FilteredList({
@@ -37,12 +38,12 @@ const FilteredList = memo(function FilteredList({
   return <div className="space-y-3">{filteredItems.map((item) => renderItem(item, () => onItemClick(item)))}</div>
 })
 
-export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCategory }: OperatorSidebarProps) {
-  const [activeSection, setActiveSection] = useState<"notes" | "tabulation" | "situation" | "channel" | "calendar">(
+export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCategory, currentStep }: OperatorSidebarProps) {
+  const [activeSection, setActiveSection] = useState<"checkTabulation" | "tabulation" | "situation" | "channel" | "calendar">(
     "calendar",
   )
+  const [expandedTabulation, setExpandedTabulation] = useState<{ name: string; description: string } | null>(null)
 
-  const [notes, setNotes] = useState("")
   const [selectedTabulation, setSelectedTabulation] = useState("")
   const [selectedSituation, setSelectedSituation] = useState("")
   const [selectedChannel, setSelectedChannel] = useState("")
@@ -130,7 +131,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
   return (
     <aside className="w-[360px] border-l bg-card flex flex-col h-full">
       <div className="border-b p-2 grid grid-cols-5 gap-1">
-        {/* Calendar first, then Notes */}
+        {/* 1. Calendario */}
         <Button
           variant={activeSection === "calendar" ? "default" : "outline"}
           size="sm"
@@ -142,8 +143,29 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           }`}
         >
           <CalendarIcon className="h-4 w-4 mb-1" />
-          <span className="text-xs truncate w-full">Calendario</span>
+          <span className="text-xs truncate w-full">Calen.</span>
         </Button>
+        {/* 2. Verificar Tabulacao */}
+        <Button
+          variant={activeSection === "checkTabulation" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveSection("checkTabulation")}
+          className={`flex-col h-auto py-2 relative ${
+            activeSection === "checkTabulation"
+              ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
+              : ""
+          }`}
+        >
+          <CheckCircle2 className="h-4 w-4 mb-1" />
+          <span className="text-xs truncate w-full">Verif.</span>
+          {currentStep?.tabulations && currentStep.tabulations.length > 0 && activeSection !== "checkTabulation" && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-50" style={{ animation: "ping 2.5s cubic-bezier(0, 0, 0.2, 1) infinite" }}></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 shadow-md shadow-green-500/50"></span>
+            </span>
+          )}
+        </Button>
+        {/* 3. Tabulacoes */}
         <Button
           variant={activeSection === "tabulation" ? "default" : "outline"}
           size="sm"
@@ -155,8 +177,9 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           }`}
         >
           <Tags className="h-4 w-4 mb-1" />
-          <span className="text-xs truncate w-full px-1">Tabulação</span>
+          <span className="text-xs truncate w-full">Tabu.</span>
         </Button>
+        {/* 4. Situacoes */}
         <Button
           variant={activeSection === "situation" ? "default" : "outline"}
           size="sm"
@@ -168,8 +191,9 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           }`}
         >
           <AlertCircle className="h-4 w-4 mb-1" />
-          <span className="text-xs truncate w-full px-1">Situação</span>
+          <span className="text-xs truncate w-full">Situ.</span>
         </Button>
+        {/* 5. Canal */}
         <Button
           variant={activeSection === "channel" ? "default" : "outline"}
           size="sm"
@@ -183,38 +207,109 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           <Radio className="h-4 w-4 mb-1" />
           <span className="text-xs truncate w-full">Canal</span>
         </Button>
-        <Button
-          variant={activeSection === "notes" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveSection("notes")}
-          className={`flex-col h-auto py-2 ${
-            activeSection === "notes"
-              ? "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white"
-              : ""
-          }`}
-        >
-          <StickyNote className="h-4 w-4 mb-1" />
-          <span className="text-xs truncate w-full">Notas</span>
-        </Button>
       </div>
 
       {/* Content area */}
       <div className="flex-1 overflow-auto p-4">
-        {activeSection === "notes" && (
+        {activeSection === "checkTabulation" && (
+          <>
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle className="text-sm">Bloco de Notas</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600">
+                  <CheckCircle2 className="h-4 w-4 text-white" />
+                </div>
+                Tabulação Recomendada
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Tabulação sugerida para a tela atual do roteiro
+              </p>
             </CardHeader>
-            <CardContent>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Anotações do atendimento..."
-                className="min-h-[300px] text-sm"
-              />
-              <p className="text-xs text-muted-foreground mt-2">{notes.length} caracteres</p>
+            <CardContent className="space-y-3">
+              {currentStep?.tabulations && currentStep.tabulations.length > 0 ? (
+                currentStep.tabulations.map((tabulation, index) => (
+                  <button
+                    type="button"
+                    key={tabulation.id || index}
+                    onClick={() => setExpandedTabulation({ name: tabulation.name, description: tabulation.description })}
+                    className="group relative rounded-xl border-2 border-orange-200/60 dark:border-orange-500/40 bg-white dark:bg-slate-700 p-4 shadow-md hover:shadow-lg hover:border-orange-400 dark:hover:border-orange-400 transition-all duration-200 overflow-hidden w-full text-left cursor-pointer"
+                  >
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-60 transition-opacity">
+                      <Maximize2 className="h-4 w-4 text-orange-500 dark:text-orange-400" />
+                    </div>
+                    <div className="relative">
+                      <div className="flex items-start gap-2 mb-2">
+                        <div className="p-1 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0 mt-0.5">
+                          <CheckCircle2 className="h-3 w-3 text-white" />
+                        </div>
+                        <h4 className="font-bold text-base text-gray-900 dark:text-white leading-tight break-words">
+                          {tabulation.name}
+                        </h4>
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-100 leading-relaxed whitespace-pre-wrap pl-6 break-words line-clamp-3">
+                        {tabulation.description}
+                      </p>
+                    </div>
+                    <div className="mt-2 pl-6">
+                      <span className="text-[10px] text-orange-500 dark:text-orange-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                        Clique para ampliar
+                      </span>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="rounded-xl border-2 border-muted bg-muted/30 p-6 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="p-3 rounded-full bg-muted">
+                      <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Nenhuma tabulação específica recomendada para esta tela. Continue o atendimento normalmente.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          <Dialog open={!!expandedTabulation} onOpenChange={() => setExpandedTabulation(null)}>
+            <DialogContent className="sm:max-w-2xl shadow-2xl max-h-[80vh] overflow-y-auto border-2 border-orange-200 dark:border-zinc-700">
+              <DialogHeader className="space-y-3 pb-4 border-b border-border">
+                <DialogTitle className="flex items-center gap-3 text-xl font-bold">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-400 dark:to-orange-300">
+                    <CheckCircle2 className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="bg-gradient-to-r from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                    Tabulação Recomendada
+                  </span>
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+                  Detalhes da tabulação selecionada
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-4">
+                <div className="group relative rounded-xl border-2 border-orange-200/60 dark:border-orange-500/40 bg-white dark:bg-slate-700 p-5 md:p-6 shadow-md overflow-hidden">
+                  <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <CheckCircle2 className="h-12 w-12 text-orange-500 dark:text-orange-400" />
+                  </div>
+                  <div className="relative">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="p-1.5 rounded-lg bg-orange-500 dark:bg-orange-400 flex-shrink-0">
+                        <CheckCircle2 className="h-4 w-4 text-white" />
+                      </div>
+                      <h4 className="font-bold text-xl text-gray-900 dark:text-white leading-tight break-words">
+                        {expandedTabulation?.name}
+                      </h4>
+                    </div>
+                    <p className="text-base text-gray-700 dark:text-gray-100 leading-relaxed whitespace-pre-wrap pl-9 break-words">
+                      {expandedTabulation?.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          </>
         )}
 
         {activeSection === "tabulation" && (

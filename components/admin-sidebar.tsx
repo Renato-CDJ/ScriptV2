@@ -18,10 +18,11 @@ import {
   Settings2,
   MessageSquare,
   Shield,
-  MessageCircle,
+
   Presentation,
   BookOpen,
   Megaphone,
+  ListChecks,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -46,8 +47,8 @@ const menuItems = [
   { id: "operators", label: "Operadores", icon: Users, permission: "operators" },
   { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
   { id: "presentations", label: "Apresentações", icon: Presentation, permission: "messagesQuiz" },
-  { id: "feedback", label: "Feedback", icon: Megaphone, permission: "messagesQuiz" }, // Added Feedback menu item
-  { id: "chat", label: "Chat", icon: MessageCircle, permission: "chat" },
+  { id: "feedback", label: "Feedback", icon: Megaphone, permission: "messagesQuiz" },
+  { id: "result-codes", label: "Codigos de Resultado", icon: ListChecks, permission: "tabulations" },
   { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]
 

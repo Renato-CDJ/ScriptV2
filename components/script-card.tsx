@@ -475,20 +475,18 @@ export const ScriptCard = memo(function ScriptCard({
           variant="outline"
           size="sm"
           onClick={() => setShowTabulation(true)}
-          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm ${
-            showTabulationPulse ? "animate-bounce" : ""
-          }`}
+          className={`absolute top-3 right-3 md:top-4 md:right-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-white dark:to-gray-100 dark:hover:from-gray-100 dark:hover:to-white text-white dark:text-black font-bold border-0 shadow-lg hover:shadow-xl transition-all duration-200 z-10 text-xs md:text-sm`}
         >
           {hasTabulations ? (
-            <AlertCircle className="h-4 w-4 md:h-5 md:w-5 md:mr-2 animate-pulse" />
+            <AlertCircle className="h-4 w-4 md:h-5 md:w-5 md:mr-2" />
           ) : (
             <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 md:mr-2" />
           )}
           <span className="hidden md:inline">Verificar Tabulação</span>
           {hasTabulations && showTabulationPulse && (
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" style={{ animation: "ping 2s cubic-bezier(0, 0, 0.2, 1) infinite" }}></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 shadow-md shadow-green-500/50"></span>
             </span>
           )}
         </Button>

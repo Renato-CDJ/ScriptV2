@@ -30,7 +30,6 @@ const NotesTab = lazy(() => import("@/components/admin-tabs/notes-tab").then((m)
 const MessagesQuizTab = lazy(() =>
   import("@/components/admin-tabs/messages-quiz-tab").then((m) => ({ default: m.MessagesQuizTab })),
 )
-const ChatTab = lazy(() => import("@/components/admin-tabs/chat-tab").then((m) => ({ default: m.ChatTab })))
 const SettingsPage = lazy(() => import("@/app/admin/settings/page"))
 const AccessControlTab = lazy(() =>
   import("@/components/admin-tabs/access-control-tab").then((m) => ({ default: m.AccessControlTab })),
@@ -41,7 +40,9 @@ const PresentationsTab = lazy(() =>
 const InitialGuideTab = lazy(() =>
   import("@/components/admin-tabs/initial-guide-tab").then((m) => ({ default: m.InitialGuideTab })),
 )
-const FeedbackTab = lazy(() => import("@/components/admin-tabs/feedback-tab").then((m) => ({ default: m.FeedbackTab }))) // Added Feedback tab lazy import
+const FeedbackTab = lazy(() => import("@/components/admin-tabs/feedback-tab").then((m) => ({ default: m.FeedbackTab })))
+const ResultCodesTab = lazy(() => import("@/components/admin-tabs/result-codes-tab").then((m) => ({ default: m.ResultCodesTab })))
+
 
 const LoadingFallback = memo(function LoadingFallback() {
   return (
@@ -132,12 +133,6 @@ const AdminContent = memo(function AdminContent() {
             <FeedbackTab />
           </Suspense>
         )
-      case "chat":
-        return (
-          <Suspense fallback={<LoadingFallback />}>
-            <ChatTab />
-          </Suspense>
-        )
       case "settings":
         return (
           <Suspense fallback={<LoadingFallback />}>
@@ -160,6 +155,12 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <InitialGuideTab />
+          </Suspense>
+        )
+      case "result-codes":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <ResultCodesTab />
           </Suspense>
         )
       default:

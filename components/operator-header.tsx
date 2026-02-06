@@ -18,9 +18,9 @@ import {
   Hash,
   Filter,
   Bell,
-  MessageCircle,
   BookOpen,
   FileText,
+  ListChecks,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
@@ -28,7 +28,6 @@ import {
   getActiveMessagesForOperator,
   getActiveQuizzesForOperator,
   hasOperatorAnsweredQuiz,
-  getChatMessagesForUser,
   getActivePresentationsForOperator,
 } from "@/lib/store"
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
@@ -38,9 +37,9 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { OperatorMessagesModal } from "@/components/operator-messages-modal"
-import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { OperatorPresentationsModal } from "@/components/operator-presentations-modal"
 import { OperatorInitialGuideModal } from "@/components/operator-initial-guide-modal"
+import { OperatorResultCodesModal } from "@/components/operator-result-codes-modal"
 
 interface OperatorHeaderProps {
   searchQuery?: string
@@ -74,11 +73,11 @@ export const OperatorHeader = memo(function OperatorHeader({
   const [selectedPersonTypes, setSelectedPersonTypes] = useState<string[]>([])
   const [showMessagesModal, setShowMessagesModal] = useState(false)
   const [unseenMessagesCount, setUnseenMessagesCount] = useState(0)
-  const [showChatModal, setShowChatModal] = useState(false)
-  const [unreadChatCount, setUnreadChatCount] = useState(0)
+
   const [showPresentationsModal, setShowPresentationsModal] = useState(false)
   const [availablePresentationsCount, setAvailablePresentationsCount] = useState(0)
   const [showInitialGuideModal, setShowInitialGuideModal] = useState(false)
+  const [showResultCodesModal, setShowResultCodesModal] = useState(false)
 
   useEffect(() => {
     const handleStoreUpdate = () => {
@@ -93,12 +92,10 @@ export const OperatorHeader = memo(function OperatorHeader({
 
   useEffect(() => {
     updateUnseenCount()
-    updateUnreadChatCount()
     updateAvailablePresentationsCount()
 
     const interval = setInterval(() => {
       updateUnseenCount()
-      updateUnreadChatCount()
       updateAvailablePresentationsCount()
     }, 15000)
 
@@ -115,15 +112,6 @@ export const OperatorHeader = memo(function OperatorHeader({
     const unansweredQuizzes = quizzes.filter((q) => !hasOperatorAnsweredQuiz(q.id, user.id)).length
 
     setUnseenMessagesCount(unseenMessages + unansweredQuizzes)
-  }, [user])
-
-  const updateUnreadChatCount = useCallback(() => {
-    if (!user) return
-
-    const messages = getChatMessagesForUser(user.id, user.role)
-    const unreadCount = messages.filter((m: any) => !m.isRead && m.senderId !== user.id).length
-
-    setUnreadChatCount(unreadCount)
   }, [user])
 
   const updateAvailablePresentationsCount = useCallback(() => {
@@ -366,6 +354,16 @@ export const OperatorHeader = memo(function OperatorHeader({
               <Button
                 variant="outline"
                 size="icon"
+                onClick={() => setShowResultCodesModal(true)}
+                className="h-9 w-9 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 dark:from-blue-600 dark:to-indigo-600 dark:hover:from-blue-700 dark:hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                title="Codigos de Resultado"
+              >
+                <ListChecks className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => setShowPresentationsModal(true)}
                 className="h-9 w-9 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 dark:from-yellow-600 dark:to-orange-600 dark:hover:from-yellow-700 dark:hover:to-orange-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
                 title="Treinamentos"
@@ -386,7 +384,7 @@ export const OperatorHeader = memo(function OperatorHeader({
                 size="icon"
                 onClick={() => setShowMessagesModal(true)}
                 className="h-9 w-9 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-700 dark:hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
-                title="Recados e Quiz"
+                title="Central da Qualidade"
               >
                 <Bell className="h-4 w-4" />
                 {unseenMessagesCount > 0 && (
@@ -395,24 +393,6 @@ export const OperatorHeader = memo(function OperatorHeader({
                     className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
                   >
                     {unseenMessagesCount}
-                  </Badge>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowChatModal(true)}
-                className="h-9 w-9 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 dark:from-blue-600 dark:to-indigo-600 dark:hover:from-blue-700 dark:hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
-                title="Chat com Admin"
-              >
-                <MessageCircle className="h-4 w-4" />
-                {unreadChatCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-                  >
-                    {unreadChatCount}
                   </Badge>
                 )}
               </Button>
@@ -485,9 +465,9 @@ export const OperatorHeader = memo(function OperatorHeader({
       </header>
 
       <OperatorMessagesModal open={showMessagesModal} onOpenChange={setShowMessagesModal} />
-      <OperatorChatModal open={showChatModal} onOpenChange={setShowChatModal} />
       <OperatorPresentationsModal isOpen={showPresentationsModal} onClose={() => setShowPresentationsModal(false)} />
       <OperatorInitialGuideModal open={showInitialGuideModal} onOpenChange={setShowInitialGuideModal} />
+      <OperatorResultCodesModal open={showResultCodesModal} onOpenChange={setShowResultCodesModal} />
     </>
   )
 })
