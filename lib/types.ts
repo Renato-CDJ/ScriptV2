@@ -271,6 +271,24 @@ export interface OperatorRanking {
 
 export type Ranking = OperatorRanking
 
+export interface QualityQuestion {
+  id: string
+  operatorId: string
+  operatorName: string
+  question: string
+  createdAt: Date
+  answer?: string
+  answeredBy?: string
+  answeredByName?: string
+  answeredAt?: Date
+  isResolved: boolean // operator confirmed it was clarified
+  resolvedAt?: Date
+  wasClear?: boolean // true = esclarecido, false = nao esclarecido
+  reopenReason?: string // reason the operator gave when marking "nao esclareceu"
+  reopenedAt?: Date
+  previousAnswers?: Array<{ answer: string; answeredByName: string; answeredAt: Date; reopenReason: string }>
+}
+
 export interface ResultCode {
   id: string
   name: string

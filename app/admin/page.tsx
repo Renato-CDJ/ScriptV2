@@ -41,6 +41,7 @@ const InitialGuideTab = lazy(() =>
   import("@/components/admin-tabs/initial-guide-tab").then((m) => ({ default: m.InitialGuideTab })),
 )
 const FeedbackTab = lazy(() => import("@/components/admin-tabs/feedback-tab").then((m) => ({ default: m.FeedbackTab })))
+const QualityQuestionsTab = lazy(() => import("@/components/admin-tabs/quality-questions-tab").then((m) => ({ default: m.QualityQuestionsTab })))
 const ResultCodesTab = lazy(() => import("@/components/admin-tabs/result-codes-tab").then((m) => ({ default: m.ResultCodesTab })))
 
 
@@ -155,6 +156,12 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <InitialGuideTab />
+          </Suspense>
+        )
+      case "quality-questions":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <QualityQuestionsTab />
           </Suspense>
         )
       case "result-codes":

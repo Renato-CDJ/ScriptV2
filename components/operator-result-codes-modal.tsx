@@ -63,7 +63,7 @@ export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[98vw] max-h-[90vh] h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="!max-w-[98vw] w-[98vw] max-h-[90vh] h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b bg-card">
           <div className="flex items-center gap-3">
@@ -105,7 +105,7 @@ export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultC
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4">
+        <div className="flex-1 min-h-0 overflow-auto px-3 py-4">
           {resultCodes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center mb-4">
@@ -116,71 +116,80 @@ export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultC
               </p>
             </div>
           ) : (
-            <div className="rounded-lg border border-border overflow-hidden">
-              {/* Column Headers */}
-              <div className="grid grid-cols-2 bg-muted/40 border-b border-border">
-                <div className="flex items-center gap-2 px-4 py-3 border-r border-border">
-                  <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
-                  <span className="text-xs font-bold uppercase tracking-wide text-foreground">
-                    Antes da Identificacao Positiva
-                  </span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                    {beforeCodes.length}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-3">
-                  <ShieldCheck className="h-4 w-4 text-green-500 shrink-0" />
-                  <span className="text-xs font-bold uppercase tracking-wide text-foreground">
-                    Apos Identificacao Positiva
-                  </span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                    {afterCodes.length}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Rows */}
-              {maxRows === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  Nenhum resultado encontrado para a pesquisa
-                </div>
-              ) : (
-                Array.from({ length: maxRows }).map((_, i) => {
-                  const beforeCode = beforeCodes[i]
-                  const afterCode = afterCodes[i]
-                  return (
-                    <div
-                      key={`row-${i}`}
-                      className="grid grid-cols-2 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors"
-                    >
-                      <div className="px-4 py-3 border-r border-border">
-                        {beforeCode ? (
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">{beforeCode.name}</p>
-                            {beforeCode.description && (
-                              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                                {beforeCode.description}
-                              </p>
-                            )}
-                          </div>
-                        ) : null}
+            <div className="rounded-lg border border-border">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-muted/40 border-b border-border">
+                    <th className="text-left px-5 py-3 border-r border-border whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
+                        <span className="text-xs font-bold uppercase tracking-wide text-foreground">
+                          Antes da Identificacao Positiva
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                          {beforeCodes.length}
+                        </Badge>
                       </div>
-                      <div className="px-4 py-3">
-                        {afterCode ? (
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">{afterCode.name}</p>
-                            {afterCode.description && (
-                              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                                {afterCode.description}
-                              </p>
-                            )}
-                          </div>
-                        ) : null}
+                    </th>
+                    <th className="text-left px-5 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-green-500 shrink-0" />
+                        <span className="text-xs font-bold uppercase tracking-wide text-foreground">
+                          Apos Identificacao Positiva
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                          {afterCodes.length}
+                        </Badge>
                       </div>
-                    </div>
-                  )
-                })
-              )}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {maxRows === 0 ? (
+                    <tr>
+                      <td colSpan={2} className="text-center py-8 text-muted-foreground text-sm">
+                        Nenhum resultado encontrado para a pesquisa
+                      </td>
+                    </tr>
+                  ) : (
+                    Array.from({ length: maxRows }).map((_, i) => {
+                      const beforeCode = beforeCodes[i]
+                      const afterCode = afterCodes[i]
+                      return (
+                        <tr
+                          key={`row-${i}`}
+                          className="border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors"
+                        >
+                          <td className="px-5 py-3 border-r border-border align-top whitespace-nowrap">
+                            {beforeCode ? (
+                              <div>
+                                <p className="text-sm font-semibold text-foreground">{beforeCode.name}</p>
+                                {beforeCode.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {beforeCode.description}
+                                  </p>
+                                )}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="px-5 py-3 align-top whitespace-nowrap">
+                            {afterCode ? (
+                              <div>
+                                <p className="text-sm font-semibold text-foreground">{afterCode.name}</p>
+                                {afterCode.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {afterCode.description}
+                                  </p>
+                                )}
+                              </div>
+                            ) : null}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

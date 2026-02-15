@@ -26,6 +26,7 @@ import type {
   SupervisorTeam, // Import for supervisor teams
   Feedback, // Added Feedback import
   ResultCode,
+  QualityQuestion,
 } from "./types"
 import { db, auth } from "./firebase"
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
@@ -1059,6 +1060,7 @@ export const STORAGE_KEYS = {
   SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
   FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
   RESULT_CODES: "callcenter_result_codes",
+  QUALITY_QUESTIONS: "callcenter_quality_questions",
 } as const
 
 // Initialize mock data
@@ -3328,5 +3330,115 @@ export function updateResultCode(id: string, updates: Partial<ResultCode>): void
 export function deleteResultCode(id: string): void {
   const codes = getResultCodes().filter((c) => c.id !== id)
   saveImmediately(STORAGE_KEYS.RESULT_CODES, codes)
+  notifyUpdateImmediate()
+}
+
+// ===== Quality Questions (Pergunte para Qualidade) =====
+export function getQualityQuestions(): QualityQuestion[] {
+  if (typeof window === "undefined") return []
+  const questions = JSON.parse(localStorage.getItem(STORAGE_KEYS.QUALITY_QUESTIONS) || "[]")
+  return questions.map((q: QualityQuestion) => ({
+    ...q,
+    createdAt: convertFirestoreTimestamp(q.createdAt),
+    answeredAt: q.answeredAt ? convertFirestoreTimestamp(q.answeredAt) : undefined,
+    resolvedAt: q.resolvedAt ? convertFirestoreTimestamp(q.resolvedAt) : undefined,
+  }))
+}
+
+export function getQualityQuestionsByOperator(operatorId: string): QualityQuestion[] {
+  return getQualityQuestions().filter((q) => q.operatorId === operatorId)
+}
+
+export function getPendingQualityQuestions(): QualityQuestion[] {
+  return getQualityQuestions().filter((q) => !q.answer)
+}
+
+export function getAnsweredQualityQuestions(): QualityQuestion[] {
+  return getQualityQuestions().filter((q) => !!q.answer)
+}
+
+export function getOpenQuestionsCountByOperator(operatorId: string): number {
+  return getQualityQuestionsByOperator(operatorId).filter((q) => !q.isResolved).length
+}
+
+export function canOperatorAskMore(operatorId: string): boolean {
+  const pending = getQualityQuestionsByOperator(operatorId).filter((q) => !q.isResolved)
+  return pending.length < 3
+}
+
+export function createQualityQuestion(data: { operatorId: string; operatorName: string; question: string }): QualityQuestion {
+  const newQ: QualityQuestion = {
+    id: `qq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    operatorId: data.operatorId,
+    operatorName: data.operatorName,
+    question: data.question,
+    createdAt: new Date(),
+    isResolved: false,
+  }
+  const questions = getQualityQuestions()
+  questions.push(newQ)
+  saveImmediately(STORAGE_KEYS.QUALITY_QUESTIONS, questions)
+  notifyUpdateImmediate()
+  return newQ
+}
+
+export function answerQualityQuestion(questionId: string, answer: string, adminId: string, adminName: string): void {
+  const questions = getQualityQuestions()
+  const index = questions.findIndex((q) => q.id === questionId)
+  if (index !== -1) {
+    questions[index].answer = answer
+    questions[index].answeredBy = adminId
+    questions[index].answeredByName = adminName
+    questions[index].answeredAt = new Date()
+    saveImmediately(STORAGE_KEYS.QUALITY_QUESTIONS, questions)
+    notifyUpdateImmediate()
+  }
+}
+
+export function resolveQualityQuestion(questionId: string, wasClear: boolean): void {
+  const questions = getQualityQuestions()
+  const index = questions.findIndex((q) => q.id === questionId)
+  if (index !== -1) {
+    questions[index].isResolved = true
+    questions[index].wasClear = wasClear
+    questions[index].resolvedAt = new Date()
+    saveImmediately(STORAGE_KEYS.QUALITY_QUESTIONS, questions)
+    notifyUpdateImmediate()
+  }
+}
+
+export function reopenQualityQuestion(questionId: string, reason: string): void {
+  const questions = getQualityQuestions()
+  const index = questions.findIndex((q) => q.id === questionId)
+  if (index !== -1) {
+    const q = questions[index]
+    // Save the previous answer to history
+    if (!q.previousAnswers) q.previousAnswers = []
+    if (q.answer) {
+      q.previousAnswers.push({
+        answer: q.answer,
+        answeredByName: q.answeredByName || "Admin",
+        answeredAt: q.answeredAt || new Date(),
+        reopenReason: reason,
+      })
+    }
+    // Reset the question to pending state
+    q.answer = undefined
+    q.answeredBy = undefined
+    q.answeredByName = undefined
+    q.answeredAt = undefined
+    q.isResolved = false
+    q.wasClear = undefined
+    q.resolvedAt = undefined
+    q.reopenReason = reason
+    q.reopenedAt = new Date()
+    saveImmediately(STORAGE_KEYS.QUALITY_QUESTIONS, questions)
+    notifyUpdateImmediate()
+  }
+}
+
+export function deleteQualityQuestion(id: string): void {
+  const questions = getQualityQuestions().filter((q) => q.id !== id)
+  saveImmediately(STORAGE_KEYS.QUALITY_QUESTIONS, questions)
   notifyUpdateImmediate()
 }

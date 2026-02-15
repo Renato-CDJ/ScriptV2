@@ -129,7 +129,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
   if (!isOpen) return null
 
   return (
-    <aside className="w-[360px] border-l bg-card flex flex-col h-full">
+    <aside className="w-[420px] border-l bg-card flex flex-col h-full">
       <div className="border-b p-2 grid grid-cols-5 gap-1">
         {/* 1. Calendario */}
         <Button

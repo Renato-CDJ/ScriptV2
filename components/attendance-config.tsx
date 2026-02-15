@@ -30,24 +30,33 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
+  const isReceptivo = attendanceType === "receptivo"
+
   const filteredProducts = products.filter((p) => {
-    if (!attendanceType || !personType) return false
+    if (!attendanceType) return false
     const matchesAttendance = p.attendanceTypes?.includes(attendanceType as any) ?? false
+    // Para receptivo, não filtra por tipo de pessoa
+    if (isReceptivo) return matchesAttendance
+    if (!personType) return false
     const matchesPerson = p.personTypes?.includes(personType as any) ?? false
     return matchesAttendance && matchesPerson
   })
 
-  const canSelectProduct = attendanceType !== null && personType !== null
+  const canSelectProduct = isReceptivo ? attendanceType !== null : attendanceType !== null && personType !== null
 
   const handleStart = () => {
-    if (!attendanceType || !personType || !product) {
+    if (!attendanceType || !product) {
       alert("Por favor, complete todas as seleções antes de iniciar")
+      return
+    }
+    if (!isReceptivo && !personType) {
+      alert("Por favor, selecione o tipo de pessoa")
       return
     }
 
     onStart({
       attendanceType: attendanceType as any,
-      personType: personType as any,
+      personType: isReceptivo ? ("fisica" as any) : (personType as any),
       product,
     })
   }
@@ -80,7 +89,11 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
                   <Button
                     key={type.id}
                     variant={attendanceType === type.value ? "default" : "outline"}
-                    onClick={() => setAttendanceType(type.value)}
+                    onClick={() => {
+                      setAttendanceType(type.value)
+                      setPersonType(null)
+                      setProduct("")
+                    }}
                     className={
                       attendanceType === type.value
                         ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
@@ -93,26 +106,28 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
               </div>
             </div>
 
-            {/* Pessoa - Now using dynamic options */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-bold text-foreground text-center">Tipo de Pessoa</h3>
-              <div className="flex gap-4 justify-center flex-wrap">
-                {personTypes.map((type) => (
-                  <Button
-                    key={type.id}
-                    variant={personType === type.value ? "default" : "outline"}
-                    onClick={() => setPersonType(type.value)}
-                    className={
-                      personType === type.value
-                        ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
-                        : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
-                    }
-                  >
-                    {type.label}
-                  </Button>
-                ))}
+            {/* Pessoa - Oculto para Receptivo */}
+            {!isReceptivo && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-foreground text-center">Tipo de Pessoa</h3>
+                <div className="flex gap-4 justify-center flex-wrap">
+                  {personTypes.map((type) => (
+                    <Button
+                      key={type.id}
+                      variant={personType === type.value ? "default" : "outline"}
+                      onClick={() => setPersonType(type.value)}
+                      className={
+                        personType === type.value
+                          ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 font-semibold border-0 shadow-lg hover:shadow-xl transition-all min-w-[120px] h-10 text-sm"
+                          : "bg-card hover:bg-accent text-foreground border-2 border-border hover:border-orange-400 dark:hover:border-orange-500 min-w-[120px] h-10 text-sm font-medium transition-all"
+                      }
+                    >
+                      {type.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {canSelectProduct && (
               <div className="space-y-4">
@@ -159,7 +174,7 @@ export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
         <Button
           size="lg"
           onClick={handleStart}
-          disabled={!attendanceType || !personType || !product}
+          disabled={!attendanceType || (!isReceptivo && !personType) || !product}
           className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-400 dark:to-orange-500 dark:hover:from-orange-500 dark:hover:to-orange-600 text-white font-bold px-16 py-7 text-xl shadow-2xl hover:shadow-orange-500/50 transition-all duration-300 hover:scale-110 border-0 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           Iniciar Atendimento

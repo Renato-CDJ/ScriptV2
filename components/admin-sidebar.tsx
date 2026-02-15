@@ -23,6 +23,7 @@ import {
   BookOpen,
   Megaphone,
   ListChecks,
+  HelpCircle,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -48,6 +49,7 @@ const menuItems = [
   { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
   { id: "presentations", label: "Apresentações", icon: Presentation, permission: "messagesQuiz" },
   { id: "feedback", label: "Feedback", icon: Megaphone, permission: "messagesQuiz" },
+  { id: "quality-questions", label: "Pergunte p/ Qualidade", icon: HelpCircle, permission: "messagesQuiz" },
   { id: "result-codes", label: "Codigos de Resultado", icon: ListChecks, permission: "tabulations" },
   { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]

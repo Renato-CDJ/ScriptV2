@@ -85,7 +85,7 @@ export function OperatorPresentationsModal({ isOpen, onClose }: OperatorPresenta
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="!w-[95vw] !max-h-[90vh] !max-w-6xl flex flex-col p-0 overflow-hidden">
+        <DialogContent className="!max-w-[98vw] w-[98vw] !max-h-[90vh] h-[85vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="border-b px-6 py-4 flex-shrink-0">
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
               <div className="p-2 bg-orange-500/10 rounded-xl">

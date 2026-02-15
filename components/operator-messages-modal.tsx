@@ -20,8 +20,14 @@ import {
   getQuizAttemptsByOperator,
   getFeedbacksByOperator,
   markFeedbackAsRead,
+  getQualityQuestionsByOperator,
+  canOperatorAskMore,
+  createQualityQuestion,
+  resolveQualityQuestion,
+  reopenQualityQuestion,
 } from "@/lib/store"
-import type { Message, Quiz, Feedback } from "@/lib/types"
+import type { Message, Quiz, Feedback, QualityQuestion } from "@/lib/types"
+import { Textarea } from "@/components/ui/textarea"
 import {
   MessageSquare,
   Brain,
@@ -34,6 +40,9 @@ import {
   MessageCircle,
   ThumbsUp,
   ThumbsDown,
+  HelpCircle,
+  Send,
+  Clock,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -50,10 +59,15 @@ const loadDataFromFirebase = async () => {
 export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesModalProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [sidebarView, setSidebarView] = useState<"messages" | "quiz" | "feedback">("messages")
+  const [sidebarView, setSidebarView] = useState<"messages" | "quiz" | "feedback" | "questions">("messages")
   const [activeTab, setActiveTab] = useState<"messages" | "quiz">("messages")
   const [showHistory, setShowHistory] = useState(false)
   const [showFeedbackHistory, setShowFeedbackHistory] = useState(false)
+  const [showQuestionsHistory, setShowQuestionsHistory] = useState(false)
+  const [qualityQuestions, setQualityQuestions] = useState<QualityQuestion[]>([])
+  const [newQuestion, setNewQuestion] = useState("")
+  const [reopeningQuestionId, setReopeningQuestionId] = useState<string | null>(null)
+  const [reopenReason, setReopenReason] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [historicalMessages, setHistoricalMessages] = useState<Message[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
@@ -82,13 +96,14 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
       const activeQuizzes = getActiveQuizzesForOperator()
       const histQuizzes = getHistoricalQuizzes()
       const userFeedbacks = getFeedbacksByOperator(user.id)
-      
+      const userQuestions = getQualityQuestionsByOperator(user.id)
       
       setMessages(activeMessages)
       setHistoricalMessages(histMessages)
       setQuizzes(activeQuizzes)
       setHistoricalQuizzes(histQuizzes)
       setFeedbacks(userFeedbacks)
+      setQualityQuestions(userQuestions)
     }
 
     loadAll()
@@ -234,7 +249,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     return [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [feedbacks, user, showFeedbackHistory])
 
-  const handleSidebarChange = (view: "messages" | "quiz" | "feedback") => {
+  const handleSidebarChange = (view: "messages" | "quiz" | "feedback" | "questions") => {
     setSidebarView(view)
     if (view === "messages") {
       setActiveTab("messages")
@@ -244,6 +259,8 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
       setShowHistory(false)
     } else if (view === "feedback") {
       setShowFeedbackHistory(false)
+    } else if (view === "questions") {
+      setShowQuestionsHistory(false)
     }
     setSelectedQuiz(null)
     setUserPreviousAnswer(null)
@@ -309,7 +326,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="!max-w-[95vw] !max-h-[90vh] sm:!max-w-5xl p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogContent className="!max-w-[98vw] w-[98vw] !max-h-[90vh] h-[85vh] p-0 gap-0 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex-shrink-0 border-b border-border">
             <div className="px-5 sm:px-8 pt-5 sm:pt-6 pb-0">
@@ -369,6 +386,24 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                   {unreadFeedbackCount > 0 && (
                     <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 text-xs font-bold text-white bg-orange-500 rounded-full">
                       {unreadFeedbackCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSidebarChange("questions")}
+                  className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
+                    sidebarView === "questions"
+                      ? "text-orange-500 bg-orange-500/10 border-b-2 border-orange-500"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  Pergunte para Qualidade
+                  {qualityQuestions.filter((q) => q.answer && !q.isResolved).length > 0 && (
+                    <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 text-xs font-bold text-white bg-orange-500 rounded-full">
+                      {qualityQuestions.filter((q) => q.answer && !q.isResolved).length}
                     </span>
                   )}
                 </button>
@@ -899,6 +934,271 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                       })}
                     </div>
                   )}
+                </div>
+              )}
+
+              {sidebarView === "questions" && (
+                <div className="space-y-4">
+                  {/* Subheader */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      {showQuestionsHistory
+                        ? "Historico de perguntas"
+                        : `${qualityQuestions.filter((q) => !q.isResolved).length} pergunta(s) em aberto`}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowQuestionsHistory(!showQuestionsHistory)}
+                      className="gap-2 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      {showQuestionsHistory ? "Ver abertas" : "Historico"}
+                    </Button>
+                  </div>
+
+                  {/* New Question Form */}
+                  {!showQuestionsHistory && user && canOperatorAskMore(user.id) && (
+                    <div className="rounded-xl border border-orange-500/30 bg-card p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <HelpCircle className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm font-semibold text-foreground">Enviar nova pergunta</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {3 - qualityQuestions.filter((q) => !q.isResolved).length} restante(s)
+                        </span>
+                      </div>
+                      <Textarea
+                        placeholder="Digite sua pergunta para a equipe de Qualidade..."
+                        value={newQuestion}
+                        onChange={(e) => setNewQuestion(e.target.value)}
+                        rows={3}
+                        className="resize-none"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (!newQuestion.trim() || !user) return
+                          createQualityQuestion({
+                            operatorId: user.id,
+                            operatorName: user.fullName,
+                            question: newQuestion.trim(),
+                          })
+                          setNewQuestion("")
+                          loadDataDebounced()
+                          toast({
+                            title: "Pergunta enviada",
+                            description: "Sua pergunta foi enviada para a equipe de Qualidade.",
+                          })
+                        }}
+                        disabled={!newQuestion.trim()}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium"
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Enviar Pergunta
+                      </Button>
+                    </div>
+                  )}
+
+                  {!showQuestionsHistory && user && !canOperatorAskMore(user.id) && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                      <p className="text-sm text-amber-600 dark:text-amber-400 font-medium text-center">
+                        Voce atingiu o limite de 3 perguntas em aberto. Aguarde a resposta ou confirme as existentes.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Questions List */}
+                  {(() => {
+                    const displayQuestions = showQuestionsHistory
+                      ? [...qualityQuestions].filter((q) => q.isResolved).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      : [...qualityQuestions].filter((q) => !q.isResolved).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+                    if (displayQuestions.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-16 sm:py-20">
+                          <div className="w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center mb-4">
+                            <HelpCircle className="h-8 w-8 text-muted-foreground/50" />
+                          </div>
+                          <p className="text-muted-foreground text-sm font-medium">
+                            {showQuestionsHistory ? "Nenhuma pergunta no historico" : "Nenhuma pergunta em aberto"}
+                          </p>
+                          <p className="text-muted-foreground/60 text-xs mt-1">
+                            {showQuestionsHistory ? "Perguntas resolvidas aparecerao aqui" : "Envie uma pergunta para a Qualidade"}
+                          </p>
+                        </div>
+                      )
+                    }
+
+                    return displayQuestions.map((q) => (
+                      <article
+                        key={q.id}
+                        className={`rounded-xl border overflow-hidden transition-all duration-200 ${
+                          q.answer && !q.isResolved
+                            ? "border-green-500/30 bg-card hover:border-green-500/50"
+                            : q.isResolved
+                              ? "border-border/50 bg-muted/20 opacity-70"
+                              : "border-orange-500/30 bg-card"
+                        }`}
+                      >
+                        <div className="px-4 sm:px-5 pt-4 pb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+                              <HelpCircle className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground">Sua pergunta</span>
+                                {!q.answer && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 bg-amber-500/10 rounded-md">
+                                    <Clock className="h-3 w-3" />
+                                    AGUARDANDO
+                                  </span>
+                                )}
+                                {q.answer && !q.isResolved && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-white bg-green-500 rounded-md">
+                                    RESPONDIDA
+                                  </span>
+                                )}
+                                {q.isResolved && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-md">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    {q.wasClear ? "Esclarecido" : "Nao esclarecido"}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(q.createdAt).toLocaleDateString("pt-BR")} as{" "}
+                                {new Date(q.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="px-4 sm:px-5 pb-4 space-y-3">
+                          {/* Question */}
+                          <div className="rounded-lg bg-muted/30 border border-border/50 p-3">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">Pergunta</p>
+                            <p className="text-sm leading-relaxed break-words text-foreground">{q.question}</p>
+                          </div>
+
+                          {/* Answer */}
+                          {q.answer && (
+                            <div className="rounded-lg bg-green-500/5 border border-green-500/20 p-3">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-xs font-semibold text-green-600 dark:text-green-400">Resposta da Qualidade</p>
+                                {q.answeredByName && (
+                                  <span className="text-[10px] text-muted-foreground">por {q.answeredByName}</span>
+                                )}
+                              </div>
+                              <p className="text-sm leading-relaxed break-words text-foreground">{q.answer}</p>
+                              {q.answeredAt && (
+                                <p className="text-[10px] text-muted-foreground mt-1.5">
+                                  {new Date(q.answeredAt).toLocaleDateString("pt-BR")} as{" "}
+                                  {new Date(q.answeredAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Resolve buttons */}
+                          {q.answer && !q.isResolved && (
+                            <div className="space-y-2">
+                              {reopeningQuestionId === q.id ? (
+                                <div className="space-y-2 rounded-lg border border-red-500/30 bg-red-500/5 p-3">
+                                  <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                                    O que nao ficou claro? Descreva para que a Qualidade possa complementar:
+                                  </p>
+                                  <Textarea
+                                    placeholder="Explique o que ainda ficou pendente..."
+                                    value={reopenReason}
+                                    onChange={(e) => setReopenReason(e.target.value)}
+                                    rows={3}
+                                    className="resize-none text-sm"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        if (!reopenReason.trim()) return
+                                        reopenQualityQuestion(q.id, reopenReason.trim())
+                                        setReopeningQuestionId(null)
+                                        setReopenReason("")
+                                        loadDataDebounced()
+                                        toast({ title: "Pergunta reaberta", description: "A Qualidade recebera sua observacao e podera responder novamente." })
+                                      }}
+                                      disabled={!reopenReason.trim()}
+                                      className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm"
+                                    >
+                                      <Send className="h-4 w-4 mr-2" />
+                                      Enviar e Reabrir
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setReopeningQuestionId(null)
+                                        setReopenReason("")
+                                      }}
+                                      className="text-sm"
+                                    >
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="text-xs font-medium text-foreground text-center">Ficou esclarecido?</p>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        resolveQualityQuestion(q.id, true)
+                                        loadDataDebounced()
+                                        toast({ title: "Obrigado!", description: "Sua pergunta foi marcada como esclarecida." })
+                                      }}
+                                      className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm"
+                                    >
+                                      <ThumbsUp className="h-4 w-4 mr-2" />
+                                      Sim, esclareceu
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setReopeningQuestionId(q.id)}
+                                      className="flex-1 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 text-sm"
+                                    >
+                                      <ThumbsDown className="h-4 w-4 mr-2" />
+                                      Nao esclareceu
+                                    </Button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Previous answers history */}
+                          {q.previousAnswers && q.previousAnswers.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Respostas anteriores</p>
+                              {q.previousAnswers.map((prev, idx) => (
+                                <div key={idx} className="rounded-lg bg-muted/20 border border-border/30 p-2.5 space-y-1">
+                                  <p className="text-xs text-foreground">{prev.answer}</p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    por {prev.answeredByName} - {new Date(prev.answeredAt).toLocaleDateString("pt-BR")}
+                                  </p>
+                                  <div className="rounded bg-red-500/5 border border-red-500/10 px-2 py-1 mt-1">
+                                    <p className="text-[10px] text-red-600 dark:text-red-400">
+                                      Motivo da reabertura: {prev.reopenReason}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </article>
+                    ))
+                  })()}
                 </div>
               )}
             </div>
