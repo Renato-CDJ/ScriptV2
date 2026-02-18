@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Pencil, Trash2, Package } from "lucide-react"
-import { getProducts, createProduct, updateProduct, deleteProduct, getScriptSteps } from "@/lib/store"
-import type { Product } from "@/lib/types"
+import { getProducts, createProduct, updateProduct, deleteProduct, getScriptSteps, getPersonTypes } from "@/lib/store"
+import type { Product, PersonTypeOption } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
 export function ProductsTab() {
@@ -26,18 +26,23 @@ export function ProductsTab() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [dialogId, setDialogId] = useState<string>("")
+  const [personTypeOptions, setPersonTypeOptions] = useState<PersonTypeOption[]>([])
   const [formData, setFormData] = useState({
     name: "",
     scriptId: "",
     category: "habitacional" as "habitacional" | "comercial" | "cartao" | "outros",
     attendanceTypes: [] as ("ativo" | "receptivo")[],
-    personTypes: [] as ("fisica" | "juridica")[],
+    personTypes: [] as string[],
   })
   const { toast } = useToast()
 
   useEffect(() => {
     loadProducts()
-    const handleStoreUpdate = () => loadProducts()
+    setPersonTypeOptions(getPersonTypes())
+    const handleStoreUpdate = () => {
+      loadProducts()
+      setPersonTypeOptions(getPersonTypes())
+    }
     window.addEventListener("store-updated", handleStoreUpdate)
     return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
@@ -143,7 +148,7 @@ export function ProductsTab() {
     }))
   }
 
-  const togglePersonType = (type: "fisica" | "juridica") => {
+  const togglePersonType = (type: string) => {
     setFormData((prev) => ({
       ...prev,
       personTypes: prev.personTypes.includes(type)
@@ -325,27 +330,19 @@ export function ProductsTab() {
 
             <div className="space-y-3">
               <Label>Tipo de Pessoa *</Label>
-              <div className="flex gap-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`fisica-${dialogId}`}
-                    checked={formData.personTypes.includes("fisica")}
-                    onCheckedChange={() => togglePersonType("fisica")}
-                  />
-                  <label htmlFor={`fisica-${dialogId}`} className="text-sm font-medium cursor-pointer">
-                    Pessoa Física
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`juridica-${dialogId}`}
-                    checked={formData.personTypes.includes("juridica")}
-                    onCheckedChange={() => togglePersonType("juridica")}
-                  />
-                  <label htmlFor={`juridica-${dialogId}`} className="text-sm font-medium cursor-pointer">
-                    Pessoa Jurídica
-                  </label>
-                </div>
+              <div className="flex gap-4 flex-wrap">
+                {personTypeOptions.map((pt) => (
+                  <div key={pt.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`person-${pt.value}-${dialogId}`}
+                      checked={formData.personTypes.includes(pt.value)}
+                      onCheckedChange={() => togglePersonType(pt.value)}
+                    />
+                    <label htmlFor={`person-${pt.value}-${dialogId}`} className="text-sm font-medium cursor-pointer">
+                      Pessoa {pt.label}
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
