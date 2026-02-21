@@ -1897,6 +1897,59 @@ export function getOnlineOperatorsCount(): number {
   return users.filter((u) => u.role === "operator" && u.isOnline === true).length
 }
 
+// Heartbeat: operator pings every 30s to prove they're active
+export function sendOperatorHeartbeat(userId: string): void {
+  if (typeof window === "undefined") return
+  const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+  const index = users.findIndex((u: User) => u.id === userId)
+  if (index !== -1) {
+    users[index].lastHeartbeat = new Date()
+    users[index].isOnline = true
+    saveImmediately(STORAGE_KEYS.USERS, users)
+  }
+}
+
+// Track when an operator accesses a script/product
+export function trackScriptAccess(userId: string, productName: string): void {
+  if (typeof window === "undefined") return
+  const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || "[]")
+  const index = users.findIndex((u: User) => u.id === userId)
+  if (index !== -1) {
+    users[index].lastScriptAccess = new Date()
+    users[index].currentProductName = productName
+    saveImmediately(STORAGE_KEYS.USERS, users)
+  }
+}
+
+// Get all operators with their status details
+export function getOperatorsWithStatus(): (User & { statusDetail: "online" | "idle" | "offline" })[] {
+  if (typeof window === "undefined") return []
+  const users = getAllUsers().filter((u) => u.role === "operator")
+  const now = Date.now()
+  const HEARTBEAT_TIMEOUT = 60000 // 60 seconds - if no heartbeat in 60s, mark as idle
+  const OFFLINE_TIMEOUT = 180000 // 3 minutes - if no heartbeat in 3 min, mark offline
+
+  return users.map((u) => {
+    const lastBeat = u.lastHeartbeat ? convertFirestoreTimestamp(u.lastHeartbeat).getTime() : 0
+    const diff = now - lastBeat
+
+    let statusDetail: "online" | "idle" | "offline" = "offline"
+    if (u.isOnline && lastBeat > 0) {
+      if (diff < HEARTBEAT_TIMEOUT) {
+        statusDetail = "online"
+      } else if (diff < OFFLINE_TIMEOUT) {
+        statusDetail = "idle"
+      } else {
+        statusDetail = "offline"
+      }
+    } else if (u.isOnline) {
+      statusDetail = "online"
+    }
+
+    return { ...u, statusDetail }
+  })
+}
+
 export function getQuizRespondentsCount(): number {
   if (typeof window === "undefined") return 0
   const attempts = getQuizAttempts()

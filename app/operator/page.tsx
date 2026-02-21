@@ -8,7 +8,7 @@ import { ScriptCard } from "@/components/script-card"
 import { AttendanceConfig } from "@/components/attendance-config"
 import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { useAuth } from "@/lib/auth-context"
-import { getScriptSteps, getScriptStepById, getProductById } from "@/lib/store"
+import { getScriptSteps, getScriptStepById, getProductById, sendOperatorHeartbeat, trackScriptAccess } from "@/lib/store"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { useRouter } from "next/navigation"
 
@@ -61,6 +61,23 @@ const OperatorContent = memo(function OperatorContent() {
 
     return () => clearInterval(interval)
   }, [logout, router])
+
+  // Heartbeat: send every 30s to prove operator is active
+  useEffect(() => {
+    if (!user) return
+    sendOperatorHeartbeat(user.id)
+    const heartbeatInterval = setInterval(() => {
+      sendOperatorHeartbeat(user.id)
+    }, 30000)
+    return () => clearInterval(heartbeatInterval)
+  }, [user])
+
+  // Track script access when operator starts a session with a product
+  useEffect(() => {
+    if (user && isSessionActive && currentProductName) {
+      trackScriptAccess(user.id, currentProductName)
+    }
+  }, [user, isSessionActive, currentProductName])
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout

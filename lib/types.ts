@@ -25,9 +25,12 @@ export interface User {
   isOnline: boolean
   createdAt: Date
   lastLoginAt?: Date
+  lastHeartbeat?: Date
+  lastScriptAccess?: Date
+  currentProductName?: string
   loginSessions?: LoginSession[]
   permissions?: AdminPermissions
-  password?: string // Added password field for individual user authentication
+  password?: string
 }
 
 export interface LoginSession {
