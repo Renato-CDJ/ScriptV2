@@ -30,24 +30,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="dark antialiased" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const theme = localStorage.getItem('roteiro-theme') || 'dark';
-                if (theme === 'dark') {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
-              } catch (e) {
-                document.documentElement.classList.add('dark');
-              }
-            `,
-          }}
-        />
-      </head>
       <body className={`font-sans ${geistSans.variable} ${geistMono.variable} relative`}>
         <div className="fixed inset-0 -z-10 dark:block hidden overflow-hidden">
           {/* Animated gradient mesh */}
@@ -62,7 +44,7 @@ export default function RootLayout({
           <div className="absolute inset-0 opacity-[0.015] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=')]" />
         </div>
 
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="roteiro-theme">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="roteiro-theme" disableTransitionOnChange>
           <Suspense fallback={null}>
             <AuthProvider>{children}</AuthProvider>
           </Suspense>

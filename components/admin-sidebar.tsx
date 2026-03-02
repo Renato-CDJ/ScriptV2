@@ -18,12 +18,13 @@ import {
   Settings2,
   MessageSquare,
   Shield,
-
   Presentation,
   BookOpen,
   Megaphone,
   ListChecks,
   HelpCircle,
+  ExternalLink,
+  Award,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
@@ -125,6 +126,18 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
               Controle de Acesso
             </Button>
           )}
+
+          <div className="my-4 border-t border-orange-500/20" />
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+            onClick={() => router.push("/quality-center")}
+          >
+            <Award className="h-4 w-4" />
+            Central da Qualidade
+            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+          </Button>
         </nav>
       </ScrollArea>
 

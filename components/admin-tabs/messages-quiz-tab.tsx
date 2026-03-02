@@ -1,6 +1,7 @@
 "use client"
 import { Table, TableBody, TableHead, TableHeader, TableCell, TableRow } from "@/components/ui/table"
 import { useState, useEffect, useMemo, useCallback } from "react"
+import { SafeHtml } from "@/components/safe-html"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -774,9 +775,9 @@ export function MessagesQuizTab() {
                                   </CardHeader>
                                   {isExpanded && (
                                     <CardContent>
-                                      <div
+                                      <SafeHtml
+                                        html={message.content}
                                         className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere mb-3 prose prose-sm max-w-none dark:prose-invert"
-                                        dangerouslySetInnerHTML={{ __html: message.content }}
                                       />
                                       <div className="text-xs text-muted-foreground break-words overflow-wrap-anywhere">
                                         <Users className="inline h-3 w-3 mr-1" />
@@ -835,9 +836,9 @@ export function MessagesQuizTab() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div
+                        <SafeHtml
+                          html={message.content}
                           className="text-sm whitespace-pre-wrap mb-4 prose prose-sm max-w-none dark:prose-invert"
-                          dangerouslySetInnerHTML={{ __html: message.content }}
                         />
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => handleEditMessage(message)}>

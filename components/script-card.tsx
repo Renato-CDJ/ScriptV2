@@ -11,6 +11,7 @@ import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { SafeHtml } from "@/components/safe-html"
 
 interface ScriptCardProps {
   step: ScriptStep
@@ -492,9 +493,10 @@ export const ScriptCard = memo(function ScriptCard({
         </Button>
 
         <CardHeader className="pb-5 pt-7 px-4 md:px-8">
-          <CardTitle
+          <SafeHtml
+            as="h2"
+            html={highlightedTitle}
             className="text-2xl md:text-3xl lg:text-4xl text-center font-bold text-balance leading-tight text-orange-900 dark:text-white drop-shadow-sm"
-            dangerouslySetInnerHTML={{ __html: highlightedTitle }}
           />
         </CardHeader>
 
@@ -504,7 +506,7 @@ export const ScriptCard = memo(function ScriptCard({
             style={contentStyles}
           >
             {typeof renderedContent === "string" ? (
-              <div dangerouslySetInnerHTML={{ __html: renderedContent }} />
+              <SafeHtml html={renderedContent} />
             ) : (
               renderedContent
             )}

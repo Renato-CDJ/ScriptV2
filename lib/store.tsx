@@ -27,6 +27,8 @@ import type {
   Feedback, // Added Feedback import
   ResultCode,
   QualityQuestion,
+  QualityPost,
+  QualityComment,
 } from "./types"
 import { db, auth } from "./firebase"
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
@@ -1059,9 +1061,10 @@ export const STORAGE_KEYS = {
   FILE_PRESENTATION_PROGRESS: "callcenter_file_presentation_progress", // Added storage key for file presentation progress
   SUPERVISOR_TEAMS: "callcenter_supervisor_teams",
   FEEDBACKS: "callcenter_feedbacks", // Added storage key for feedbacks
-  RESULT_CODES: "callcenter_result_codes",
+RESULT_CODES: "callcenter_result_codes",
   QUALITY_QUESTIONS: "callcenter_quality_questions",
-} as const
+  QUALITY_POSTS: "callcenter_quality_posts",
+  } as const
 
 // Initialize mock data
 export function initializeMockData() {
@@ -3494,4 +3497,136 @@ export function deleteQualityQuestion(id: string): void {
   const questions = getQualityQuestions().filter((q) => q.id !== id)
   saveImmediately(STORAGE_KEYS.QUALITY_QUESTIONS, questions)
   notifyUpdateImmediate()
+}
+
+// ===== Quality Center Posts (Social Feed) =====
+export function getQualityPosts(): QualityPost[] {
+  if (typeof window === "undefined") return []
+  const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.QUALITY_POSTS) || "[]")
+  return posts.map((p: QualityPost) => ({
+    ...p,
+    createdAt: convertFirestoreTimestamp(p.createdAt),
+    comments: (p.comments || []).map((c: QualityComment) => ({
+      ...c,
+      createdAt: convertFirestoreTimestamp(c.createdAt),
+    })),
+  }))
+}
+
+export function getActiveQualityPosts(): QualityPost[] {
+  return getQualityPosts().filter((p) => p.isActive).sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
+}
+
+export function getQualityPostsByType(type: QualityPost["type"]): QualityPost[] {
+  return getActiveQualityPosts().filter((p) => p.type === type)
+}
+
+export function getAdminQuestions(): QualityPost[] {
+  return getActiveQualityPosts().filter((p) => p.type === "pergunta" && p.isQuestionToAdmin)
+}
+
+export function createQualityPost(post: Omit<QualityPost, "id" | "createdAt" | "likes" | "comments">): QualityPost {
+  if (typeof window === "undefined") return { ...post, id: "", createdAt: new Date(), likes: [], comments: [] }
+  
+  const newPost: QualityPost = {
+    ...post,
+    id: `qp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date(),
+    likes: [],
+    comments: [],
+  }
+  
+  const posts = getQualityPosts()
+  posts.push(newPost)
+  saveImmediately(STORAGE_KEYS.QUALITY_POSTS, posts)
+  notifyUpdateImmediate()
+  
+  return newPost
+}
+
+export function updateQualityPost(id: string, updates: Partial<QualityPost>): void {
+  const posts = getQualityPosts()
+  const index = posts.findIndex((p) => p.id === id)
+  if (index !== -1) {
+    posts[index] = { ...posts[index], ...updates }
+    saveImmediately(STORAGE_KEYS.QUALITY_POSTS, posts)
+    notifyUpdateImmediate()
+  }
+}
+
+export function deleteQualityPost(id: string): void {
+  const posts = getQualityPosts().filter((p) => p.id !== id)
+  saveImmediately(STORAGE_KEYS.QUALITY_POSTS, posts)
+  notifyUpdateImmediate()
+}
+
+export function likeQualityPost(postId: string, userId: string): void {
+  const posts = getQualityPosts()
+  const index = posts.findIndex((p) => p.id === postId)
+  if (index !== -1) {
+    const likes = posts[index].likes || []
+    if (likes.includes(userId)) {
+      posts[index].likes = likes.filter((id) => id !== userId)
+    } else {
+      posts[index].likes = [...likes, userId]
+    }
+    saveImmediately(STORAGE_KEYS.QUALITY_POSTS, posts)
+    notifyUpdateImmediate()
+  }
+}
+
+export function voteOnQualityQuiz(postId: string, optionId: string, userId: string): void {
+  const posts = getQualityPosts()
+  const index = posts.findIndex((p) => p.id === postId)
+  if (index !== -1 && posts[index].quizOptions) {
+    // Remove previous vote
+    posts[index].quizOptions = posts[index].quizOptions!.map((opt) => ({
+      ...opt,
+      votes: opt.votes.filter((id) => id !== userId),
+    }))
+    // Add new vote
+    const optIndex = posts[index].quizOptions!.findIndex((o) => o.id === optionId)
+    if (optIndex !== -1) {
+      posts[index].quizOptions![optIndex].votes.push(userId)
+    }
+    saveImmediately(STORAGE_KEYS.QUALITY_POSTS, posts)
+    notifyUpdateImmediate()
+  }
+}
+
+export function addCommentToQualityPost(postId: string, comment: Omit<QualityComment, "id" | "createdAt">): void {
+  const posts = getQualityPosts()
+  const index = posts.findIndex((p) => p.id === postId)
+  if (index !== -1) {
+    const newComment: QualityComment = {
+      ...comment,
+      id: `qc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date(),
+    }
+    posts[index].comments = [...(posts[index].comments || []), newComment]
+    saveImmediately(STORAGE_KEYS.QUALITY_POSTS, posts)
+    notifyUpdateImmediate()
+  }
+}
+
+export function getQualityCenterStats(): {
+  totalPosts: number
+  totalLikes: number
+  totalComments: number
+  totalUsers: number
+  onlineNow: number
+} {
+  const posts = getActiveQualityPosts()
+  const users = getAllUsers().filter((u) => u.role === "operator")
+  const onlineUsers = users.filter((u) => u.isOnline)
+  
+  return {
+    totalPosts: posts.length,
+    totalLikes: posts.reduce((sum, p) => sum + (p.likes?.length || 0), 0),
+    totalComments: posts.reduce((sum, p) => sum + (p.comments?.length || 0), 0),
+    totalUsers: users.length,
+    onlineNow: onlineUsers.length,
+  }
 }

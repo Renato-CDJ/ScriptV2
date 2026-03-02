@@ -382,7 +382,7 @@ export const OperatorHeader = memo(function OperatorHeader({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setShowMessagesModal(true)}
+                onClick={() => router.push("/quality-center")}
                 className="h-9 w-9 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-700 dark:hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
                 title="Central da Qualidade"
               >

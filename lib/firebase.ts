@@ -3,13 +3,14 @@ import { getFirestore } from "firebase/firestore"
 import { getAuth } from "firebase/auth"
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB1Ys-2gMkMa4QNN3s8lkSDtrSpKQcT2LA",
-  authDomain: "banco-de-dados-roteiro.firebaseapp.com",
-  projectId: "banco-de-dados-roteiro",
-  storageBucket: "banco-de-dados-roteiro.firebasestorage.app",
-  messagingSenderId: "845018804492",
-  appId: "1:845018804492:web:0a502e1be5f015abadd929",
-  measurementId: "G-YJWTK2GSTH",
+  apiKey: "AIzaSyC5uxT0E3gkjhxGgMGfwZV2t8NH626nlqg",
+  authDomain: "scriptv2-92ba3.firebaseapp.com",
+  databaseURL: "https://scriptv2-92ba3-default-rtdb.firebaseio.com",
+  projectId: "scriptv2-92ba3",
+  storageBucket: "scriptv2-92ba3.firebasestorage.app",
+  messagingSenderId: "256429010558",
+  appId: "1:256429010558:web:61dc70c135c68849f8722f",
+  measurementId: "G-9FWPYCLSR6",
 }
 
 // Initialize Firebase

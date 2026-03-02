@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { SafeHtml } from "@/components/safe-html"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -499,9 +500,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                           {/* Card Content */}
                           <div className="px-4 sm:px-5 pb-4">
                             <div className="rounded-lg bg-muted/30 border border-border/50 p-4 max-h-[300px] overflow-y-auto">
-                              <div
+                              <SafeHtml
+                                html={message.content}
                                 className="text-sm leading-relaxed break-words prose prose-sm max-w-none dark:prose-invert"
-                                dangerouslySetInnerHTML={{ __html: message.content }}
                               />
                               {message.attachment && message.attachment.type === "image" && (
                                 <div className="mt-3">
@@ -1234,9 +1235,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
           <ScrollArea className="flex-1 min-h-0">
             <div className="px-5 sm:px-6 py-5">
               <div className="prose prose-sm sm:prose-base max-w-none dark:prose-invert">
-                <div
+                <SafeHtml
+                  html={expandedMessage?.content || ""}
                   className="text-sm sm:text-base leading-relaxed break-words"
-                  dangerouslySetInnerHTML={{ __html: expandedMessage?.content || "" }}
                 />
                 {expandedMessage?.attachment && expandedMessage.attachment.type === "image" && (
                   <div className="mt-4">

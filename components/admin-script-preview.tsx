@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Edit, Trash2, Plus, ArrowRight, CheckCircle2 } from "lucide-react"
 import type { ScriptStep } from "@/lib/types"
 import { useState } from "react"
+import { SafeHtml } from "@/components/safe-html"
 
 interface AdminScriptPreviewProps {
   step: ScriptStep
@@ -66,9 +67,9 @@ export function AdminScriptPreview({ step, onEdit, onDelete, onAddButton }: Admi
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8">
-          <div
+          <SafeHtml
+            html={step.content}
             className="bg-gradient-to-br from-muted/40 to-muted/20 rounded-xl p-10 leading-relaxed min-h-[280px] border border-border/50 text-base"
-            dangerouslySetInnerHTML={{ __html: step.content }}
           />
 
           {/* Button configuration section */}

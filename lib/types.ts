@@ -334,3 +334,37 @@ export interface Feedback {
   readAt?: Date // Quando foi marcado como lido
   isActive: boolean
 }
+
+// Quality Center types for social feed
+export type QualityPostType = "comunicado" | "quiz" | "recado" | "pergunta"
+
+export interface QualityPost {
+  id: string
+  type: QualityPostType
+  content: string
+  authorId: string
+  authorName: string
+  createdAt: Date
+  isActive: boolean
+  // Quiz specific fields
+  quizOptions?: QualityQuizOption[]
+  // Engagement
+  likes: string[] // array of user ids who liked
+  comments: QualityComment[]
+  // For questions only - if it's a question to admin
+  isQuestionToAdmin?: boolean
+}
+
+export interface QualityQuizOption {
+  id: string
+  text: string
+  votes: string[] // array of user ids who voted
+}
+
+export interface QualityComment {
+  id: string
+  authorId: string
+  authorName: string
+  content: string
+  createdAt: Date
+}
