@@ -1,7 +1,6 @@
 // Core types for the call center script system
 
 export type UserRole = "operator" | "admin"
-export type AdminType = "master" | "monitoria" | "supervisao"
 
 export interface AdminPermissions {
   dashboard?: boolean
@@ -22,10 +21,7 @@ export interface User {
   id: string
   username: string
   fullName: string
-  email?: string
   role: UserRole
-  adminType?: AdminType
-  allowedTabs?: string[]
   isOnline: boolean
   createdAt: Date
   lastLoginAt?: Date
@@ -340,7 +336,7 @@ export interface Feedback {
 }
 
 // Quality Center types for social feed
-export type QualityPostType = "comunicado" | "quiz" | "recado" | "pergunta" | "feedback"
+export type QualityPostType = "comunicado" | "quiz" | "recado" | "pergunta"
 
 export interface QualityPost {
   id: string

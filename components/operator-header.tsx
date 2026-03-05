@@ -36,7 +36,7 @@ import { useTheme } from "next-themes"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { QualityCenterModal } from "@/components/quality-center-modal"
+import { OperatorMessagesModal } from "@/components/operator-messages-modal"
 import { OperatorPresentationsModal } from "@/components/operator-presentations-modal"
 import { OperatorInitialGuideModal } from "@/components/operator-initial-guide-modal"
 import { OperatorResultCodesModal } from "@/components/operator-result-codes-modal"
@@ -382,7 +382,7 @@ export const OperatorHeader = memo(function OperatorHeader({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setShowMessagesModal(true)}
+                onClick={() => router.push("/quality-center")}
                 className="h-9 w-9 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-700 dark:hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
                 title="Central da Qualidade"
               >
@@ -464,7 +464,7 @@ export const OperatorHeader = memo(function OperatorHeader({
         </div>
       </header>
 
-      <QualityCenterModal isOpen={showMessagesModal} onClose={() => setShowMessagesModal(false)} />
+      <OperatorMessagesModal open={showMessagesModal} onOpenChange={setShowMessagesModal} />
       <OperatorPresentationsModal isOpen={showPresentationsModal} onClose={() => setShowPresentationsModal(false)} />
       <OperatorInitialGuideModal open={showInitialGuideModal} onOpenChange={setShowInitialGuideModal} />
       <OperatorResultCodesModal open={showResultCodesModal} onOpenChange={setShowResultCodesModal} />

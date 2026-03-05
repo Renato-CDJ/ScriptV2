@@ -1,8 +1,6 @@
 // Client-side state management using localStorage for prototype
 // This will be replaced with real database integration later
 
-import { useState, useEffect } from "react"
-
 import type {
   User,
   ScriptStep,
@@ -32,18 +30,16 @@ import type {
   QualityPost,
   QualityComment,
 } from "./types"
-// Firebase disabled - now using Supabase
-// import { db, auth } from "./firebase"
-// import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
-// import { signInAnonymously } from "firebase/auth"
+import { db, auth } from "./firebase"
+import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
+import { signInAnonymously } from "firebase/auth"
 import debounce from "lodash.debounce" // Import debounce
 
-// Firebase sync disabled - using Supabase instead
-let firebaseSyncDisabled = true
-
-// Define handleFirebaseError as a placeholder
+// Define handleFirebaseError as a placeholder or import it if it exists elsewhere
 const handleFirebaseError = (error: unknown) => {
   console.error("Firebase error handler called:", error)
+  // Implement actual error handling logic here, e.g., setting firebaseSyncDisabled
+  // For now, we'll just log it.
 }
 
 const FIREBASE_COLLECTION = "app_data"
@@ -144,7 +140,7 @@ function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
   })
 }
 
-// firebaseSyncDisabled is now defined at the top of the file as true
+let firebaseSyncDisabled = false
 let duplicateCleaningInProgress = false // Add flag to prevent duplicate cleaning loop
 let pendingFirebaseWrites = 0
 const MAX_PENDING_WRITES = 5 // Reduced from 10 to 5 to prevent overload
@@ -2937,10 +2933,34 @@ function scheduleNotification() {
 }
 
 export async function loadFromFirebase() {
-  // Firebase disabled - now using Supabase
-  // This function is kept for backwards compatibility but does nothing
-  console.log("[v0] loadFromFirebase called but Firebase is disabled - using Supabase instead")
-  return
+  if (typeof window === "undefined") return
+  if (!db) return
+
+  console.log("[v0] Loading all data from Firebase...")
+
+  try {
+    const promises = Object.entries(STORAGE_KEYS).map(async ([key, storageKey]) => {
+      try {
+        const docRef = doc(db, "app_data", storageKey)
+        const docSnap = await getDoc(docRef)
+
+        if (docSnap.exists()) {
+          const data = docSnap.data()
+          if (data && data.data) {
+            localStorage.setItem(storageKey, JSON.stringify(data.data))
+            console.log(`[v0] Loaded ${storageKey} from Firebase:`, data.data.length, "items")
+          }
+        }
+      } catch (error) {
+        console.error(`[v0] Error loading ${storageKey} from Firebase:`, error)
+      }
+    })
+
+    await Promise.all(promises)
+    console.log("[v0] Finished loading from Firebase")
+  } catch (error) {
+    console.error("[v0] Error in loadFromFirebase:", error)
+  }
 }
 
 // File presentation progress tracking
@@ -3609,20 +3629,4 @@ export function getQualityCenterStats(): {
     totalUsers: users.length,
     onlineNow: onlineUsers.length,
   }
-}
-
-// Hook to subscribe to store updates and trigger re-renders
-export function useStoreSubscription(): number {
-  const [version, setVersion] = useState(0)
-  
-  useEffect(() => {
-    const handleUpdate = () => {
-      setVersion((v) => v + 1)
-    }
-    
-    window.addEventListener("store-updated", handleUpdate)
-    return () => window.removeEventListener("store-updated", handleUpdate)
-  }, [])
-  
-  return version
 }

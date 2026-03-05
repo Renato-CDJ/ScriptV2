@@ -1,16 +1,24 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { createClient } from "@/lib/supabase/client"
-import type { User, AdminType } from "@/lib/types"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import {
+  getAdminUsers,
+  updateUser,
+  updateAdminPermissions,
+  createAdminUser,
+  deleteUser,
+  canDeleteAdminUser,
+  saveImmediately,
+  STORAGE_KEYS,
+  getAllUsers,
+} from "@/lib/store"
+import type { User, AdminPermissions } from "@/lib/types"
 import { Shield, Edit2, Save, X, Plus, Trash2, UserPlus, Eye, EyeOff, Key } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -32,7 +40,6 @@ export function AccessControlTab() {
   const [newUsername, setNewUsername] = useState("")
   const [newFullName, setNewFullName] = useState("")
   const [newPassword, setNewPassword] = useState("")
-  const [newAdminType, setNewAdminType] = useState<AdminType>("supervisao")
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [editingPasswordUser, setEditingPasswordUser] = useState<string | null>(null)
   const [editedPassword, setEditedPassword] = useState("")
@@ -40,50 +47,38 @@ export function AccessControlTab() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const { toast } = useToast()
 
-  const availableTabs = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "central-qualidade", label: "Central da Qualidade" },
-    { id: "scripts", label: "Roteiros" },
-    { id: "products", label: "Produtos" },
-    { id: "operators", label: "Operadores" },
-    { id: "tabulations", label: "Tabulacoes" },
-    { id: "situations", label: "Situacoes" },
-    { id: "channels", label: "Canais" },
-    { id: "messages-quiz", label: "Recados e Quiz" },
-    { id: "feedback", label: "Feedback" },
-    { id: "presentations", label: "Apresentacoes" },
-    { id: "settings", label: "Configuracoes" },
-  ]
-
-  const loadAdminUsers = useCallback(async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("role", "admin")
-      .order("admin_type", { ascending: true })
-      .order("username", { ascending: true })
-    
-    if (!error && data) {
-      const users: User[] = data.map((u) => ({
-        id: u.id,
-        username: u.username,
-        fullName: u.name,
-        email: u.email,
-        role: u.role,
-        adminType: u.admin_type,
-        allowedTabs: u.allowed_tabs || [],
-        isOnline: u.is_online,
-        createdAt: new Date(u.created_at),
-        password: u.password,
-      }))
-      setAdminUsers(users)
-    }
-  }, [])
+  const permissionLabels: Record<keyof AdminPermissions, string> = useMemo(
+    () => ({
+      dashboard: "Dashboard",
+      scripts: "Roteiros",
+      products: "Produtos",
+      attendanceConfig: "Configurar Atendimento",
+      tabulations: "Tabulações",
+      situations: "Situações",
+      channels: "Canais",
+      notes: "Bloco de Notas",
+      operators: "Operadores",
+      messagesQuiz: "Recados e Quiz",
+      chat: "Chat",
+      settings: "Configurações",
+    }),
+    [],
+  )
 
   useEffect(() => {
     loadAdminUsers()
-  }, [loadAdminUsers])
+
+    const handleStoreUpdate = () => {
+      loadAdminUsers()
+    }
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+  }, [])
+
+  const loadAdminUsers = () => {
+    const users = getAdminUsers()
+    setAdminUsers(users)
+  }
 
   const handleEditName = useCallback((user: User) => {
     setEditingUser(user.id)
@@ -91,7 +86,7 @@ export function AccessControlTab() {
   }, [])
 
   const handleSaveName = useCallback(
-    async (user: User) => {
+    (user: User) => {
       if (!editedName.trim()) {
         toast({
           title: "Erro",
@@ -101,17 +96,8 @@ export function AccessControlTab() {
         return
       }
 
-      const supabase = createClient()
-      const { error } = await supabase
-        .from("users")
-        .update({ name: editedName.trim() })
-        .eq("id", user.id)
-
-      if (error) {
-        toast({ title: "Erro", description: "Erro ao atualizar nome", variant: "destructive" })
-        return
-      }
-
+      const updatedUser = { ...user, fullName: editedName.trim() }
+      updateUser(updatedUser)
       setEditingUser(null)
       loadAdminUsers()
 
@@ -120,7 +106,7 @@ export function AccessControlTab() {
         description: `Nome do usuário ${user.username} foi atualizado com sucesso`,
       })
     },
-    [editedName, toast, loadAdminUsers],
+    [editedName, toast],
   )
 
   const handleCancelEdit = useCallback(() => {
@@ -135,7 +121,7 @@ export function AccessControlTab() {
   }, [])
 
   const handleSavePassword = useCallback(
-    async (user: User) => {
+    (user: User) => {
       if (!editedPassword.trim()) {
         toast({
           title: "Erro",
@@ -154,16 +140,10 @@ export function AccessControlTab() {
         return
       }
 
-      const supabase = createClient()
-      const { error } = await supabase
-        .from("users")
-        .update({ password: editedPassword.trim() })
-        .eq("id", user.id)
-
-      if (error) {
-        toast({ title: "Erro", description: "Erro ao atualizar senha", variant: "destructive" })
-        return
-      }
+      // Update user with new password
+      const allUsers = getAllUsers()
+      const updatedUsers = allUsers.map((u) => (u.id === user.id ? { ...u, password: editedPassword.trim() } : u))
+      saveImmediately(STORAGE_KEYS.USERS, updatedUsers)
 
       setEditingPasswordUser(null)
       setEditedPassword("")
@@ -175,7 +155,7 @@ export function AccessControlTab() {
         description: `Senha do usuário ${user.username} foi atualizada com sucesso`,
       })
     },
-    [editedPassword, toast, loadAdminUsers],
+    [editedPassword, toast],
   )
 
   const handleCancelPasswordEdit = useCallback(() => {
@@ -184,73 +164,30 @@ export function AccessControlTab() {
     setShowEditedPassword(false)
   }, [])
 
-  const handleTabToggle = useCallback(
-    async (user: User, tabId: string) => {
-      const currentTabs = user.allowedTabs || []
-      const isEnabled = currentTabs.includes(tabId)
-      const updatedTabs = isEnabled
-        ? currentTabs.filter((t) => t !== tabId)
-        : [...currentTabs, tabId]
-
-      const supabase = createClient()
-      const { error } = await supabase
-        .from("users")
-        .update({ allowed_tabs: updatedTabs })
-        .eq("id", user.id)
-
-      if (error) {
-        toast({ title: "Erro", description: "Erro ao atualizar permissoes", variant: "destructive" })
-        return
+  const handlePermissionToggle = useCallback(
+    (user: User, permission: keyof AdminPermissions) => {
+      const currentPermissions = user.permissions || {}
+      const updatedPermissions = {
+        ...currentPermissions,
+        [permission]: !currentPermissions[permission],
       }
 
+      updateAdminPermissions(user.id, updatedPermissions)
       loadAdminUsers()
 
       toast({
-        title: "Permissao atualizada",
-        description: `Aba ${tabId} foi ${!isEnabled ? "habilitada" : "desabilitada"} para ${user.fullName}`,
+        title: "Permissão atualizada",
+        description: `Permissão ${permissionLabels[permission]} foi ${updatedPermissions[permission] ? "habilitada" : "desabilitada"} para ${user.fullName}`,
       })
     },
-    [toast, loadAdminUsers],
+    [toast, permissionLabels],
   )
 
-  const handleAdminTypeChange = useCallback(
-    async (user: User, newType: AdminType) => {
-      const supabase = createClient()
-      
-      // If changing to supervisao, set default allowed tabs
-      const newAllowedTabs = newType === "supervisao" 
-        ? ["dashboard", "central-qualidade"] 
-        : []
-
-      const { error } = await supabase
-        .from("users")
-        .update({ admin_type: newType, allowed_tabs: newAllowedTabs })
-        .eq("id", user.id)
-
-      if (error) {
-        toast({ title: "Erro", description: "Erro ao atualizar tipo de admin", variant: "destructive" })
-        return
-      }
-
-      loadAdminUsers()
-      const typeLabels: Record<AdminType, string> = {
-        master: "Master (Acesso Total)",
-        monitoria: "Monitoria (Acesso Total)",
-        supervisao: "Supervisao (Limitado)",
-      }
-      toast({
-        title: "Tipo atualizado",
-        description: `${user.fullName} agora e ${typeLabels[newType]}`,
-      })
-    },
-    [toast, loadAdminUsers],
-  )
-
-  const handleCreateUser = useCallback(async () => {
+  const handleCreateUser = useCallback(() => {
     if (!newUsername.trim() || !newFullName.trim()) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatorios",
+        description: "Preencha todos os campos obrigatórios",
         variant: "destructive",
       })
       return
@@ -265,42 +202,14 @@ export function AccessControlTab() {
       return
     }
 
-    const supabase = createClient()
-    
-    // Check if username already exists
-    const { data: existing } = await supabase
-      .from("users")
-      .select("id")
-      .ilike("username", newUsername.trim())
-      .single()
+    const newUser = createAdminUser(newUsername.trim(), newFullName.trim(), newPassword.trim() || undefined)
 
-    if (existing) {
+    if (!newUser) {
       toast({
         title: "Erro",
-        description: "Nome de usuario ja existe",
+        description: "Nome de usuário já existe",
         variant: "destructive",
       })
-      return
-    }
-
-    const allowedTabs = newAdminType === "supervisao" 
-      ? ["dashboard", "central-qualidade"] 
-      : []
-
-    const { error } = await supabase.from("users").insert({
-      username: newUsername.trim(),
-      name: newFullName.trim(),
-      email: `${newUsername.trim().toLowerCase()}@rcp.com`,
-      password: newPassword.trim() || "rcp@$",
-      role: "admin",
-      admin_type: newAdminType,
-      allowed_tabs: allowedTabs,
-      is_active: true,
-      is_online: false,
-    })
-
-    if (error) {
-      toast({ title: "Erro", description: "Erro ao criar usuario", variant: "destructive" })
       return
     }
 
@@ -308,49 +217,37 @@ export function AccessControlTab() {
     setNewUsername("")
     setNewFullName("")
     setNewPassword("")
-    setNewAdminType("supervisao")
     setShowNewPassword(false)
     loadAdminUsers()
 
     toast({
-      title: "Usuario criado",
-      description: `Usuario ${newUsername} foi criado com sucesso`,
+      title: "Usuário criado",
+      description: `Usuário ${newUser.username} foi criado com sucesso${newPassword ? " com senha personalizada" : ""}`,
     })
-  }, [newUsername, newFullName, newPassword, newAdminType, toast, loadAdminUsers])
+  }, [newUsername, newFullName, newPassword, toast])
 
-  const handleDeleteUser = useCallback(async () => {
+  const handleDeleteUser = useCallback(() => {
     if (!userToDelete) return
 
-    // Prevent deleting master admin
-    if (userToDelete.adminType === "master") {
+    if (!canDeleteAdminUser(userToDelete.id)) {
       toast({
         title: "Erro",
-        description: "Nao e possivel excluir o usuario master",
+        description: "Não é possível excluir este usuário",
         variant: "destructive",
       })
       setUserToDelete(null)
       return
     }
 
-    const supabase = createClient()
-    const { error } = await supabase
-      .from("users")
-      .delete()
-      .eq("id", userToDelete.id)
-
-    if (error) {
-      toast({ title: "Erro", description: "Erro ao excluir usuario", variant: "destructive" })
-      return
-    }
-
+    deleteUser(userToDelete.id)
     setUserToDelete(null)
     loadAdminUsers()
 
     toast({
-      title: "Usuario excluido",
-      description: `Usuario ${userToDelete.username} foi excluido com sucesso`,
+      title: "Usuário excluído",
+      description: `Usuário ${userToDelete.username} foi excluído com sucesso`,
     })
-  }, [userToDelete, toast, loadAdminUsers])
+  }, [userToDelete, toast])
 
   return (
     <div className="space-y-6">
@@ -384,14 +281,14 @@ export function AccessControlTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="new-username">Nome de Usuario *</Label>
+                <Label htmlFor="new-username">Nome de Usuário *</Label>
                 <Input
                   id="new-username"
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
-                  placeholder="Ex: Supervisor31"
+                  placeholder="Ex: Supervisao"
                 />
               </div>
               <div className="space-y-2">
@@ -400,20 +297,8 @@ export function AccessControlTab() {
                   id="new-fullname"
                   value={newFullName}
                   onChange={(e) => setNewFullName(e.target.value)}
-                  placeholder="Ex: Joao da Silva"
+                  placeholder="Ex: Supervisão"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-admin-type">Tipo de Admin *</Label>
-                <Select value={newAdminType} onValueChange={(v) => setNewAdminType(v as AdminType)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monitoria">Monitoria (Acesso Total)</SelectItem>
-                    <SelectItem value="supervisao">Supervisao (Limitado)</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-password">Senha de Acesso</Label>
@@ -423,7 +308,7 @@ export function AccessControlTab() {
                     type={showNewPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Padrao: rcp@$"
+                    placeholder="Deixe vazio para senha padrão"
                     className="pr-10"
                   />
                   <Button
@@ -440,6 +325,9 @@ export function AccessControlTab() {
                     )}
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Mínimo 4 caracteres. Se vazio, usa senha padrão do admin.
+                </p>
               </div>
             </div>
             <div className="flex gap-2 justify-end">
@@ -450,7 +338,6 @@ export function AccessControlTab() {
                   setNewUsername("")
                   setNewFullName("")
                   setNewPassword("")
-                  setNewAdminType("supervisao")
                   setShowNewPassword(false)
                 }}
               >
@@ -513,22 +400,8 @@ export function AccessControlTab() {
                         </Button>
                       )}
                     </CardTitle>
-                    <CardDescription className="mt-1 break-words flex items-center gap-2">
-                      {user.fullName}
-                      <Badge 
-                        variant="outline" 
-                        className={
-                          user.adminType === "master" 
-                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-500"
-                            : user.adminType === "monitoria"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-500"
-                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-500"
-                        }
-                      >
-                        {user.adminType === "master" ? "Master" : user.adminType === "monitoria" ? "Monitoria" : "Supervisao"}
-                      </Badge>
-                    </CardDescription>
-                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <CardDescription className="mt-1 break-words">{user.fullName}</CardDescription>
+                    <div className="mt-2 flex items-center gap-2">
                       {editingPasswordUser === user.id ? (
                         <div className="flex items-center gap-2">
                           <div className="relative">
@@ -604,61 +477,29 @@ export function AccessControlTab() {
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="space-y-4">
-                  {/* Admin Type Selector */}
-                  {user.adminType !== "master" && (
-                    <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-muted/30">
-                      <Label className="text-sm font-semibold text-foreground whitespace-nowrap">Tipo de Admin:</Label>
-                      <Select 
-                        value={user.adminType || "supervisao"} 
-                        onValueChange={(v) => handleAdminTypeChange(user, v as AdminType)}
-                      >
-                        <SelectTrigger className="w-[250px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="monitoria">Monitoria (Acesso Total)</SelectItem>
-                          <SelectItem value="supervisao">Supervisao (Limitado)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Tab Permissions - Only for Supervisao */}
-                  {user.adminType === "supervisao" && (
-                    <>
-                      <Label className="text-sm font-semibold text-foreground">Abas Permitidas</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {availableTabs.map((tab) => {
-                          const isEnabled = (user.allowedTabs || []).includes(tab.id)
-                          return (
-                            <div
-                              key={tab.id}
-                              className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors min-w-0"
-                            >
-                              <Label htmlFor={`${user.id}-${tab.id}`} className="text-sm cursor-pointer flex-1 break-words">
-                                {tab.label}
-                              </Label>
-                              <Switch
-                                id={`${user.id}-${tab.id}`}
-                                checked={isEnabled}
-                                onCheckedChange={() => handleTabToggle(user, tab.id)}
-                                className="flex-shrink-0"
-                              />
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Full access message for Master/Monitoria */}
-                  {(user.adminType === "master" || user.adminType === "monitoria") && (
-                    <div className="p-4 rounded-lg border border-green-500/30 bg-green-50 dark:bg-green-900/20">
-                      <p className="text-sm text-green-700 dark:text-green-400">
-                        Este usuario tem acesso total ao painel administrativo.
-                      </p>
-                    </div>
-                  )}
+                  <Label className="text-sm font-semibold text-foreground">Permissões do Painel Admin</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(permissionLabels).map(([key, label]) => {
+                      const permissionKey = key as keyof AdminPermissions
+                      const isEnabled = user.permissions?.[permissionKey] ?? true
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors min-w-0"
+                        >
+                          <Label htmlFor={`${user.id}-${key}`} className="text-sm cursor-pointer flex-1 break-words">
+                            {label}
+                          </Label>
+                          <Switch
+                            id={`${user.id}-${key}`}
+                            checked={isEnabled}
+                            onCheckedChange={() => handlePermissionToggle(user, permissionKey)}
+                            className="flex-shrink-0"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </CardContent>
             </Card>
