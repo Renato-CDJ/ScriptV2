@@ -58,7 +58,6 @@ import {
   Phone,
   Edit3,
   Save,
-  MessageSquare,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import {
