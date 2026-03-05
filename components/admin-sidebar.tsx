@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -23,13 +24,13 @@ import {
   Megaphone,
   ListChecks,
   HelpCircle,
-  ExternalLink,
   Award,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
+import { QualityCenterModal } from "@/components/quality-center-modal"
 
 interface AdminSidebarProps {
   activeTab: string
@@ -59,6 +60,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const [showQualityModal, setShowQualityModal] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -132,13 +134,14 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30"
-            onClick={() => router.push("/quality-center")}
+            onClick={() => setShowQualityModal(true)}
           >
             <Award className="h-4 w-4" />
             Central da Qualidade
-            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
           </Button>
         </nav>
+
+        <QualityCenterModal isOpen={showQualityModal} onClose={() => setShowQualityModal(false)} />
       </ScrollArea>
 
       <div className="p-3 border-t border-orange-500/30 dark:border-orange-500/40 space-y-2">
