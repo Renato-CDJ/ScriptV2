@@ -38,14 +38,7 @@ export function AccessControlTab() {
   const [editedPassword, setEditedPassword] = useState("")
   const [showEditedPassword, setShowEditedPassword] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-
-  const adminTypeLabels: Record<AdminType, string> = {
-    master: "Master (Acesso Total)",
-    monitoria: "Monitoria (Acesso Total)",
-    supervisao: "Supervisao (Limitado)",
-  }
 
   const availableTabs = [
     { id: "dashboard", label: "Dashboard" },
@@ -63,7 +56,6 @@ export function AccessControlTab() {
   ]
 
   const loadAdminUsers = useCallback(async () => {
-    setLoading(true)
     const supabase = createClient()
     const { data, error } = await supabase
       .from("users")
@@ -87,7 +79,6 @@ export function AccessControlTab() {
       }))
       setAdminUsers(users)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -129,7 +120,7 @@ export function AccessControlTab() {
         description: `Nome do usuário ${user.username} foi atualizado com sucesso`,
       })
     },
-    [editedName, toast],
+    [editedName, toast, loadAdminUsers],
   )
 
   const handleCancelEdit = useCallback(() => {
@@ -184,7 +175,7 @@ export function AccessControlTab() {
         description: `Senha do usuário ${user.username} foi atualizada com sucesso`,
       })
     },
-    [editedPassword, toast],
+    [editedPassword, toast, loadAdminUsers],
   )
 
   const handleCancelPasswordEdit = useCallback(() => {
@@ -214,13 +205,12 @@ export function AccessControlTab() {
 
       loadAdminUsers()
 
-      const tabLabel = availableTabs.find((t) => t.id === tabId)?.label || tabId
       toast({
         title: "Permissao atualizada",
-        description: `${tabLabel} foi ${!isEnabled ? "habilitada" : "desabilitada"} para ${user.fullName}`,
+        description: `Aba ${tabId} foi ${!isEnabled ? "habilitada" : "desabilitada"} para ${user.fullName}`,
       })
     },
-    [toast, availableTabs],
+    [toast, loadAdminUsers],
   )
 
   const handleAdminTypeChange = useCallback(
@@ -228,13 +218,13 @@ export function AccessControlTab() {
       const supabase = createClient()
       
       // If changing to supervisao, set default allowed tabs
-      const allowedTabs = newType === "supervisao" 
+      const newAllowedTabs = newType === "supervisao" 
         ? ["dashboard", "central-qualidade"] 
         : []
 
       const { error } = await supabase
         .from("users")
-        .update({ admin_type: newType, allowed_tabs: allowedTabs })
+        .update({ admin_type: newType, allowed_tabs: newAllowedTabs })
         .eq("id", user.id)
 
       if (error) {
@@ -243,12 +233,17 @@ export function AccessControlTab() {
       }
 
       loadAdminUsers()
+      const typeLabels: Record<AdminType, string> = {
+        master: "Master (Acesso Total)",
+        monitoria: "Monitoria (Acesso Total)",
+        supervisao: "Supervisao (Limitado)",
+      }
       toast({
         title: "Tipo atualizado",
-        description: `${user.fullName} agora e ${adminTypeLabels[newType]}`,
+        description: `${user.fullName} agora e ${typeLabels[newType]}`,
       })
     },
-    [toast, adminTypeLabels],
+    [toast, loadAdminUsers],
   )
 
   const handleCreateUser = useCallback(async () => {
@@ -321,7 +316,7 @@ export function AccessControlTab() {
       title: "Usuario criado",
       description: `Usuario ${newUsername} foi criado com sucesso`,
     })
-  }, [newUsername, newFullName, newPassword, newAdminType, toast])
+  }, [newUsername, newFullName, newPassword, newAdminType, toast, loadAdminUsers])
 
   const handleDeleteUser = useCallback(async () => {
     if (!userToDelete) return
@@ -355,7 +350,7 @@ export function AccessControlTab() {
       title: "Usuario excluido",
       description: `Usuario ${userToDelete.username} foi excluido com sucesso`,
     })
-  }, [userToDelete, toast])
+  }, [userToDelete, toast, loadAdminUsers])
 
   return (
     <div className="space-y-6">
