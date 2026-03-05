@@ -58,20 +58,18 @@ import {
   Phone,
   Edit3,
   Save,
+  MessageSquare,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import {
-  getActiveQualityPosts,
-  createQualityPost,
-  likeQualityPost,
-  voteOnQualityQuiz,
-  addCommentToQualityPost,
-  getAdminQuestions,
-  getQualityCenterStats,
-  getAllUsers,
-  addFeedback,
-  useStoreSubscription,
-} from "@/lib/store"
+  useQualityPosts,
+  useAdminQuestions,
+  createQualityPostSupabase,
+  likePostSupabase,
+  addCommentSupabase,
+  voteOnQuizSupabase,
+  getQualityStatsSupabase,
+} from "@/hooks/use-supabase-realtime"
 import type { QualityPost, User as UserType } from "@/lib/types"
 
 interface QualityCenterModalProps {
@@ -84,17 +82,9 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
   const { theme, setTheme } = useTheme()
   const [activeView, setActiveView] = useState("inicio")
   const [searchQuery, setSearchQuery] = useState("")
-  const [posts, setPosts] = useState<QualityPost[]>([])
-  const [onlineUsers, setOnlineUsers] = useState<UserType[]>([])
-  const storeVersion = useStoreSubscription()
-
-  useEffect(() => {
-    if (isOpen) {
-      setPosts(getActiveQualityPosts())
-      const users = getAllUsers().filter((u) => u.role === "operator" && u.isOnline)
-      setOnlineUsers(users)
-    }
-  }, [isOpen, storeVersion])
+  
+  // Use real-time hooks from Supabase
+  const { posts, loading: postsLoading, refetch: refetchPosts } = useQualityPosts()
 
   const isAdmin = user?.role === "admin"
 
@@ -198,9 +188,44 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
                 onClick={() => setActiveView("ranking")}
               />
 
+              {/* Filter shortcuts */}
+              <div className="my-3 border-t border-border pt-3">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-2">Filtros</p>
+                <SidebarButton
+                  icon={<Megaphone className="h-5 w-5" />}
+                  label="Comunicados"
+                  active={activeView === "filter-comunicado"}
+                  onClick={() => setActiveView("filter-comunicado")}
+                />
+                <SidebarButton
+                  icon={<MessageCircle className="h-5 w-5" />}
+                  label="Recados"
+                  active={activeView === "filter-recado"}
+                  onClick={() => setActiveView("filter-recado")}
+                />
+                <SidebarButton
+                  icon={<ClipboardList className="h-5 w-5" />}
+                  label="Feedback"
+                  active={activeView === "filter-feedback"}
+                  onClick={() => setActiveView("filter-feedback")}
+                />
+                <SidebarButton
+                  icon={<HelpCircle className="h-5 w-5" />}
+                  label="Quiz"
+                  active={activeView === "filter-quiz"}
+                  onClick={() => setActiveView("filter-quiz")}
+                />
+                <SidebarButton
+                  icon={<MessageSquare className="h-5 w-5" />}
+                  label="Perguntas"
+                  active={activeView === "filter-perguntas"}
+                  onClick={() => setActiveView("filter-perguntas")}
+                />
+              </div>
+
               {isAdmin && (
                 <>
-                  <div className="my-4 border-t border-border" />
+                  <div className="my-3 border-t border-border" />
                   <SidebarButton
                     icon={<Shield className="h-5 w-5" />}
                     label="Painel Admin"
@@ -247,7 +272,57 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
                 {activeView === "admin" && isAdmin && (
                   <AdminPanelView user={user} getInitials={getInitials} formatTimeAgo={formatTimeAgo} />
                 )}
-                {activeView !== "inicio" && activeView !== "admin" && activeView !== "perfil" && (
+                {activeView === "filter-comunicado" && (
+                  <FilteredFeedView
+                    posts={posts.filter(p => p.type === "comunicado")}
+                    user={user}
+                    title="Comunicados"
+                    icon={<Megaphone className="h-5 w-5 text-orange-500" />}
+                    getInitials={getInitials}
+                    formatTimeAgo={formatTimeAgo}
+                  />
+                )}
+                {activeView === "filter-recado" && (
+                  <FilteredFeedView
+                    posts={posts.filter(p => p.type === "recado")}
+                    user={user}
+                    title="Recados"
+                    icon={<MessageCircle className="h-5 w-5 text-blue-500" />}
+                    getInitials={getInitials}
+                    formatTimeAgo={formatTimeAgo}
+                  />
+                )}
+                {activeView === "filter-feedback" && (
+                  <FilteredFeedView
+                    posts={posts.filter(p => p.type === "feedback")}
+                    user={user}
+                    title="Feedbacks"
+                    icon={<ClipboardList className="h-5 w-5 text-green-500" />}
+                    getInitials={getInitials}
+                    formatTimeAgo={formatTimeAgo}
+                  />
+                )}
+                {activeView === "filter-quiz" && (
+                  <FilteredFeedView
+                    posts={posts.filter(p => p.type === "quiz")}
+                    user={user}
+                    title="Quizzes"
+                    icon={<HelpCircle className="h-5 w-5 text-purple-500" />}
+                    getInitials={getInitials}
+                    formatTimeAgo={formatTimeAgo}
+                  />
+                )}
+                {activeView === "filter-perguntas" && (
+                  <FilteredFeedView
+                    posts={posts.filter(p => p.type === "pergunta")}
+                    user={user}
+                    title="Perguntas"
+                    icon={<MessageSquare className="h-5 w-5 text-cyan-500" />}
+                    getInitials={getInitials}
+                    formatTimeAgo={formatTimeAgo}
+                  />
+                )}
+                {!["inicio", "admin", "perfil", "filter-comunicado", "filter-recado", "filter-feedback", "filter-quiz", "filter-perguntas"].includes(activeView) && (
                   <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
                     <div className="p-6 bg-muted rounded-full mb-4">
                       <Settings className="h-12 w-12" />
@@ -517,6 +592,70 @@ function ProfileView({ user, getInitials }: { user: any; getInitials: (name: str
           </CardContent>
         </Card>
       </div>
+    </div>
+  )
+}
+
+// Filtered Feed View Component
+function FilteredFeedView({
+  posts,
+  user,
+  title,
+  icon,
+  getInitials,
+  formatTimeAgo,
+}: {
+  posts: QualityPost[]
+  user: any
+  title: string
+  icon: React.ReactNode
+  getInitials: (name: string) => string
+  formatTimeAgo: (date: Date) => string
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-4">
+        {icon}
+        <h2 className="text-xl font-bold">{title}</h2>
+        <Badge variant="secondary" className="ml-2">{posts.length}</Badge>
+      </div>
+      
+      {posts.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <div className="p-4 bg-muted rounded-full w-fit mx-auto mb-3">
+            {icon}
+          </div>
+          <p>Nenhum {title.toLowerCase().slice(0, -1)} encontrado</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <Card key={post.id} className="border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-10 w-10 border border-border">
+                    <AvatarFallback className="text-sm bg-muted">
+                      {getInitials(post.authorName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-sm">{post.authorName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimeAgo(new Date(post.createdAt))}
+                      </span>
+                    </div>
+                    <div 
+                      className="text-sm prose prose-sm dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: post.content }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -883,77 +1022,73 @@ function AdminPanelView({
   const [activeTab, setActiveTab] = useState("publicar")
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Shield className="h-5 w-5 text-orange-500" />
-          <h2 className="text-xl font-bold">Painel Administrativo</h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Gerencie publicacoes, quizzes, feedbacks e visualize perguntas dos colaboradores.
-        </p>
+    <div className="flex gap-6">
+      {/* Questions Panel - Left Side */}
+      <div className="w-80 shrink-0">
+        <QuestionsTab getInitials={getInitials} formatTimeAgo={formatTimeAgo} compact />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-muted/30 border border-border p-1 mb-4 h-auto flex-wrap">
-          <TabsTrigger
-            value="publicar"
-            className="gap-1.5 text-sm data-[state=active]:bg-orange-500 data-[state=active]:text-white"
-          >
-            <Send className="h-3.5 w-3.5" />
-            Publicar
-          </TabsTrigger>
-          <TabsTrigger
-            value="quiz"
-            className="gap-1.5 text-sm data-[state=active]:bg-orange-500 data-[state=active]:text-white"
-          >
-            <HelpCircle className="h-3.5 w-3.5" />
-            Quiz
-          </TabsTrigger>
-          <TabsTrigger
-            value="feedback"
-            className="gap-1.5 text-sm data-[state=active]:bg-orange-500 data-[state=active]:text-white"
-          >
-            <ClipboardList className="h-3.5 w-3.5" />
-            Feedback
-          </TabsTrigger>
-          <TabsTrigger
-            value="perguntas"
-            className="gap-1.5 text-sm relative data-[state=active]:bg-orange-500 data-[state=active]:text-white"
-          >
-            <HelpCircle className="h-3.5 w-3.5" />
-            Perguntas
-            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-red-500 rounded-full" />
-          </TabsTrigger>
-          <TabsTrigger
-            value="estatisticas"
-            className="gap-1.5 text-sm data-[state=active]:bg-orange-500 data-[state=active]:text-white"
-          >
-            <BarChart3 className="h-3.5 w-3.5" />
-            Estatisticas
-          </TabsTrigger>
-        </TabsList>
+      {/* Main Admin Panel - Right Side */}
+      <div className="flex-1 max-w-3xl">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="h-5 w-5 text-orange-500" />
+            <h2 className="text-xl font-bold">Painel Administrativo</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Gerencie publicacoes, quizzes, feedbacks e estatisticas.
+          </p>
+        </div>
 
-        <TabsContent value="publicar" className="mt-0">
-          <PublishTab user={user} />
-        </TabsContent>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="bg-muted/30 border border-border p-1 mb-4 h-auto flex-wrap">
+            <TabsTrigger
+              value="publicar"
+              className="gap-1.5 text-sm data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Publicar
+            </TabsTrigger>
+            <TabsTrigger
+              value="quiz"
+              className="gap-1.5 text-sm data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              Quiz
+            </TabsTrigger>
+            <TabsTrigger
+              value="feedback"
+              className="gap-1.5 text-sm data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+            >
+              <ClipboardList className="h-3.5 w-3.5" />
+              Feedback
+            </TabsTrigger>
+            <TabsTrigger
+              value="estatisticas"
+              className="gap-1.5 text-sm data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              Estatisticas
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="quiz">
-          <QuizTab user={user} />
-        </TabsContent>
+          <TabsContent value="publicar" className="mt-0">
+            <PublishTab user={user} />
+          </TabsContent>
 
-        <TabsContent value="feedback">
-          <FeedbackTab user={user} />
-        </TabsContent>
+          <TabsContent value="quiz">
+            <QuizTab user={user} />
+          </TabsContent>
 
-        <TabsContent value="perguntas">
-          <QuestionsTab getInitials={getInitials} formatTimeAgo={formatTimeAgo} />
-        </TabsContent>
+          <TabsContent value="feedback">
+            <FeedbackTab user={user} />
+          </TabsContent>
 
-        <TabsContent value="estatisticas">
-          <StatsTab />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="estatisticas">
+            <StatsTab />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
@@ -964,15 +1099,14 @@ function PublishTab({ user }: { user: any }) {
   const [type, setType] = useState<"comunicado" | "recado">("comunicado")
   const [sendToAll, setSendToAll] = useState(true)
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!content.trim() || !user) return
 
-    createQualityPost({
+    await createQualityPostSupabase({
       type,
       content,
       authorId: user.id,
       authorName: user.fullName || user.username || "Admin",
-      isActive: true,
     })
 
     setContent("")
@@ -1244,57 +1378,70 @@ function FeedbackTab({ user }: { user: any }) {
 function QuestionsTab({
   getInitials,
   formatTimeAgo,
+  compact = false,
 }: {
   getInitials: (name: string) => string
   formatTimeAgo: (date: Date) => string
+  compact?: boolean
 }) {
-  const [questions, setQuestions] = useState<QualityPost[]>([])
-  const storeVersion = useStoreSubscription()
-
-  useEffect(() => {
-    setQuestions(getAdminQuestions())
-  }, [storeVersion])
+  const { questions, loading } = useAdminQuestions()
 
   return (
-    <Card>
-      <CardContent className="p-6">
+    <Card className={compact ? "border-orange-500/50 border-2" : ""}>
+      <CardHeader className={compact ? "py-3 px-4" : "pb-4"}>
+        <CardTitle className={`flex items-center gap-2 ${compact ? "text-base" : "text-lg"}`}>
+          <HelpCircle className={`text-orange-500 ${compact ? "h-4 w-4" : "h-5 w-5"}`} />
+          Perguntas dos Operadores
+          {questions.length > 0 && (
+            <Badge className="bg-orange-500 text-white ml-1">{questions.length}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className={compact ? "px-4 pb-4 pt-0" : "p-6 pt-0"}>
         {questions.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="p-6 bg-muted rounded-full inline-block mb-4">
-              <HelpCircle className="h-12 w-12 text-muted-foreground" />
+          <div className={`text-center ${compact ? "py-6" : "py-12"}`}>
+            <div className={`bg-muted rounded-full inline-block mb-3 ${compact ? "p-3" : "p-6"}`}>
+              <HelpCircle className={`text-muted-foreground ${compact ? "h-6 w-6" : "h-12 w-12"}`} />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Nenhuma pergunta</h3>
-            <p className="text-muted-foreground">Voce nao tem perguntas pendentes</p>
+            <h3 className={`font-semibold mb-1 ${compact ? "text-sm" : "text-xl"}`}>Nenhuma pergunta</h3>
+            <p className={`text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>Nenhuma pergunta pendente</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {questions.map((question) => (
-              <div key={question.id} className="p-4 border border-border rounded-xl">
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-10 w-10 bg-muted">
-                    <AvatarFallback>{getInitials(question.authorName)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{question.authorName}</span>
-                      <span className="text-sm text-muted-foreground">{formatTimeAgo(question.createdAt)}</span>
-                    </div>
-                    <p className="mt-2">{question.content.replace(/<[^>]*>/g, "")}</p>
-                    <div className="mt-3">
-                      <Textarea placeholder="Digite sua resposta..." className="mb-2" />
-                      <Button
-                        size="sm"
-                        className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Responder
-                      </Button>
+          <ScrollArea className={compact ? "h-[400px]" : "max-h-[500px]"}>
+            <div className="space-y-3">
+              {questions.map((question) => (
+                <div key={question.id} className={`border border-border rounded-lg ${compact ? "p-3" : "p-4"}`}>
+                  <div className="flex items-start gap-2">
+                    <Avatar className={`bg-orange-100 dark:bg-orange-900/50 ${compact ? "h-8 w-8" : "h-10 w-10"}`}>
+                      <AvatarFallback className={`text-orange-600 dark:text-orange-300 ${compact ? "text-xs" : "text-sm"}`}>
+                        {getInitials(question.authorName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-semibold ${compact ? "text-sm" : ""}`}>{question.authorName}</span>
+                        <span className={`text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>
+                          {formatTimeAgo(question.createdAt)}
+                        </span>
+                      </div>
+                      <p className={`mt-1 text-foreground ${compact ? "text-sm" : ""}`}>
+                        {question.content.replace(/<[^>]*>/g, "")}
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs border-orange-500/50 text-orange-600 hover:bg-orange-500/10"
+                        >
+                          Responder
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </ScrollArea>
         )}
       </CardContent>
     </Card>
