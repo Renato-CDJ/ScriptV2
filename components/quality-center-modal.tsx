@@ -86,7 +86,7 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
   const [searchQuery, setSearchQuery] = useState("")
   
   // Use real-time hooks from Supabase
-  const { posts, loading: postsLoading, refetch: refetchPosts } = useQualityPosts()
+  const { posts } = useQualityPosts()
 
   const isAdmin = user?.role === "admin"
 
@@ -1376,7 +1376,7 @@ function QuestionsTab({
   formatTimeAgo: (date: Date) => string
   compact?: boolean
 }) {
-  const { questions, loading } = useAdminQuestions()
+  const { questions } = useAdminQuestions()
 
   return (
     <Card className={compact ? "border-orange-500/50 border-2" : ""}>

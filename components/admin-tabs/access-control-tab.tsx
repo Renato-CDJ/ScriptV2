@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
-import type { User, AdminPermissions, AdminType } from "@/lib/types"
+import type { User, AdminType } from "@/lib/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Shield, Edit2, Save, X, Plus, Trash2, UserPlus, Eye, EyeOff, Key } from "lucide-react"
@@ -62,11 +62,7 @@ export function AccessControlTab() {
     { id: "settings", label: "Configuracoes" },
   ]
 
-  useEffect(() => {
-    loadAdminUsers()
-  }, [])
-
-  const loadAdminUsers = async () => {
+  const loadAdminUsers = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
     const { data, error } = await supabase
@@ -92,7 +88,11 @@ export function AccessControlTab() {
       setAdminUsers(users)
     }
     setLoading(false)
-  }
+  }, [])
+
+  useEffect(() => {
+    loadAdminUsers()
+  }, [loadAdminUsers])
 
   const handleEditName = useCallback((user: User) => {
     setEditingUser(user.id)
