@@ -334,3 +334,28 @@ export async function setUserOnlineSupabase(userId: string, isOnline: boolean): 
   const supabase = createClient()
   await supabase.from("users").update({ is_online: isOnline }).eq("id", userId)
 }
+
+// Create feedback
+export async function createFeedbackSupabase(feedback: {
+  operatorId: string
+  operatorName: string
+  createdBy: string
+  createdByName: string
+  feedbackType: "positive" | "negative"
+  details: string
+  score: number
+}): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from("feedbacks").insert({
+    operator_id: feedback.operatorId,
+    operator_name: feedback.operatorName,
+    created_by: feedback.createdBy,
+    created_by_name: feedback.createdByName,
+    feedback_type: feedback.feedbackType,
+    details: feedback.details,
+    score: feedback.score,
+    is_active: true,
+    is_read: false,
+  })
+  return !error
+}

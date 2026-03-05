@@ -64,11 +64,13 @@ import { useTheme } from "next-themes"
 import {
   useQualityPosts,
   useAdminQuestions,
+  useAllUsers,
   createQualityPostSupabase,
   likePostSupabase,
   addCommentSupabase,
   voteOnQuizSupabase,
   getQualityStatsSupabase,
+  createFeedbackSupabase,
 } from "@/hooks/use-supabase-realtime"
 import type { QualityPost, User as UserType } from "@/lib/types"
 
@@ -687,15 +689,14 @@ function FeedView({
     )
   })
 
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     if (!newPostContent.trim() || !user) return
 
-    createQualityPost({
+    await createQualityPostSupabase({
       type: isQuestionToAdmin ? "pergunta" : "comunicado",
       content: newPostContent,
       authorId: user.id,
       authorName: user.fullName || user.username || "Usuario",
-      isActive: true,
       isQuestionToAdmin,
     })
 
@@ -703,20 +704,20 @@ function FeedView({
     setIsQuestionToAdmin(false)
   }
 
-  const handleLike = (postId: string) => {
+  const handleLike = async (postId: string) => {
     if (!user) return
-    likeQualityPost(postId, user.id)
+    await likePostSupabase(postId, user.id)
   }
 
-  const handleVote = (postId: string, optionId: string) => {
+  const handleVote = async (postId: string, optionId: string) => {
     if (!user) return
-    voteOnQualityQuiz(postId, optionId, user.id)
+    await voteOnQuizSupabase(postId, optionId, user.id)
   }
 
-  const handleComment = (postId: string) => {
+  const handleComment = async (postId: string) => {
     if (!user || !commentInputs[postId]?.trim()) return
 
-    addCommentToQualityPost(postId, {
+    await addCommentSupabase(postId, {
       authorId: user.id,
       authorName: user.fullName || user.username || "Usuario",
       content: commentInputs[postId],
@@ -964,12 +965,7 @@ function QuestionsReceivedSection({
   getInitials: (name: string) => string
   formatTimeAgo: (date: Date) => string
 }) {
-  const [questions, setQuestions] = useState<QualityPost[]>([])
-  const storeVersion = useStoreSubscription()
-
-  useEffect(() => {
-    setQuestions(getAdminQuestions())
-  }, [storeVersion])
+  const { questions } = useAdminQuestions()
 
   if (questions.length === 0) return null
 
@@ -1208,15 +1204,14 @@ function QuizTab({ user }: { user: any }) {
     setOptions(newOptions)
   }
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!question.trim() || options.filter((o) => o.trim()).length < 2 || !user) return
 
-    createQualityPost({
+    await createQualityPostSupabase({
       type: "quiz",
       content: question,
       authorId: user.id,
       authorName: user.fullName || user.username || "Admin",
-      isActive: true,
       quizOptions: options
         .filter((o) => o.trim())
         .map((text, i) => ({ id: `opt-${Date.now()}-${i}`, text, votes: [] })),
@@ -1278,17 +1273,15 @@ function FeedbackTab({ user }: { user: any }) {
   const [selectedOperator, setSelectedOperator] = useState("")
   const [feedbackType, setFeedbackType] = useState<"positive" | "negative">("positive")
   const [details, setDetails] = useState("")
-  const [operators, setOperators] = useState<UserType[]>([])
+  const { users: operators } = useAllUsers()
 
-  useEffect(() => {
-    setOperators(getAllUsers().filter((u) => u.role === "operator"))
-  }, [])
+  const filteredOperators = operators.filter((u) => u.role === "operator")
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedOperator || !details.trim() || !user) return
 
-    const operator = operators.find((o) => o.id === selectedOperator)
-    addFeedback({
+    const operator = filteredOperators.find((o) => o.id === selectedOperator)
+    await createFeedbackSupabase({
       operatorId: selectedOperator,
       operatorName: operator?.fullName || operator?.username || "Operador",
       createdBy: user.id,
@@ -1296,7 +1289,6 @@ function FeedbackTab({ user }: { user: any }) {
       feedbackType,
       details,
       score: feedbackType === "positive" ? 80 : 40,
-      isActive: true,
     })
 
     setSelectedOperator("")
@@ -1314,7 +1306,7 @@ function FeedbackTab({ user }: { user: any }) {
               <SelectValue placeholder="Selecione o operador" />
             </SelectTrigger>
             <SelectContent>
-              {operators.map((op) => (
+              {filteredOperators.map((op) => (
                 <SelectItem key={op.id} value={op.id}>
                   {op.fullName || op.username}
                 </SelectItem>
@@ -1451,11 +1443,12 @@ function QuestionsTab({
 // Stats Tab
 function StatsTab() {
   const [stats, setStats] = useState({ totalPosts: 0, totalLikes: 0, totalComments: 0, totalUsers: 0, onlineNow: 0 })
-  const storeVersion = useStoreSubscription()
 
   useEffect(() => {
-    setStats(getQualityCenterStats())
-  }, [storeVersion])
+    getQualityStatsSupabase().then((data) => {
+      setStats({ ...data, onlineNow: 0 })
+    })
+  }, [])
 
   const statCards = [
     { label: "Publicacoes", value: stats.totalPosts, icon: <MessageSquare className="h-6 w-6" />, color: "blue" },

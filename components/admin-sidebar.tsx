@@ -71,18 +71,32 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
     setTheme(theme === "dark" ? "light" : "dark")
   }
 
-  const hasPermission = (permission: string) => {
+  const hasPermission = (permission: string, tabId: string) => {
     if (!user) return false
-    // Admin role has all permissions
-    if (user.role === "admin") return true
+    
+    // Master admin and Monitoria have all permissions
+    if (user.adminType === "master" || user.adminType === "monitoria") return true
+    
+    // Supervisao has limited permissions - only allowed tabs
+    if (user.adminType === "supervisao") {
+      const allowedTabs = user.allowedTabs || []
+      // Map tab IDs to allowed tab names
+      const tabMapping: Record<string, string> = {
+        "dashboard": "dashboard",
+        "central-qualidade": "central-qualidade",
+      }
+      return allowedTabs.includes(tabMapping[tabId] || tabId)
+    }
 
+    // For other admin users, check permissions object
     const permissions = user.permissions || {}
     return permissions[permission as keyof typeof permissions] !== false
   }
 
-  const visibleMenuItems = menuItems.filter((item) => hasPermission(item.permission))
+  const visibleMenuItems = menuItems.filter((item) => hasPermission(item.permission, item.id))
 
-  const isMainAdmin = user?.role === "admin"
+  // Only master and monitoria can see access control
+  const canSeeAccessControl = user?.adminType === "master" || user?.adminType === "monitoria"
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-orange-500/30 dark:border-orange-500/40">
@@ -114,7 +128,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
             )
           })}
 
-          {isMainAdmin && (
+          {canSeeAccessControl && (
             <Button
               variant={activeTab === "access-control" ? "secondary" : "ghost"}
               className={cn(
