@@ -10,14 +10,13 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import {
-  getActiveQualityPosts,
-  createQualityPost,
-  likeQualityPost,
-  voteOnQualityQuiz,
-  addCommentToQualityPost,
-  getAdminQuestions,
-  getAllUsers,
-} from "@/lib/store"
+  useQualityPosts,
+  useAdminQuestions,
+  createQualityPostSupabase,
+  likePostSupabase,
+  voteOnQuizSupabase,
+  addCommentSupabase,
+} from "@/hooks/use-supabase-realtime"
 import type { QualityPost, User } from "@/lib/types"
 import { Send, HelpCircle, ThumbsUp, MessageCircle, Share2, Megaphone, Brain } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
@@ -26,63 +25,55 @@ import { ptBR } from "date-fns/locale"
 export function QualityCenterFeed() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [posts, setPosts] = useState<QualityPost[]>([])
-  const [pendingQuestions, setPendingQuestions] = useState<QualityPost[]>([])
+  const { posts: allPosts, loading, refetch } = useQualityPosts()
+  const { questions: pendingQuestions } = useAdminQuestions()
   const [newPostContent, setNewPostContent] = useState("")
   const [isQuestionToAdmin, setIsQuestionToAdmin] = useState(false)
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
 
-  const loadData = () => {
-    const allPosts = getActiveQualityPosts()
-    setPosts(allPosts.filter((p) => !p.isQuestionToAdmin || user?.role === "admin"))
-    setPendingQuestions(getAdminQuestions())
-  }
+  // Filter posts based on user role
+  const posts = allPosts.filter((p) => p.type !== "pergunta" || user?.role === "admin")
 
-  useEffect(() => {
-    loadData()
-    const handleUpdate = () => loadData()
-    window.addEventListener("store-updated", handleUpdate)
-    return () => window.removeEventListener("store-updated", handleUpdate)
-  }, [user])
-
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     if (!newPostContent.trim() || !user) return
 
-    createQualityPost({
-      type: isQuestionToAdmin ? "pergunta" : "comunicado",
+    // Operadores sempre publicam como pergunta
+    const isOperator = user.role === "operator"
+    const postType = isOperator ? "pergunta" : (isQuestionToAdmin ? "pergunta" : "comunicado")
+
+    await createQualityPostSupabase({
+      type: postType,
       content: newPostContent.trim(),
       authorId: user.id,
-      authorName: user.fullName,
-      isActive: true,
-      isQuestionToAdmin,
+      authorName: user.fullName || user.username,
     })
 
     setNewPostContent("")
     setIsQuestionToAdmin(false)
     toast({
-      title: isQuestionToAdmin ? "Pergunta enviada" : "Publicacao criada",
-      description: isQuestionToAdmin ? "Sua pergunta foi enviada para o admin" : "Sua publicacao foi criada com sucesso",
+      title: isQuestionToAdmin || isOperator ? "Pergunta enviada" : "Publicacao criada",
+      description: isQuestionToAdmin || isOperator ? "Sua pergunta foi enviada para o admin" : "Sua publicacao foi criada com sucesso",
     })
   }
 
-  const handleLike = (postId: string) => {
+  const handleLike = async (postId: string) => {
     if (!user) return
-    likeQualityPost(postId, user.id)
+    await likePostSupabase(postId, user.id)
   }
 
-  const handleVote = (postId: string, optionId: string) => {
+  const handleVote = async (postId: string, optionId: string) => {
     if (!user) return
-    voteOnQualityQuiz(postId, optionId, user.id)
+    await voteOnQuizSupabase(postId, optionId, user.id)
   }
 
-  const handleComment = (postId: string) => {
+  const handleComment = async (postId: string) => {
     const content = commentInputs[postId]?.trim()
     if (!content || !user) return
 
-    addCommentToQualityPost(postId, {
+    await addCommentSupabase(postId, {
       authorId: user.id,
-      authorName: user.fullName,
+      authorName: user.fullName || user.username,
       content,
     })
 
@@ -97,10 +88,7 @@ export function QualityCenterFeed() {
       .toUpperCase()
       .slice(0, 2) || "U"
 
-  const getPostTypeBadge = (type: QualityPost["type"], isQuestion?: boolean) => {
-    if (isQuestion) {
-      return <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 text-xs">Pergunta</Badge>
-    }
+  const getPostTypeBadge = (type: QualityPost["type"]) => {
     switch (type) {
       case "comunicado":
         return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-xs"><Megaphone className="h-3 w-3 mr-1" />Comunicado</Badge>
@@ -150,43 +138,45 @@ export function QualityCenterFeed() {
         </Card>
       )}
 
-      {/* Create Post */}
-      <Card className="bg-white border-slate-200 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-blue-100 text-blue-600">{userInitials}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <Textarea
-                placeholder="No que voce esta pensando?"
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-                className="min-h-[80px] resize-none border-slate-200 focus:border-blue-500 bg-slate-50"
-              />
-              <div className="flex items-center justify-between mt-3">
-                <Button
-                  variant={isQuestionToAdmin ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIsQuestionToAdmin(!isQuestionToAdmin)}
-                  className={isQuestionToAdmin ? "bg-purple-500 hover:bg-purple-600" : "text-slate-600"}
-                >
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  Pergunta para Admin
-                </Button>
-                <Button
-                  onClick={handleCreatePost}
-                  disabled={!newPostContent.trim()}
-                  className="bg-blue-500 hover:bg-blue-600"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Publicar
-                </Button>
+      {/* Create Post - Only for operators */}
+      {user?.role === "operator" && (
+        <Card className="bg-white border-slate-200 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-blue-100 text-blue-600">{userInitials}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Textarea
+                  placeholder="Compartilhe algo com a equipe..."
+                  value={newPostContent}
+                  onChange={(e) => setNewPostContent(e.target.value)}
+                  className="min-h-[80px] resize-none border-slate-200 focus:border-blue-500 bg-slate-50"
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <Button
+                    variant={isQuestionToAdmin ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsQuestionToAdmin(!isQuestionToAdmin)}
+                    className={isQuestionToAdmin ? "bg-purple-500 hover:bg-purple-600" : "text-slate-600"}
+                  >
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Pergunta para Admin
+                  </Button>
+                  <Button
+                    onClick={handleCreatePost}
+                    disabled={!newPostContent.trim()}
+                    className="bg-orange-500 hover:bg-orange-600"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Publicar
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Posts Feed */}
       <div className="space-y-4">
@@ -212,7 +202,7 @@ export function QualityCenterFeed() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-slate-900">{post.authorName}</span>
-                      {getPostTypeBadge(post.type, post.isQuestionToAdmin)}
+                      {getPostTypeBadge(post.type)}
                     </div>
                     <p className="text-xs text-slate-500">
                       {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ptBR })}

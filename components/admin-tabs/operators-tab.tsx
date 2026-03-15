@@ -29,7 +29,10 @@ import {
   STORAGE_KEYS,
   cleanupDuplicateUsers,
 } from "@/lib/store"
+import { createClient } from "@/lib/supabase/client"
 import type { User } from "@/lib/types"
+
+const supabase = createClient()
 import * as XLSX from "xlsx"
 
 export function OperatorsTab() {
@@ -45,34 +48,61 @@ export function OperatorsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const loadOperators = () => {
-      const allUsers = getAllUsers()
-      const ops = allUsers.filter((u) => u.role === "operator")
+    const loadOperators = async () => {
+      // Fetch operators from Supabase
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("role", "operator")
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("[v0] Error loading operators:", error)
+        return
+      }
+
+      const ops: User[] = (data || []).map((u: any) => ({
+        id: u.id,
+        username: u.username,
+        fullName: u.name,
+        isOnline: u.is_online || false,
+        role: u.role,
+        createdAt: new Date(u.created_at),
+        loginSessions: [],
+        permissions: {
+          dashboard: true,
+          scripts: true,
+          products: true,
+          attendanceConfig: false,
+          tabulations: false,
+          situations: false,
+          channels: false,
+          notes: true,
+          operators: false,
+          messagesQuiz: false,
+          chat: true,
+          settings: false,
+        },
+      }))
       setOperators(ops)
     }
 
     loadOperators()
 
-    const cleanup = cleanupDuplicateUsers()
-    if (cleanup.removed > 0) {
-      toast({
-        title: "Duplicatas Removidas",
-        description: `${cleanup.removed} usuário(s) duplicado(s) foram removidos automaticamente`,
-      })
-      loadOperators()
-    }
-
-    const interval = setInterval(loadOperators, 10000)
-
-    const handleStoreUpdate = () => {
-      loadOperators()
-    }
-
-    window.addEventListener("store-updated", handleStoreUpdate)
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel("operators-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "users", filter: "role=eq.operator" },
+        () => {
+          loadOperators()
+        }
+      )
+      .subscribe()
 
     return () => {
-      clearInterval(interval)
-      window.removeEventListener("store-updated", handleStoreUpdate)
+      supabase.removeChannel(channel)
     }
   }, [])
 
@@ -93,12 +123,28 @@ export function OperatorsTab() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = (operatorId: string) => {
+  const handleDelete = async (operatorId: string) => {
     if (confirm("Tem certeza que deseja excluir este operador?")) {
+      // Delete from Supabase
+      const { error } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", operatorId)
+
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir operador: " + error.message,
+          variant: "destructive",
+        })
+        return
+      }
+
       deleteUser(operatorId)
+      setOperators(operators.filter(op => op.id !== operatorId))
       toast({
         title: "Sucesso",
-        description: "Operador excluído com sucesso",
+        description: "Operador excluido com sucesso",
       })
     }
   }
@@ -124,7 +170,7 @@ export function OperatorsTab() {
     })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.fullName.trim() || !formData.username.trim()) {
       toast({
         title: "Erro",
@@ -139,6 +185,25 @@ export function OperatorsTab() {
     }
 
     if (isEditMode && editingOperator) {
+      // Update in Supabase
+      const { error } = await supabase
+        .from("users")
+        .update({
+          name: formData.fullName.trim(),
+          username: formData.username.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editingOperator.id)
+
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao atualizar operador: " + error.message,
+          variant: "destructive",
+        })
+        return
+      }
+
       const updatedOperator: User = {
         ...editingOperator,
         fullName: formData.fullName,
@@ -150,26 +215,53 @@ export function OperatorsTab() {
         description: "Operador atualizado com sucesso",
       })
     } else {
-      const allUsers = getAllUsers()
-      const normalizedNew = normalizeUsername(formData.username)
-      const existingUser = allUsers.find((u) => normalizeUsername(u.username) === normalizedNew)
+      // Check if username exists in Supabase
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("username")
+        .ilike("username", formData.username.trim())
+        .single()
 
       if (existingUser) {
         toast({
           title: "Erro",
-          description: `Usuário "${existingUser.username}" já existe no sistema`,
+          description: `Usuario "${existingUser.username}" ja existe no sistema`,
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Insert into Supabase
+      const { data: newUser, error } = await supabase
+        .from("users")
+        .insert({
+          username: formData.username.trim(),
+          name: formData.fullName.trim(),
+          email: `${formData.username.trim()}@operador.com`,
+          role: "operator",
+          is_active: true,
+          is_online: false,
+          allowed_tabs: ["dashboard", "scripts", "products", "notes", "chat"],
+        })
+        .select()
+        .single()
+
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao criar operador: " + error.message,
           variant: "destructive",
         })
         return
       }
 
       const newOperator: User = {
-        id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        username: formData.username.trim(),
-        fullName: formData.fullName.trim(),
+        id: newUser.id,
+        username: newUser.username,
+        fullName: newUser.name,
         isOnline: false,
         role: "operator",
-        createdAt: new Date(),
+        createdAt: new Date(newUser.created_at),
         loginSessions: [],
         permissions: {
           dashboard: true,
@@ -186,12 +278,6 @@ export function OperatorsTab() {
           settings: false,
         },
       }
-
-      allUsers.push(newOperator)
-
-      console.log("[v0] Adding new operator:", newOperator.username, "Total users:", allUsers.length)
-
-      saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
       setOperators([...operators, newOperator])
 
