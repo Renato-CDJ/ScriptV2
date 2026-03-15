@@ -58,9 +58,11 @@ import {
   Phone,
   Edit3,
   Save,
-  MessageSquare,
   Check,
   X,
+  BookOpen,
+  FileText,
+  Eye,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { 
@@ -240,6 +242,12 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
                 active={activeView === "ranking"}
                 onClick={() => setActiveView("ranking")}
               />
+              <SidebarButton
+                icon={<BookOpen className="h-5 w-5" />}
+                label="Treinamentos"
+                active={activeView === "treinamentos"}
+                onClick={() => setActiveView("treinamentos")}
+              />
 
               {/* Filter shortcuts */}
               <div className="my-3 border-t border-border pt-3">
@@ -376,7 +384,10 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
                     formatTimeAgo={formatTimeAgo}
                   />
                 )}
-                {!["inicio", "admin", "perfil", "filter-comunicado", "filter-recado", "filter-feedback", "filter-quiz", "filter-perguntas"].includes(activeView) && (
+                {activeView === "treinamentos" && (
+                  <TreinamentosView user={user} getInitials={getInitials} />
+                )}
+                {!["inicio", "admin", "perfil", "treinamentos", "filter-comunicado", "filter-recado", "filter-feedback", "filter-quiz", "filter-perguntas"].includes(activeView) && (
                   <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
                     <div className="p-6 bg-muted rounded-full mb-4">
                       <Settings className="h-12 w-12" />
@@ -1766,6 +1777,209 @@ function StatsTab() {
           </CardContent>
         </Card>
       ))}
+    </div>
+  )
+}
+
+// Treinamentos View Component
+function TreinamentosView({
+  user,
+  getInitials,
+}: {
+  user: any
+  getInitials: (name: string) => string
+}) {
+  const [trainings, setTrainings] = useState<any[]>([])
+  const [selectedTraining, setSelectedTraining] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  useEffect(() => {
+    // Load trainings from Vercel Blob API
+    const loadTrainings = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await fetch('/api/trainings')
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar treinamentos')
+        }
+        
+        const data = await response.json()
+        setTrainings(data.trainings || [])
+      } catch (err) {
+        console.error("Error loading trainings:", err)
+        setError("Erro ao carregar treinamentos. Tente novamente.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadTrainings()
+  }, [])
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes || bytes === 0) return ""
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
+
+  if (selectedTraining) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => setSelectedTraining(null)}
+            className="gap-2"
+          >
+            <X className="h-4 w-4" />
+            Voltar
+          </Button>
+          <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/30">
+            Treinamento PDF
+          </Badge>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">{selectedTraining.title}</CardTitle>
+            <p className="text-muted-foreground text-sm">{selectedTraining.filename}</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="w-full h-[70vh] border rounded-lg overflow-hidden bg-muted">
+                <iframe
+                  src={`${selectedTraining.url}#toolbar=1&navpanes=1&scrollbar=1`}
+                  className="w-full h-full"
+                  title={selectedTraining.title}
+                />
+              </div>
+              <div className="flex items-center justify-center gap-4">
+                <Button variant="outline" asChild>
+                  <a href={selectedTraining.url} target="_blank" rel="noopener noreferrer">
+                    <Eye className="h-4 w-4 mr-2" />
+                    Abrir em nova aba
+                  </a>
+                </Button>
+                <Button variant="outline" asChild>
+                  <a href={selectedTraining.url} download={selectedTraining.filename}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Baixar PDF
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+            <p className="text-muted-foreground">Carregando treinamentos...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="p-4 bg-destructive/10 rounded-full mb-4">
+              <X className="h-10 w-10 text-destructive" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Erro ao carregar</h3>
+            <p className="text-muted-foreground text-sm text-center">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Treinamentos</h2>
+          <p className="text-muted-foreground text-sm">Acesse os materiais de treinamento em PDF</p>
+        </div>
+        <Badge variant="outline" className="gap-1">
+          <BookOpen className="h-3.5 w-3.5" />
+          {trainings.length} disponível(is)
+        </Badge>
+      </div>
+
+      {trainings.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="p-4 bg-muted rounded-full mb-4">
+              <BookOpen className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Nenhum treinamento disponível</h3>
+            <p className="text-muted-foreground text-sm text-center">
+              Quando novos treinamentos forem publicados, eles aparecerão aqui.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {trainings.map((training) => (
+            <Card 
+              key={training.id}
+              className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-orange-500"
+              onClick={() => setSelectedTraining(training)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-orange-500/10 rounded-lg">
+                      <FileText className="h-6 w-6 text-orange-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{training.title}</h3>
+                      <div className="flex items-center gap-3 mt-2">
+                        <Badge variant="secondary" className="text-xs">
+                          PDF
+                        </Badge>
+                        {training.filename && (
+                          <span className="text-xs text-muted-foreground">
+                            {training.filename}
+                          </span>
+                        )}
+                        {training.size && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatFileSize(training.size)}
+                          </span>
+                        )}
+                        {training.uploadedAt && (
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(training.uploadedAt), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-orange-500">
+                    Visualizar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

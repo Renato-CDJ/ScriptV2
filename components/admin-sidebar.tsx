@@ -48,10 +48,7 @@ const menuItems = [
   { id: "channels", label: "Canais", icon: Radio, permission: "channels" },
   { id: "notes", label: "Bloco de Notas", icon: StickyNote, permission: "notes" },
   { id: "operators", label: "Operadores", icon: Users, permission: "operators" },
-  { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
   { id: "presentations", label: "Apresentações", icon: Presentation, permission: "messagesQuiz" },
-  { id: "feedback", label: "Feedback", icon: Megaphone, permission: "messagesQuiz" },
-  { id: "quality-questions", label: "Pergunte p/ Qualidade", icon: HelpCircle, permission: "messagesQuiz" },
   { id: "result-codes", label: "Codigos de Resultado", icon: ListChecks, permission: "tabulations" },
   { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]
