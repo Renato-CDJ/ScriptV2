@@ -18,6 +18,7 @@ import {
   Hash,
   Filter,
   Bell,
+  BookOpen,
   FileText,
   ListChecks,
 } from "lucide-react"
@@ -27,6 +28,7 @@ import {
   getActiveMessagesForOperator,
   getActiveQuizzesForOperator,
   hasOperatorAnsweredQuiz,
+  getActivePresentationsForOperator,
 } from "@/lib/store"
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -34,7 +36,8 @@ import { useTheme } from "next-themes"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { QualityCenterModal } from "@/components/quality-center-modal"
+import { OperatorMessagesModal } from "@/components/operator-messages-modal"
+import { OperatorPresentationsModal } from "@/components/operator-presentations-modal"
 import { OperatorInitialGuideModal } from "@/components/operator-initial-guide-modal"
 import { OperatorResultCodesModal } from "@/components/operator-result-codes-modal"
 
@@ -71,7 +74,8 @@ export const OperatorHeader = memo(function OperatorHeader({
   const [showMessagesModal, setShowMessagesModal] = useState(false)
   const [unseenMessagesCount, setUnseenMessagesCount] = useState(0)
 
-
+  const [showPresentationsModal, setShowPresentationsModal] = useState(false)
+  const [availablePresentationsCount, setAvailablePresentationsCount] = useState(0)
   const [showInitialGuideModal, setShowInitialGuideModal] = useState(false)
   const [showResultCodesModal, setShowResultCodesModal] = useState(false)
 
@@ -79,6 +83,7 @@ export const OperatorHeader = memo(function OperatorHeader({
     const handleStoreUpdate = () => {
       setProducts(getProducts().filter((p) => p.isActive))
       updateUnseenCount()
+      updateAvailablePresentationsCount()
     }
 
     window.addEventListener("store-updated", handleStoreUpdate)
@@ -87,9 +92,11 @@ export const OperatorHeader = memo(function OperatorHeader({
 
   useEffect(() => {
     updateUnseenCount()
+    updateAvailablePresentationsCount()
 
     const interval = setInterval(() => {
       updateUnseenCount()
+      updateAvailablePresentationsCount()
     }, 15000)
 
     return () => clearInterval(interval)
@@ -105,6 +112,13 @@ export const OperatorHeader = memo(function OperatorHeader({
     const unansweredQuizzes = quizzes.filter((q) => !hasOperatorAnsweredQuiz(q.id, user.id)).length
 
     setUnseenMessagesCount(unseenMessages + unansweredQuizzes)
+  }, [user])
+
+  const updateAvailablePresentationsCount = useCallback(() => {
+    if (!user) return
+
+    const presentations = getActivePresentationsForOperator(user.id)
+    setAvailablePresentationsCount(presentations.length)
   }, [user])
 
   const handleLogout = useCallback(() => {
@@ -350,7 +364,25 @@ export const OperatorHeader = memo(function OperatorHeader({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setShowMessagesModal(true)}
+                onClick={() => setShowPresentationsModal(true)}
+                className="h-9 w-9 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 dark:from-yellow-600 dark:to-orange-600 dark:hover:from-yellow-700 dark:hover:to-orange-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
+                title="Treinamentos"
+              >
+                <BookOpen className="h-4 w-4" />
+                {availablePresentationsCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  >
+                    {availablePresentationsCount}
+                  </Badge>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => router.push("/quality-center")}
                 className="h-9 w-9 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-700 dark:hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
                 title="Central da Qualidade"
               >
@@ -432,7 +464,8 @@ export const OperatorHeader = memo(function OperatorHeader({
         </div>
       </header>
 
-      <QualityCenterModal isOpen={showMessagesModal} onClose={() => setShowMessagesModal(false)} />
+      <OperatorMessagesModal open={showMessagesModal} onOpenChange={setShowMessagesModal} />
+      <OperatorPresentationsModal isOpen={showPresentationsModal} onClose={() => setShowPresentationsModal(false)} />
       <OperatorInitialGuideModal open={showInitialGuideModal} onOpenChange={setShowInitialGuideModal} />
       <OperatorResultCodesModal open={showResultCodesModal} onOpenChange={setShowResultCodesModal} />
     </>

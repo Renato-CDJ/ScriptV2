@@ -7,18 +7,28 @@ import { QualityCenterSidebar } from "./quality-center-sidebar"
 import { QualityCenterFeed } from "./quality-center-feed"
 import { QualityCenterOnlineUsers } from "./quality-center-online-users"
 import { QualityCenterAdminPanel } from "./quality-center-admin-panel"
-import { useAllUsers, useAdminQuestions } from "@/hooks/use-supabase-realtime"
+import { getAllUsers, getAdminQuestions } from "@/lib/store"
 import type { User } from "@/lib/types"
 
 export function QualityCenterLayout() {
   const { user } = useAuth()
   const [showAdminPanel, setShowAdminPanel] = useState(false)
-  
-  const { users: allUsers } = useAllUsers()
-  const { questions: adminQuestions } = useAdminQuestions()
+  const [onlineUsers, setOnlineUsers] = useState<User[]>([])
+  const [pendingQuestions, setPendingQuestions] = useState(0)
 
-  const onlineUsers = allUsers.filter((u) => u.role === "operator" && u.isOnline)
-  const pendingQuestions = adminQuestions.length
+  const loadData = () => {
+    const users = getAllUsers().filter((u) => u.role === "operator" && u.isOnline)
+    setOnlineUsers(users)
+    const questions = getAdminQuestions()
+    setPendingQuestions(questions.length)
+  }
+
+  useEffect(() => {
+    loadData()
+    const handleUpdate = () => loadData()
+    window.addEventListener("store-updated", handleUpdate)
+    return () => window.removeEventListener("store-updated", handleUpdate)
+  }, [])
 
   const isAdmin = user?.role === "admin"
 

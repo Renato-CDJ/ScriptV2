@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,7 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useResultCodes } from "@/hooks/use-supabase-admin"
+import {
+  getResultCodes,
+  createResultCode,
+  updateResultCode,
+  deleteResultCode,
+} from "@/lib/store"
+import type { ResultCode } from "@/lib/types"
 import {
   ListChecks,
   Plus,
@@ -33,155 +39,126 @@ import {
   Search,
   ShieldCheck,
   ShieldAlert,
-  Loader2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-interface ResultCode {
-  id: string
-  code: string
-  name: string
-  description: string
-  category: string
-  color: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
 export function ResultCodesTab() {
-  const { data: resultCodes, loading, create, update, remove } = useResultCodes()
+  const [resultCodes, setResultCodes] = useState<ResultCode[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [filterPhase, setFilterPhase] = useState<"all" | "before" | "after">("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingCode, setEditingCode] = useState<ResultCode | null>(null)
-  const [formCode, setFormCode] = useState("")
   const [formName, setFormName] = useState("")
   const [formDescription, setFormDescription] = useState("")
   const [formPhase, setFormPhase] = useState<"before" | "after">("before")
-  const [saving, setSaving] = useState(false)
   const { toast } = useToast()
+
+  const loadData = useCallback(() => {
+    setResultCodes(getResultCodes())
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    const handleStoreUpdate = () => loadData()
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+  }, [loadData])
 
   const filteredCodes = useMemo(() => {
     return resultCodes
       .filter((c) => {
-        if (filterPhase !== "all" && c.category !== filterPhase) return false
+        if (filterPhase !== "all" && c.phase !== filterPhase) return false
         if (searchQuery) {
           const query = searchQuery.toLowerCase()
           return (
-            c.name.toLowerCase().includes(query) || 
-            c.code?.toLowerCase().includes(query) ||
-            c.description?.toLowerCase().includes(query)
+            c.name.toLowerCase().includes(query) || c.description.toLowerCase().includes(query)
           )
         }
         return true
       })
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [resultCodes, searchQuery, filterPhase])
 
-  const beforeCount = resultCodes.filter((c) => c.category === "before").length
-  const afterCount = resultCodes.filter((c) => c.category === "after").length
+  const beforeCount = resultCodes.filter((c) => c.phase === "before").length
+  const afterCount = resultCodes.filter((c) => c.phase === "after").length
 
   const resetForm = () => {
-    setFormCode("")
     setFormName("")
     setFormDescription("")
     setFormPhase("before")
     setEditingCode(null)
   }
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!formName.trim()) {
       toast({ title: "Erro", description: "O nome e obrigatorio.", variant: "destructive" })
       return
     }
 
-    setSaving(true)
-    const { error } = await create({
-      code: formCode.trim() || `TAB-${Date.now()}`,
+    createResultCode({
       name: formName.trim(),
       description: formDescription.trim(),
-      category: formPhase,
-      color: formPhase === "before" ? "#f59e0b" : "#22c55e",
-      is_active: true,
+      phase: formPhase,
+      isActive: true,
     })
 
-    if (error) {
-      toast({ title: "Erro", description: error, variant: "destructive" })
-    } else {
-      toast({ title: "Sucesso", description: "Tabulacao criada com sucesso." })
-      resetForm()
-      setShowCreateDialog(false)
-    }
-    setSaving(false)
+    toast({ title: "Sucesso", description: "Codigo de resultado criado." })
+    resetForm()
+    setShowCreateDialog(false)
+    loadData()
   }
 
-  const handleUpdate = async () => {
+  const handleUpdate = () => {
     if (!editingCode) return
     if (!formName.trim()) {
       toast({ title: "Erro", description: "O nome e obrigatorio.", variant: "destructive" })
       return
     }
 
-    setSaving(true)
-    const { error } = await update(editingCode.id, {
-      code: formCode.trim(),
+    updateResultCode(editingCode.id, {
       name: formName.trim(),
       description: formDescription.trim(),
-      category: formPhase,
-      color: formPhase === "before" ? "#f59e0b" : "#22c55e",
+      phase: formPhase,
     })
 
-    if (error) {
-      toast({ title: "Erro", description: error, variant: "destructive" })
-    } else {
-      toast({ title: "Sucesso", description: "Tabulacao atualizada." })
-      resetForm()
-      setEditingCode(null)
-    }
-    setSaving(false)
+    toast({ title: "Sucesso", description: "Codigo de resultado atualizado." })
+    resetForm()
+    loadData()
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta tabulacao?")) return
-    
-    const { error } = await remove(id)
-    if (error) {
-      toast({ title: "Erro", description: error, variant: "destructive" })
-    } else {
-      toast({ title: "Sucesso", description: "Tabulacao excluida." })
-    }
+  const handleDelete = (id: string) => {
+    deleteResultCode(id)
+    toast({ title: "Sucesso", description: "Codigo de resultado removido." })
+    loadData()
   }
 
-  const handleToggleActive = async (code: ResultCode) => {
-    await update(code.id, { is_active: !code.is_active })
+  const handleToggleActive = (code: ResultCode) => {
+    updateResultCode(code.id, { isActive: !code.isActive })
+    loadData()
   }
 
   const startEdit = (code: ResultCode) => {
     setEditingCode(code)
-    setFormCode(code.code || "")
     setFormName(code.name)
-    setFormDescription(code.description || "")
-    setFormPhase(code.category === "after" ? "after" : "before")
+    setFormDescription(code.description)
+    setFormPhase(code.phase)
   }
 
   const cancelEdit = () => {
     resetForm()
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    )
-  }
-
   const formFields = (isEdit: boolean) => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Nome da Tabulacao</Label>
+        <Label htmlFor={isEdit ? "edit-code-name" : "create-code-name"} className="text-sm font-medium">
+          Nome da Tabulacao
+        </Label>
         <Input
+          id={isEdit ? "edit-code-name" : "create-code-name"}
           placeholder="Ex: Sem Interesse"
           value={formName}
           onChange={(e) => setFormName(e.target.value)}
@@ -189,8 +166,11 @@ export function ResultCodesTab() {
         />
       </div>
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Descricao</Label>
+        <Label htmlFor={isEdit ? "edit-code-desc" : "create-code-desc"} className="text-sm font-medium">
+          Descricao
+        </Label>
         <Textarea
+          id={isEdit ? "edit-code-desc" : "create-code-desc"}
           placeholder="Descricao da tabulacao..."
           value={formDescription}
           onChange={(e) => setFormDescription(e.target.value)}
@@ -227,20 +207,16 @@ export function ResultCodesTab() {
             </Button>
             <Button
               onClick={handleUpdate}
-              disabled={saving}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Salvar Alteracoes
             </Button>
           </>
         ) : (
           <Button
             onClick={handleCreate}
-            disabled={saving}
             className="bg-orange-500 hover:bg-orange-600 text-white"
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Criar Tabulacao
           </Button>
         )}
@@ -415,7 +391,7 @@ export function ResultCodesTab() {
                         </span>
                       </TableCell>
                       <TableCell className="py-3 text-center">
-                        {code.category === "before" ? (
+                        {code.phase === "before" ? (
                           <Badge
                             variant="outline"
                             className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
@@ -435,7 +411,7 @@ export function ResultCodesTab() {
                       </TableCell>
                       <TableCell className="py-3 text-center">
                         <Switch
-                          checked={code.is_active}
+                          checked={code.isActive}
                           onCheckedChange={() => handleToggleActive(code)}
                         />
                       </TableCell>

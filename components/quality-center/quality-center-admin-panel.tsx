@@ -16,17 +16,14 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import { RichTextEditorWYSIWYG } from "@/components/rich-text-editor-wysiwyg"
 import {
-  useQualityPosts,
-  useAdminQuestions,
-  useAllUsers,
-  createQualityPostSupabase,
-  createFeedbackSupabase,
-  getQualityStatsSupabase,
-} from "@/hooks/use-supabase-realtime"
-import { createClient } from "@/lib/supabase/client"
+  createQualityPost,
+  getAdminQuestions,
+  deleteQualityPost,
+  getQualityCenterStats,
+  getAllUsers,
+  addFeedback,
+} from "@/lib/store"
 import type { QualityPost, User } from "@/lib/types"
-
-const supabase = createClient()
 import {
   Send,
   Megaphone,
@@ -80,53 +77,43 @@ export function QualityCenterAdminPanel({ pendingQuestions }: QualityCenterAdmin
     improvementPoints: "",
   })
 
-  const { users: allUsers } = useAllUsers()
-  const { questions: adminQuestions } = useAdminQuestions()
-  
-  useEffect(() => {
-    setOperators(allUsers.filter((u) => u.role === "operator"))
-  }, [allUsers])
+  const loadData = () => {
+    setOperators(getAllUsers().filter((u) => u.role === "operator"))
+    setQuestions(getAdminQuestions())
+    setStats(getQualityCenterStats())
+  }
 
   useEffect(() => {
-    setQuestions(adminQuestions as any)
-  }, [adminQuestions])
+    loadData()
+    const handleUpdate = () => loadData()
+    window.addEventListener("store-updated", handleUpdate)
+    return () => window.removeEventListener("store-updated", handleUpdate)
+  }, [])
 
-  useEffect(() => {
-    const loadStats = async () => {
-      const s = await getQualityStatsSupabase()
-      setStats({
-        totalPosts: s.postsCount,
-        totalLikes: s.likesCount,
-        totalComments: s.commentsCount,
-        totalUsers: allUsers.length,
-        onlineNow: allUsers.filter((u) => u.isOnline).length,
-      })
-    }
-    loadStats()
-  }, [allUsers])
-
-  const handlePublicarComunicado = async () => {
+  const handlePublicarComunicado = () => {
     if (!comunicadoContent.trim() || !user) return
 
-    await createQualityPostSupabase({
+    createQualityPost({
       type: "comunicado",
       content: comunicadoContent,
       authorId: user.id,
-      authorName: user.fullName || user.username,
+      authorName: user.fullName,
+      isActive: true,
     })
 
     setComunicadoContent("")
     toast({ title: "Comunicado publicado", description: "O comunicado foi publicado com sucesso" })
   }
 
-  const handlePublicarQuiz = async () => {
+  const handlePublicarQuiz = () => {
     if (!quizQuestion.trim() || quizOptions.filter((o) => o.trim()).length < 2 || !user) return
 
-    await createQualityPostSupabase({
+    createQualityPost({
       type: "quiz",
       content: quizQuestion,
       authorId: user.id,
-      authorName: user.fullName || user.username,
+      authorName: user.fullName,
+      isActive: true,
       quizOptions: quizOptions
         .filter((o) => o.trim())
         .map((text, i) => ({
@@ -141,21 +128,22 @@ export function QualityCenterAdminPanel({ pendingQuestions }: QualityCenterAdmin
     toast({ title: "Quiz publicado", description: "O quiz foi publicado com sucesso" })
   }
 
-  const handlePublicarRecado = async () => {
+  const handlePublicarRecado = () => {
     if (!recadoContent.trim() || !user) return
 
-    await createQualityPostSupabase({
+    createQualityPost({
       type: "recado",
       content: recadoContent,
       authorId: user.id,
-      authorName: user.fullName || user.username,
+      authorName: user.fullName,
+      isActive: true,
     })
 
     setRecadoContent("")
     toast({ title: "Recado enviado", description: "O recado foi enviado para a equipe" })
   }
 
-  const handleCriarFeedback = async () => {
+  const handleCriarFeedback = () => {
     if (!user || !feedbackForm.operatorId || !feedbackForm.callDate || !feedbackForm.ecNumber) {
       toast({ title: "Erro", description: "Preencha todos os campos obrigatorios", variant: "destructive" })
       return
@@ -164,11 +152,14 @@ export function QualityCenterAdminPanel({ pendingQuestions }: QualityCenterAdmin
     const operator = operators.find((o) => o.id === feedbackForm.operatorId)
     if (!operator) return
 
-    await createFeedbackSupabase({
-      type: feedbackForm.feedbackType,
-      message: feedbackForm.details,
-      authorId: user.id,
-      authorName: user.fullName || user.username,
+    addFeedback({
+      ...feedbackForm,
+      operatorName: operator.fullName,
+      createdBy: user.id,
+      createdByName: user.fullName,
+      callDate: new Date(`${feedbackForm.callDate}T${feedbackForm.callTime || "00:00"}`),
+      isRead: false,
+      isActive: true,
     })
 
     setFeedbackForm({
@@ -186,8 +177,8 @@ export function QualityCenterAdminPanel({ pendingQuestions }: QualityCenterAdmin
     toast({ title: "Feedback criado", description: "O feedback foi criado com sucesso" })
   }
 
-  const handleDeleteQuestion = async (id: string) => {
-    await supabase.from("quality_posts").delete().eq("id", id)
+  const handleDeleteQuestion = (id: string) => {
+    deleteQualityPost(id)
     toast({ title: "Pergunta removida" })
   }
 

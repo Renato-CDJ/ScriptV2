@@ -1,76 +1,57 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Save, Clock, Loader2 } from "lucide-react"
+import { Save, Clock } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
-import { useNotes } from "@/hooks/use-supabase-admin"
+import { getNotes, saveNote } from "@/lib/store"
+import type { Note } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
 export function NotesTab() {
   const { user } = useAuth()
-  const { data: notes, loading, create, update } = useNotes(user?.id)
   const [content, setContent] = useState("")
+  const [notes, setNotes] = useState<Note[]>([])
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [currentNoteId, setCurrentNoteId] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
-    if (notes && notes.length > 0) {
-      const latestNote = notes[0]
-      setContent(latestNote.content || "")
-      setCurrentNoteId(latestNote.id)
-      setLastSaved(new Date(latestNote.updated_at || latestNote.created_at))
+    if (user) {
+      const userNotes = getNotes(user.id)
+      setNotes(userNotes)
+      if (userNotes.length > 0) {
+        setContent(userNotes[userNotes.length - 1].content)
+        setLastSaved(userNotes[userNotes.length - 1].updatedAt)
+      }
     }
-  }, [notes])
+  }, [user])
 
-  const handleSave = useCallback(async () => {
+  const handleSave = () => {
     if (!user) return
 
-    setSaving(true)
-    try {
-      if (currentNoteId) {
-        await update(currentNoteId, { content, title: "Notas" })
-      } else {
-        const { data } = await create({ title: "Notas", content })
-        if (data) setCurrentNoteId(data.id)
-      }
-      setLastSaved(new Date())
-      toast({
-        title: "Nota salva",
-        description: "Suas anotacoes foram salvas com sucesso.",
-      })
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar nota",
-        variant: "destructive",
-      })
-    }
-    setSaving(false)
-  }, [user, currentNoteId, content, create, update, toast])
+    saveNote(user.id, content)
+    setLastSaved(new Date())
+    setNotes(getNotes(user.id))
+
+    toast({
+      title: "Nota salva",
+      description: "Suas anotações foram salvas com sucesso.",
+    })
+  }
 
   // Auto-save every 30 seconds if there are changes
   useEffect(() => {
     if (!content || !user) return
 
     const autoSaveInterval = setInterval(() => {
-      handleSave()
+      saveNote(user.id, content)
+      setLastSaved(new Date())
     }, 30000)
 
     return () => clearInterval(autoSaveInterval)
-  }, [content, user, handleSave])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    )
-  }
+  }, [content, user])
 
   return (
     <div className="space-y-6">
@@ -95,8 +76,8 @@ export function NotesTab() {
                 )}
               </CardDescription>
             </div>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            <Button onClick={handleSave}>
+              <Save className="h-4 w-4 mr-2" />
               Salvar
             </Button>
           </div>
