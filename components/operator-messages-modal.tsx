@@ -5,13 +5,28 @@ import { SafeHtml } from "@/components/safe-html"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Trophy, ChevronLeft, Loader2 } from "lucide-react"
+import { Trophy, ChevronLeft } from "lucide-react"
 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/lib/auth-context"
-import { useMessages, useQuizzes, useFeedbacksForOperator } from "@/hooks/use-supabase-admin"
-import { useAdminQuestions } from "@/hooks/use-supabase-realtime"
+import {
+  getActiveMessagesForOperator,
+  getHistoricalMessagesForOperator,
+  getActiveQuizzesForOperator,
+  getHistoricalQuizzes,
+  markMessageAsSeen,
+  createQuizAttempt,
+  hasOperatorAnsweredQuiz,
+  getQuizAttemptsByOperator,
+  getFeedbacksByOperator,
+  markFeedbackAsRead,
+  getQualityQuestionsByOperator,
+  canOperatorAskMore,
+  createQualityQuestion,
+  resolveQualityQuestion,
+  reopenQualityQuestion,
+} from "@/lib/store"
 import type { Message, Quiz, Feedback, QualityQuestion } from "@/lib/types"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -37,101 +52,96 @@ interface OperatorMessagesModalProps {
   onOpenChange: (open: boolean) => void
 }
 
+// Mock function for demonstration purposes
+const loadDataFromFirebase = async () => {
+  return new Promise((resolve) => setTimeout(resolve, 500))
+}
+
 export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesModalProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  
-  // Use Supabase hooks for realtime data
-  const { data: messagesData, loading: messagesLoading, markAsSeen } = useMessages(user?.id)
-  const { data: quizzesData, loading: quizzesLoading, submitAttempt } = useQuizzes(user?.id)
-  const { data: feedbacksData, loading: feedbacksLoading, markAsRead: markFeedbackAsRead } = useFeedbacksForOperator(user?.id)
-  const { questions: adminQuestionsData } = useAdminQuestions()
-  
   const [sidebarView, setSidebarView] = useState<"messages" | "quiz" | "feedback" | "questions">("messages")
   const [activeTab, setActiveTab] = useState<"messages" | "quiz">("messages")
   const [showHistory, setShowHistory] = useState(false)
   const [showFeedbackHistory, setShowFeedbackHistory] = useState(false)
   const [showQuestionsHistory, setShowQuestionsHistory] = useState(false)
+  const [qualityQuestions, setQualityQuestions] = useState<QualityQuestion[]>([])
   const [newQuestion, setNewQuestion] = useState("")
   const [reopeningQuestionId, setReopeningQuestionId] = useState<string | null>(null)
   const [reopenReason, setReopenReason] = useState("")
-  const [selectedQuiz, setSelectedQuiz] = useState<any | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [historicalMessages, setHistoricalMessages] = useState<Message[]>([])
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [historicalQuizzes, setHistoricalQuizzes] = useState<Quiz[]>([])
+  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
   const [selectedAnswer, setSelectedAnswer] = useState<string>("")
   const [showResult, setShowResult] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
-  const [expandedMessage, setExpandedMessage] = useState<any | null>(null)
+  const [expandedMessage, setExpandedMessage] = useState<Message | null>(null)
   const [resultTimeout, setResultTimeout] = useState<NodeJS.Timeout | null>(null)
   const [userPreviousAnswer, setUserPreviousAnswer] = useState<string | null>(null)
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
+
   const [fadingFeedbackId, setFadingFeedbackId] = useState<string | null>(null)
 
-  // Map Supabase data to component format
-  const messages = useMemo(() => messagesData
-    .filter((m: any) => m.is_active && (!m.seen_by || !m.seen_by.includes(user?.id)))
-    .map((m: any) => ({
-      id: m.id,
-      title: m.title,
-      content: m.content,
-      priority: m.priority || "normal",
-      isActive: m.is_active,
-      createdAt: new Date(m.created_at),
-      seenBy: m.seen_by || [],
-    })), [messagesData, user?.id])
+  // Assume needsFirebaseLoad is determined elsewhere or always true for this example
+  const needsFirebaseLoad = true
 
-  const historicalMessages = useMemo(() => messagesData
-    .filter((m: any) => m.seen_by && m.seen_by.includes(user?.id))
-    .map((m: any) => ({
-      id: m.id,
-      title: m.title,
-      content: m.content,
-      priority: m.priority || "normal",
-      isActive: m.is_active,
-      createdAt: new Date(m.created_at),
-      seenBy: m.seen_by || [],
-    })), [messagesData, user?.id])
+  // loadDataDebounced is the primary function to refresh all data
+  const loadDataDebounced = useCallback(() => {
+    if (!user) return
 
-  const quizzes = useMemo(() => quizzesData
-    .filter((q: any) => q.is_active)
-    .map((q: any) => ({
-      id: q.id,
-      question: q.question,
-      options: q.options || [],
-      correctAnswer: q.correct_answer,
-      isActive: q.is_active,
-      createdAt: new Date(q.created_at),
-    })), [quizzesData])
+    const loadAll = () => {
+      const activeMessages = getActiveMessagesForOperator(user.id)
+      const histMessages = getHistoricalMessagesForOperator(user.id)
+      const activeQuizzes = getActiveQuizzesForOperator()
+      const histQuizzes = getHistoricalQuizzes()
+      const userFeedbacks = getFeedbacksByOperator(user.id)
+      const userQuestions = getQualityQuestionsByOperator(user.id)
+      
+      setMessages(activeMessages)
+      setHistoricalMessages(histMessages)
+      setQuizzes(activeQuizzes)
+      setHistoricalQuizzes(histQuizzes)
+      setFeedbacks(userFeedbacks)
+      setQualityQuestions(userQuestions)
+    }
 
-  const historicalQuizzes = useMemo(() => quizzesData
-    .filter((q: any) => !q.is_active)
-    .map((q: any) => ({
-      id: q.id,
-      question: q.question,
-      options: q.options || [],
-      correctAnswer: q.correct_answer,
-      isActive: q.is_active,
-      createdAt: new Date(q.created_at),
-    })), [quizzesData])
+    loadAll()
+  }, [user])
 
-  const feedbacks = useMemo(() => feedbacksData
-    .filter((f: any) => !f.is_read)
-    .map((f: any) => ({
-      id: f.id,
-      type: f.type || "positive",
-      message: f.message,
-      senderName: f.sender_name,
-      isRead: f.is_read,
-      createdAt: new Date(f.created_at),
-    })), [feedbacksData])
+  useEffect(() => {
+    // Load data only once on mount and when user is available
+    if (needsFirebaseLoad && user?.id) {
+      loadDataFromFirebase().then(() => {
+        loadDataDebounced()
 
-  // Filter questions for this operator
-  const qualityQuestions = useMemo(() => adminQuestionsData
-    .filter((q: any) => q.authorId === user?.id)
-    .map((q: any) => ({
-      id: q.id,
-      question: q.question,
-      reply: q.reply,
-      status: q.reply ? "answered" : "pending",
-      createdAt: new Date(q.createdAt),
-    })), [adminQuestionsData, user?.id])
+      })
+    }
+  }, [user?.id, needsFirebaseLoad])
+
+  useEffect(() => {
+    if (open) {
+      loadDataDebounced()
+    }
+  }, [open, loadDataDebounced])
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
+    const handleStoreUpdate = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        loadDataDebounced()
+      }, 500)
+    }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      window.removeEventListener("store-updated", handleStoreUpdate)
+      clearTimeout(timeoutId)
+    }
+  }, [loadDataDebounced])
 
   const unseenCount = useMemo(() => {
     if (!user) return 0
@@ -151,55 +161,77 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     [user],
   )
 
-  const [answeredQuizzes, setAnsweredQuizzes] = useState<Set<string>>(new Set())
-
   const hasAnsweredQuiz = useCallback(
     (quizId: string) => {
-      return answeredQuizzes.has(quizId)
+      if (!user) return false
+      return hasOperatorAnsweredQuiz(quizId, user.id)
     },
-    [answeredQuizzes],
+    [user],
   )
 
   const handleMarkAsSeen = useCallback(
-    async (messageId: string) => {
+    (messageId: string) => {
       if (user) {
-        await markAsSeen(messageId)
+        markMessageAsSeen(messageId, user.id)
+        loadDataDebounced()
         toast({
           title: "Mensagem marcada como vista",
           description: "A mensagem foi marcada como vista com sucesso.",
         })
       }
     },
-    [user, markAsSeen, toast],
+    [user, loadDataDebounced, toast],
   )
 
-  const handleSelectQuiz = (quiz: any) => {
+  const handleSelectQuiz = (quiz: Quiz) => {
     setSelectedQuiz(quiz)
     setSelectedAnswer("")
     setShowResult(false)
     setIsCorrect(false)
-    setUserPreviousAnswer(null)
+
+    if (showHistory && user) {
+      const attempts = getQuizAttemptsByOperator(user.id).filter((a) => a.quizId === quiz.id)
+      if (attempts.length > 0) {
+        const lastAttempt = attempts[attempts.length - 1]
+        setUserPreviousAnswer(lastAttempt.selectedAnswer)
+      } else {
+        setUserPreviousAnswer(null)
+      }
+    } else {
+      setUserPreviousAnswer(null)
+    }
   }
 
-  const handleSubmitQuiz = useCallback(async () => {
+  const handleSubmitQuiz = useCallback(() => {
     if (!selectedQuiz || !selectedAnswer || !user) return
 
     const correct = selectedAnswer === selectedQuiz.correctAnswer
     setIsCorrect(correct)
     setShowResult(true)
 
-    await submitAttempt(selectedQuiz.id, selectedAnswer, correct)
-    setAnsweredQuizzes(prev => new Set([...prev, selectedQuiz.id]))
+    createQuizAttempt({
+      quizId: selectedQuiz.id,
+      operatorId: user.id,
+      operatorName: user.fullName,
+      selectedAnswer,
+      isCorrect: correct,
+    })
+
+    window.dispatchEvent(new Event("store-updated"))
 
     if (resultTimeout) clearTimeout(resultTimeout)
     const timeout = setTimeout(() => {
       setShowResult(false)
       setSelectedQuiz(null)
       setSelectedAnswer("")
-      setUserPreviousAnswer(null)
+      setUserPreviousAnswer(null) // Clear previous answer on quiz completion
     }, 5000)
     setResultTimeout(timeout)
-  }, [selectedQuiz, selectedAnswer, user, submitAttempt, resultTimeout])
+
+    setTimeout(() => {
+      loadDataDebounced()
+    }, 500)
+  }, [selectedQuiz, selectedAnswer, user, loadDataDebounced, resultTimeout])
 
   const displayMessages = useMemo(() => {
     const list = showHistory ? historicalMessages : messages
@@ -235,24 +267,26 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
     setUserPreviousAnswer(null)
   }
 
-  const handleMarkFeedbackAsReadFn = useCallback(
-    async (feedbackId: string) => {
+  const handleMarkFeedbackAsRead = useCallback(
+    (feedbackId: string) => {
       if (!user) return
 
       setFadingFeedbackId(feedbackId)
 
       // Wait for animation to complete before marking as read
-      setTimeout(async () => {
-        await markFeedbackAsRead(feedbackId)
+      setTimeout(() => {
+        markFeedbackAsRead(feedbackId, user.id)
+        // Force immediate state update
+        setFeedbacks(getFeedbacksByOperator(user.id))
         setFadingFeedbackId(null)
 
         toast({
           title: "Feedback marcado como lido",
-          description: "Voce confirmou a leitura deste feedback.",
+          description: "Você confirmou a leitura deste feedback.",
         })
       }, 300) // Match animation duration
     },
-    [user, toast, markFeedbackAsRead],
+    [user, toast, loadDataDebounced],
   )
 
   // Determine if feedback is positive based on score
@@ -886,7 +920,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      handleMarkFeedbackAsReadFn(feedback.id)
+                                      handleMarkFeedbackAsRead(feedback.id)
                                     }}
                                     className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium"
                                   >
@@ -924,14 +958,14 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                     </Button>
                   </div>
 
-                  {/* New Question Form - limit to 3 open questions */}
-                  {!showQuestionsHistory && user && qualityQuestions.filter((q) => q.status === "pending").length < 3 && (
+                  {/* New Question Form */}
+                  {!showQuestionsHistory && user && canOperatorAskMore(user.id) && (
                     <div className="rounded-xl border border-orange-500/30 bg-card p-4 space-y-3">
                       <div className="flex items-center gap-2">
                         <HelpCircle className="h-4 w-4 text-orange-500" />
                         <span className="text-sm font-semibold text-foreground">Enviar nova pergunta</span>
                         <span className="text-xs text-muted-foreground ml-auto">
-                          {3 - qualityQuestions.filter((q) => q.status === "pending").length} restante(s)
+                          {3 - qualityQuestions.filter((q) => !q.isResolved).length} restante(s)
                         </span>
                       </div>
                       <Textarea
@@ -943,16 +977,15 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                       />
                       <Button
                         size="sm"
-                        onClick={async () => {
+                        onClick={() => {
                           if (!newQuestion.trim() || !user) return
-                          // Using createAdminQuestion from useAdminQuestions hook imported
-                          const { createAdminQuestion } = await import("@/hooks/use-supabase-realtime")
-                          await createAdminQuestion({
+                          createQualityQuestion({
+                            operatorId: user.id,
+                            operatorName: user.fullName,
                             question: newQuestion.trim(),
-                            authorId: user.id,
-                            authorName: user.fullName || user.username || "Operador",
                           })
                           setNewQuestion("")
+                          loadDataDebounced()
                           toast({
                             title: "Pergunta enviada",
                             description: "Sua pergunta foi enviada para a equipe de Qualidade.",
@@ -967,7 +1000,7 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                     </div>
                   )}
 
-                  {!showQuestionsHistory && user && qualityQuestions.filter((q) => q.status === "pending").length >= 3 && (
+                  {!showQuestionsHistory && user && !canOperatorAskMore(user.id) && (
                     <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
                       <p className="text-sm text-amber-600 dark:text-amber-400 font-medium text-center">
                         Voce atingiu o limite de 3 perguntas em aberto. Aguarde a resposta ou confirme as existentes.
@@ -1086,12 +1119,12 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   <div className="flex gap-2">
                                     <Button
                                       size="sm"
-                                      onClick={async () => {
+                                      onClick={() => {
                                         if (!reopenReason.trim()) return
-                                        const { markQuestionUnderstood } = await import("@/hooks/use-supabase-realtime")
-                                        await markQuestionUnderstood(q.id, false)
+                                        reopenQualityQuestion(q.id, reopenReason.trim())
                                         setReopeningQuestionId(null)
                                         setReopenReason("")
+                                        loadDataDebounced()
                                         toast({ title: "Pergunta reaberta", description: "A Qualidade recebera sua observacao e podera responder novamente." })
                                       }}
                                       disabled={!reopenReason.trim()}
@@ -1119,9 +1152,9 @@ export function OperatorMessagesModal({ open, onOpenChange }: OperatorMessagesMo
                                   <div className="flex gap-2">
                                     <Button
                                       size="sm"
-                                      onClick={async () => {
-                                        const { markQuestionUnderstood } = await import("@/hooks/use-supabase-realtime")
-                                        await markQuestionUnderstood(q.id, true)
+                                      onClick={() => {
+                                        resolveQualityQuestion(q.id, true)
+                                        loadDataDebounced()
                                         toast({ title: "Obrigado!", description: "Sua pergunta foi marcada como esclarecida." })
                                       }}
                                       className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm"

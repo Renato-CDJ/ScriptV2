@@ -20,8 +20,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { useMessages, useQuizzes } from "@/hooks/use-supabase-admin"
-import { useAllUsers } from "@/hooks/use-supabase-realtime"
+import {
+  getMessages,
+  createMessage,
+  updateMessage,
+  deleteMessage,
+  getQuizzes,
+  createQuiz,
+  updateQuiz,
+  deleteQuiz,
+  getQuizAttemptsByQuiz,
+  getAllUsers,
+  getMonthlyQuizRanking,
+} from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
 import type { Message, Quiz, QuizOption, OperatorRanking, ContentSegment } from "@/lib/types"
 import {
@@ -55,20 +66,16 @@ import { RichTextEditorWYSIWYG } from "@/components/rich-text-editor-wysiwyg"
 export function MessagesQuizTab() {
   const { user } = useAuth()
   const { toast } = useToast()
-  
-  // Use Supabase hooks for realtime data
-  const { data: messagesData, loading: messagesLoading, create: createMessage, update: updateMessage, remove: deleteMessage } = useMessages()
-  const { data: quizzesData, loading: quizzesLoading, create: createQuiz, update: updateQuiz, remove: deleteQuiz, getAttempts } = useQuizzes()
-  const { users: allUsersData } = useAllUsers()
-  
   const [activeSection, setActiveSection] = useState<"messages" | "quiz" | "ranking">("messages")
+  const [messages, setMessages] = useState<Message[]>([])
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [operators, setOperators] = useState<{ id: string; fullName: string }[]>([])
   const [showMessageDialog, setShowMessageDialog] = useState(false)
   const [showQuizDialog, setShowQuizDialog] = useState(false)
   const [showMessageHistoryDialog, setShowMessageHistoryDialog] = useState(false)
   const [showQuizHistoryDialog, setShowQuizHistoryDialog] = useState(false)
-  const [editingMessage, setEditingMessage] = useState<any | null>(null)
-  const [editingQuiz, setEditingQuiz] = useState<any | null>(null)
-  const [saving, setSaving] = useState(false)
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null)
+  const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null)
 
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(new Set())
   const [expandedQuizIds, setExpandedQuizIds] = useState<Set<string>>(new Set())
@@ -98,39 +105,48 @@ export function MessagesQuizTab() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  // Map Supabase data to component format
-  const messages = useMemo(() => messagesData.map((m: any) => ({
-    id: m.id,
-    title: m.title || "",
-    content: m.content,
-    priority: m.priority || "normal",
-    isActive: m.is_active,
-    createdAt: new Date(m.created_at),
-    seenBy: m.seen_by || [],
-    recipients: m.recipients || [],
-    sendToAll: m.send_to_all ?? true,
-    segments: m.segments || [],
-  })), [messagesData])
+  // CHANGE: Using useCallback to memoize expensive functions
+  const loadData = useCallback(() => {
+    setMessages(getMessages())
+    setQuizzes(getQuizzes())
+  }, [])
 
-  const quizzes = useMemo(() => quizzesData.map((q: any) => ({
-    id: q.id,
-    question: q.question,
-    options: q.options || [],
-    correctAnswer: q.correct_answer,
-    isActive: q.is_active,
-    createdAt: new Date(q.created_at),
-    scheduledDate: q.scheduled_date ? new Date(q.scheduled_date) : undefined,
-  })), [quizzesData])
+  const loadOperators = useCallback(() => {
+    const allUsers = getAllUsers()
+    const operatorUsers = allUsers.filter((u) => u.role === "operator")
+    setOperators(operatorUsers.map((u) => ({ id: u.id, fullName: u.fullName })))
+  }, [])
 
-  const operators = useMemo(() => allUsersData
-    .filter((u: any) => u.role === "operator")
-    .map((u: any) => ({ id: u.id, fullName: u.fullName || u.username })), [allUsersData])
+  const loadRankings = useCallback(() => {
+    setRankings(getMonthlyQuizRanking(selectedYear, selectedMonth))
+  }, [selectedYear, selectedMonth])
 
-  // Active and historical messages/quizzes
-  const activeMessages = useMemo(() => messages.filter(m => m.isActive), [messages])
-  const historicalMessages = useMemo(() => messages.filter(m => !m.isActive), [messages])
-  const activeQuizzes = useMemo(() => quizzes.filter(q => q.isActive), [quizzes])
-  const historicalQuizzes = useMemo(() => quizzes.filter(q => !q.isActive), [quizzes])
+  // CHANGE: Debounced store update handler to reduce re-renders
+  useEffect(() => {
+    loadData()
+    loadOperators()
+    loadRankings()
+  }, [loadData, loadOperators, loadRankings])
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
+    const handleStoreUpdate = () => {
+      // Reduced debounce time from 300ms to 200ms for faster updates
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        loadData()
+        loadOperators()
+        loadRankings()
+      }, 200)
+    }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      window.removeEventListener("store-updated", handleStoreUpdate)
+      clearTimeout(timeoutId)
+    }
+  }, [loadData, loadOperators, loadRankings])
 
   // CHANGE: Memoize expensive filtering operations
   const filteredOperators = useMemo(() => {
@@ -174,7 +190,7 @@ export function MessagesQuizTab() {
     setOperatorSearch("")
   }
 
-
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleSaveMessage = useCallback(async () => {
     if (!user || !messageContent.trim()) {
@@ -195,38 +211,34 @@ export function MessagesQuizTab() {
       return
     }
 
-    setSaving(true)
+    setIsSaving(true)
 
     try {
       const recipients = sendToAll ? [] : messageRecipients
 
       if (editingMessage) {
-        const { error } = await updateMessage(editingMessage.id, {
+        updateMessage({
+          ...editingMessage,
           title: messageContent.substring(0, 50) + (messageContent.length > 50 ? "..." : ""),
           content: messageContent,
-          is_active: messageActive,
+          isActive: messageActive,
           recipients,
           segments: messageSegments,
-          send_to_all: sendToAll,
         })
-        if (error) throw new Error(error)
         toast({
           title: "Recado atualizado",
           description: "O recado foi atualizado com sucesso.",
         })
       } else {
-        const { error } = await createMessage({
+        createMessage({
           title: messageContent.substring(0, 50) + (messageContent.length > 50 ? "..." : ""),
           content: messageContent,
-          created_by: user.id,
-          created_by_name: user.fullName,
-          is_active: messageActive,
+          createdBy: user.id,
+          createdByName: user.fullName,
+          isActive: messageActive,
           recipients,
           segments: messageSegments,
-          send_to_all: sendToAll,
-          seen_by: [],
         })
-        if (error) throw new Error(error)
         toast({
           title: "Recado criado",
           description: "O recado foi criado com sucesso.",
@@ -235,14 +247,9 @@ export function MessagesQuizTab() {
 
       setShowMessageDialog(false)
       resetMessageForm()
-    } catch (err: any) {
-      toast({
-        title: "Erro",
-        description: err.message || "Erro ao salvar recado",
-        variant: "destructive",
-      })
+      loadData()
     } finally {
-      setSaving(false)
+      setIsSaving(false)
     }
   }, [
     user,
@@ -253,8 +260,7 @@ export function MessagesQuizTab() {
     messageSegments,
     editingMessage,
     toast,
-    createMessage,
-    updateMessage,
+    loadData,
   ])
 
   const handleEditMessage = (message: Message) => {
@@ -267,21 +273,14 @@ export function MessagesQuizTab() {
     setShowMessageDialog(true)
   }
 
-  const handleDeleteMessage = async (id: string) => {
+  const handleDeleteMessage = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este recado?")) {
-      const { error } = await deleteMessage(id)
-      if (error) {
-        toast({
-          title: "Erro",
-          description: error,
-          variant: "destructive",
-        })
-        return
-      }
+      deleteMessage(id)
       toast({
         title: "Recado excluído",
         description: "O recado foi excluído com sucesso.",
       })
+      loadData()
     }
   }
 
@@ -312,7 +311,7 @@ export function MessagesQuizTab() {
     }
   }
 
-  const handleSaveQuiz = async () => {
+  const handleSaveQuiz = () => {
     if (!user || !quizQuestion.trim() || !quizCorrectAnswer) {
       toast({
         title: "Erro",
@@ -347,53 +346,42 @@ export function MessagesQuizTab() {
       }
     }
 
-    const scheduledDate = quizScheduledDate ? new Date(quizScheduledDate).toISOString() : null
+    const scheduledDate = quizScheduledDate ? new Date(quizScheduledDate) : new Date()
 
-    setSaving(true)
-    try {
-      if (editingQuiz) {
-        const { error } = await updateQuiz(editingQuiz.id, {
-          question: quizQuestion,
-          options: quizOptions,
-          correct_answer: quizCorrectAnswer,
-          is_active: quizActive,
-          scheduled_date: scheduledDate,
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Quiz atualizado",
-          description: "O quiz foi atualizado com sucesso.",
-        })
-      } else {
-        const { error } = await createQuiz({
-          question: quizQuestion,
-          options: quizOptions,
-          correct_answer: quizCorrectAnswer,
-          created_by: user.id,
-          created_by_name: user.fullName,
-          is_active: quizActive,
-          scheduled_date: scheduledDate,
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Quiz criado",
-          description: scheduledDate
-            ? `O quiz foi agendado para ${new Date(scheduledDate).toLocaleDateString("pt-BR")}.`
-            : "O quiz foi criado com sucesso.",
-        })
-      }
-
-      setShowQuizDialog(false)
-      resetQuizForm()
-    } catch (err: any) {
-      toast({
-        title: "Erro",
-        description: err.message || "Erro ao salvar quiz",
-        variant: "destructive",
+    if (editingQuiz) {
+      updateQuiz({
+        ...editingQuiz,
+        question: quizQuestion,
+        options: quizOptions,
+        correctAnswer: quizCorrectAnswer,
+        isActive: quizActive,
+        scheduledDate,
       })
-    } finally {
-      setSaving(false)
+      toast({
+        title: "Quiz atualizado",
+        description: "O quiz foi atualizado com sucesso.",
+      })
+    } else {
+      createQuiz({
+        question: quizQuestion,
+        options: quizOptions,
+        correctAnswer: quizCorrectAnswer,
+        createdBy: user.id,
+        createdByName: user.fullName,
+        isActive: quizActive,
+        scheduledDate,
+      })
+      toast({
+        title: "Quiz criado",
+        description: scheduledDate
+          ? `O quiz foi agendado para ${new Date(scheduledDate).toLocaleDateString("pt-BR")}.`
+          : "O quiz foi criado com sucesso.",
+      })
     }
+
+    setShowQuizDialog(false)
+    resetQuizForm()
+    loadData()
   }
 
   const handleEditQuiz = (quiz: Quiz) => {
@@ -406,21 +394,14 @@ export function MessagesQuizTab() {
     setShowQuizDialog(true)
   }
 
-  const handleDeleteQuiz = async (id: string) => {
+  const handleDeleteQuiz = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este quiz?")) {
-      const { error } = await deleteQuiz(id)
-      if (error) {
-        toast({
-          title: "Erro",
-          description: error,
-          variant: "destructive",
-        })
-        return
-      }
+      deleteQuiz(id)
       toast({
         title: "Quiz excluído",
         description: "O quiz foi excluído com sucesso.",
       })
+      loadData()
     }
   }
 
@@ -713,11 +694,11 @@ export function MessagesQuizTab() {
                         <Label htmlFor="message-active">Ativo</Label>
                       </div>
                       <div className="flex gap-2 justify-end">
-                        <Button variant="outline" onClick={() => setShowMessageDialog(false)} disabled={saving}>
+                        <Button variant="outline" onClick={() => setShowMessageDialog(false)} disabled={isSaving}>
                           Cancelar
                         </Button>
-                        <Button onClick={handleSaveMessage} disabled={saving}>
-                          {saving ? "Salvando..." : "Salvar"}
+                        <Button onClick={handleSaveMessage} disabled={isSaving}>
+                          {isSaving ? "Salvando..." : "Salvar"}
                         </Button>
                       </div>
                     </div>

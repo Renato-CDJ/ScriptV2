@@ -1,33 +1,30 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Edit, Trash2, Save, X, ExternalLink, Copy, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, Save, X, ExternalLink, Copy } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { useChannels } from "@/hooks/use-supabase-admin"
+import { getChannels } from "@/lib/store"
+import type { Channel } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
-interface Channel {
-  id: string
-  name: string
-  description: string
-  icon: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
 export function ChannelsTab() {
-  const { data: channels, loading, create, update, remove } = useChannels()
-  const [editingItem, setEditingItem] = useState<Partial<Channel> | null>(null)
+  const [channels, setChannels] = useState<Channel[]>(getChannels())
+  const [editingItem, setEditingItem] = useState<Channel | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [saving, setSaving] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    const handleStoreUpdate = () => {
+      setChannels(getChannels())
+    }
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+  }, [])
 
   const handleEdit = (item: Channel) => {
     setEditingItem({ ...item })
@@ -35,71 +32,56 @@ export function ChannelsTab() {
   }
 
   const handleCreate = () => {
-    setEditingItem({
+    const newItem: Channel = {
+      id: `ch-${Date.now()}`,
       name: "",
-      description: "",
-      icon: "phone",
-      is_active: true,
-    })
+      contact: "",
+      isActive: true,
+      createdAt: new Date(),
+    }
+    setEditingItem(newItem)
     setIsCreating(true)
   }
 
-  const handleSave = async () => {
-    if (!editingItem || !editingItem.name) return
+  const handleSave = () => {
+    if (!editingItem) return
 
-    setSaving(true)
-    try {
-      if (isCreating) {
-        const { error } = await create({
-          name: editingItem.name,
-          description: editingItem.description || "",
-          icon: editingItem.icon || "phone",
-          is_active: editingItem.is_active !== false,
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Canal criado",
-          description: "O novo canal foi criado com sucesso.",
-        })
-      } else if (editingItem.id) {
-        const { error } = await update(editingItem.id, {
-          name: editingItem.name,
-          description: editingItem.description,
-          icon: editingItem.icon,
-          is_active: editingItem.is_active,
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Canal atualizado",
-          description: "As alteracoes foram salvas com sucesso.",
-        })
-      }
-    } catch (err: any) {
+    if (isCreating) {
+      const newChannels = [...channels, editingItem]
+      localStorage.setItem("callcenter_channels", JSON.stringify(newChannels))
+      setChannels(newChannels)
       toast({
-        title: "Erro",
-        description: err.message || "Erro ao salvar canal",
-        variant: "destructive",
+        title: "Canal criado",
+        description: "O novo canal foi criado com sucesso.",
       })
-    } finally {
-      setSaving(false)
-      setEditingItem(null)
-      setIsCreating(false)
+    } else {
+      const updatedChannels = channels.map((c) => (c.id === editingItem.id ? editingItem : c))
+      localStorage.setItem("callcenter_channels", JSON.stringify(updatedChannels))
+      setChannels(updatedChannels)
+      toast({
+        title: "Canal atualizado",
+        description: "As alterações foram salvas com sucesso.",
+      })
     }
+
+    localStorage.setItem("callcenter_last_update", Date.now().toString())
+    window.dispatchEvent(new CustomEvent("store-updated"))
+
+    setEditingItem(null)
+    setIsCreating(false)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este canal?")) {
-      const { error } = await remove(id)
-      if (error) {
-        toast({
-          title: "Erro",
-          description: error,
-          variant: "destructive",
-        })
-        return
-      }
+      const updatedChannels = channels.filter((c) => c.id !== id)
+      localStorage.setItem("callcenter_channels", JSON.stringify(updatedChannels))
+      setChannels(updatedChannels)
+
+      localStorage.setItem("callcenter_last_update", Date.now().toString())
+      window.dispatchEvent(new CustomEvent("store-updated"))
+
       toast({
-        title: "Canal excluido",
+        title: "Canal excluído",
         description: "O canal foi removido com sucesso.",
       })
     }
@@ -108,14 +90,6 @@ export function ChannelsTab() {
   const handleCancel = () => {
     setEditingItem(null)
     setIsCreating(false)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    )
   }
 
   const isUrl = (text: string | undefined) => {

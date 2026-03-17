@@ -2,12 +2,12 @@
 
 import type React from "react"
 
-import { useState, useMemo, useCallback, memo } from "react"
+import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { useTabulations, useSituations, useChannels } from "@/hooks/use-supabase-admin"
+import { getTabulations, getSituations, getChannels } from "@/lib/store"
 import { CheckCircle2, Tags, AlertCircle, Radio, List, Search, CalendarIcon, Maximize2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PromiseCalendarInline } from "@/components/promise-calendar"
@@ -65,35 +65,33 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
   const [selectedChannelForModal, setSelectedChannelForModal] = useState<any>(null)
   const [channelSearchQuery, setChannelSearchQuery] = useState("")
 
-  // Use Supabase hooks for realtime data
-  const { data: tabulationsData } = useTabulations()
-  const { data: situationsData } = useSituations()
-  const { data: channelsData } = useChannels()
+  const [tabulations, setTabulations] = useState(getTabulations())
+  const [situations, setSituations] = useState(getSituations().filter((s) => s.isActive))
+  const [channels, setChannels] = useState(getChannels().filter((c) => c.isActive))
 
-  // Map Supabase data to component format
-  const tabulations = useMemo(() => tabulationsData.map((t: any) => ({
-    id: t.id,
-    name: t.name,
-    description: t.description || "",
-    color: t.color || "#6b7280",
-    isActive: t.is_active,
-  })).filter((t: any) => t.isActive), [tabulationsData])
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null
 
-  const situations = useMemo(() => situationsData.map((s: any) => ({
-    id: s.id,
-    name: s.name,
-    description: s.description || "",
-    color: s.color || "#6b7280",
-    isActive: s.is_active,
-  })).filter((s: any) => s.isActive), [situationsData])
+    const handleStoreUpdate = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      timeoutId = setTimeout(() => {
+        setTabulations(getTabulations())
+        setSituations(getSituations().filter((s) => s.isActive))
+        setChannels(getChannels().filter((c) => c.isActive))
+        timeoutId = null
+      }, 150)
+    }
 
-  const channels = useMemo(() => channelsData.map((c: any) => ({
-    id: c.id,
-    name: c.name,
-    description: c.description || "",
-    icon: c.icon || "phone",
-    isActive: c.is_active,
-  })).filter((c: any) => c.isActive), [channelsData])
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      window.removeEventListener("store-updated", handleStoreUpdate)
+    }
+  }, [])
 
   const selectedSituationData = situations.find((s) => s.id === selectedSituation)
   const selectedChannelData = channels.find((c) => c.id === selectedChannel)

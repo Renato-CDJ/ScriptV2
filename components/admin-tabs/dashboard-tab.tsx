@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,10 +16,13 @@ import {
   LogIn,
   FileText,
   Filter,
-  Loader2,
-  RefreshCw,
 } from "lucide-react"
-import { useAllUsers, useOperatorPresence } from "@/hooks/use-supabase-realtime"
+import {
+  getOperatorsWithStatus,
+  getOnlineOperatorsCount,
+  getAllUsers,
+  convertFirestoreTimestamp,
+} from "@/lib/store"
 import type { User } from "@/lib/types"
 
 type StatusDetail = "online" | "idle" | "offline"
@@ -27,7 +30,7 @@ type StatusDetail = "online" | "idle" | "offline"
 function safeDate(date: any): Date | null {
   if (!date) return null
   try {
-    const d = new Date(date)
+    const d = convertFirestoreTimestamp(date)
     if (isNaN(d.getTime())) return null
     return d
   } catch {
@@ -78,31 +81,36 @@ function StatusIndicator({ status }: { status: StatusDetail }) {
 }
 
 export function DashboardTab() {
-  // Use Supabase realtime hook for operator presence
-  const { 
-    operators, 
-    loading, 
-    onlineCount, 
-    idleCount, 
-    offlineCount, 
-    totalCount,
-    refetch,
-  } = useOperatorPresence()
-  
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await refetch()
-    setTimeout(() => setIsRefreshing(false), 500)
-  }
-  
+  const [operators, setOperators] = useState<(User & { statusDetail: StatusDetail })[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<"all" | StatusDetail>("all")
   const [filterScript, setFilterScript] = useState<"all" | "accessed" | "not-accessed">("all")
+  const [onlineCount, setOnlineCount] = useState(0)
 
-  const totalOperators = totalCount
-  const activeOnline = onlineCount
+  useEffect(() => {
+    const updateData = () => {
+      setOperators(getOperatorsWithStatus())
+      setOnlineCount(getOnlineOperatorsCount())
+    }
+
+    updateData()
+
+    // Refresh every 10 seconds for near real-time
+    const interval = setInterval(updateData, 10000)
+
+    const handleStoreUpdate = () => updateData()
+    window.addEventListener("store-updated", handleStoreUpdate)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("store-updated", handleStoreUpdate)
+    }
+  }, [])
+
+  const totalOperators = operators.length
+  const idleCount = operators.filter((o) => o.statusDetail === "idle").length
+  const offlineCount = operators.filter((o) => o.statusDetail === "offline").length
+  const activeOnline = operators.filter((o) => o.statusDetail === "online").length
 
   // Today's script access
   const today = new Date()
@@ -154,33 +162,13 @@ export function DashboardTab() {
     return list
   }, [operators, searchQuery, filterStatus, filterScript])
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
-          <p className="text-muted-foreground mt-1">
-            Monitoramento de operadores em tempo real
-          </p>
-        </div>
-        <Button
-          onClick={handleRefresh}
-          variant="outline"
-          size="sm"
-          disabled={isRefreshing}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+      <div>
+        <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
+        <p className="text-muted-foreground mt-1">
+          Monitoramento de operadores em tempo real
+        </p>
       </div>
 
       {/* Stats Cards */}

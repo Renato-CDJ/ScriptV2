@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/lib/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
-import { InitializeStorage } from "@/components/initialize-storage-client"
 import "./globals.css"
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" })
@@ -46,7 +45,6 @@ export default function RootLayout({
         </div>
 
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="roteiro-theme" disableTransitionOnChange>
-          <InitializeStorage />
           <Suspense fallback={null}>
             <AuthProvider>{children}</AuthProvider>
           </Suspense>

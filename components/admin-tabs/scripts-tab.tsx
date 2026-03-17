@@ -24,12 +24,21 @@ import {
   AlignJustify,
   AlertCircle,
 } from "lucide-react"
+import {
+  getScriptSteps,
+  updateScriptStep,
+  createScriptStep,
+  deleteScriptStep,
+  deleteAllStepsFromProduct,
+  importScriptFromJson,
+  getProducts,
+} from "@/lib/store"
 import type { ScriptStep, ScriptButton, Product } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { AdminScriptPreview } from "@/components/admin-script-preview"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { validateScriptJson } from "@/lib/scripts-loader"
-import { useScripts, useProducts, importScriptsFromJson, deleteScriptsForProduct } from "@/hooks/use-supabase-admin"
+import { getAutoLoadScripts } from "@/lib/auto-load-scripts"
 
 interface AvailableScript {
   name: string
@@ -38,9 +47,9 @@ interface AvailableScript {
 }
 
 export function ScriptsTab() {
-  const { data: scripts, loading: scriptsLoading, create: createScript, update: updateScript, remove: removeScript } = useScripts()
-  const { data: products, loading: productsLoading } = useProducts()
   const [selectedProduct, setSelectedProduct] = useState<string>("")
+  const [steps, setSteps] = useState<ScriptStep[]>(getScriptSteps())
+  const [products, setProducts] = useState<Product[]>(getProducts())
   const [editingStep, setEditingStep] = useState<ScriptStep | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [previewStep, setPreviewStep] = useState<ScriptStep | null>(null)
@@ -48,31 +57,41 @@ export function ScriptsTab() {
   const [availableScripts, setAvailableScripts] = useState<AvailableScript[]>([])
   const { toast } = useToast()
 
-  // Map Supabase scripts to ScriptStep format
-  const steps: ScriptStep[] = scripts.map((s: any) => ({
-    id: s.id,
-    title: s.title,
-    content: s.content || "",
-    productId: s.product_id,
-    productName: s.product_name,
-    order: s.step_order || 0,
-    buttons: s.buttons || [],
-    tabulations: s.tabulations || [],
-    alert: s.alert ? { title: "Alerta", message: s.alert, createdAt: new Date() } : undefined,
-    createdAt: new Date(s.created_at),
-    updatedAt: new Date(s.updated_at),
-  }))
+  useEffect(() => {
+    const handleStoreUpdate = () => {
+      refreshSteps()
+    }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
+    loadAvailableScripts()
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+  }, [])
+
+  const loadAvailableScripts = () => {
+    try {
+      const scripts = getAutoLoadScripts()
+      setAvailableScripts(scripts)
+    } catch (error) {
+      console.error("[v0] Error loading available scripts:", error)
+    }
+  }
+
+  const refreshSteps = () => {
+    setSteps(getScriptSteps())
+    setProducts(getProducts())
+  }
 
   const isScriptImported = (scriptName: string): boolean => {
     const productId = `prod-${scriptName.toLowerCase().replace(/\s+/g, "-")}`
     return products.some((p) => p.id === productId)
   }
 
-  const handleImportAvailableScript = async (scriptData: any, scriptName: string) => {
+  const handleImportAvailableScript = (scriptData: any, scriptName: string) => {
     try {
-      const result = await importScriptsFromJson(scriptData)
+      const result = importScriptFromJson(scriptData)
 
       if (result.stepCount > 0) {
+        refreshSteps()
         toast({
           title: "Script importado com sucesso!",
           description: `${result.productCount} produto(s) e ${result.stepCount} tela(s) foram importados de ${scriptName}.`,
@@ -146,9 +165,10 @@ export function ScriptsTab() {
           return
         }
 
-        const result = await importScriptsFromJson(data)
+        const result = importScriptFromJson(data)
 
         if (result.stepCount > 0) {
+          refreshSteps()
           setEditingStep(null)
           setIsCreating(false)
           setPreviewStep(null)
@@ -158,13 +178,12 @@ export function ScriptsTab() {
             description: `${result.productCount} produto(s) e ${result.stepCount} tela(s) foram importados.`,
           })
         } else {
-          throw new Error("Nenhuma tela foi importada. Verifique se as tabelas do banco de dados estão configuradas corretamente.")
+          throw new Error("Nenhuma tela foi importada")
         }
-      } catch (error: any) {
-        console.error("[v0] Import error:", error)
+      } catch (error) {
         toast({
           title: "Erro ao importar",
-          description: error?.message || "O arquivo não está no formato correto. Esperado: { marcas: { PRODUTO: { step_key: {...} } } }",
+          description: "O arquivo não está no formato correto. Esperado: { marcas: { PRODUTO: { step_key: {...} } } }",
           variant: "destructive",
         })
       }
@@ -174,9 +193,9 @@ export function ScriptsTab() {
 
   const handleLoadScripts = async () => {
     try {
-      const availableScriptsList = getAutoLoadScripts()
+      const scripts = getAutoLoadScripts()
 
-      if (availableScriptsList.length === 0) {
+      if (scripts.length === 0) {
         toast({
           title: "Nenhum script encontrado",
           description: "Não há arquivos JSON na pasta data/scripts para carregar.",
@@ -188,16 +207,17 @@ export function ScriptsTab() {
       let totalProducts = 0
       let totalSteps = 0
 
-      for (const scriptData of availableScriptsList) {
+      scripts.forEach((scriptData) => {
         try {
-          const result = await importScriptsFromJson(scriptData)
+          const result = importScriptFromJson(scriptData)
           totalProducts += result.productCount
           totalSteps += result.stepCount
         } catch (error) {
           console.error("[v0] Error loading individual script:", error)
         }
-      }
+      })
 
+      refreshSteps()
       toast({
         title: "Scripts carregados com sucesso!",
         description: `${totalProducts} produto(s) e ${totalSteps} tela(s) foram importados da pasta data/scripts.`,
@@ -242,64 +262,32 @@ export function ScriptsTab() {
     setPreviewStep(null)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!editingStep) return
 
-    try {
-      if (isCreating) {
-        const { error } = await createScript({
-          id: editingStep.id,
-          title: editingStep.title,
-          content: editingStep.content,
-          product_id: editingStep.productId,
-          product_name: editingStep.productName,
-          step_order: editingStep.order || 0,
-          buttons: editingStep.buttons,
-          tabulations: editingStep.tabulations,
-          alert: editingStep.alert?.message || null,
-          is_active: true,
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Roteiro criado",
-          description: "O novo roteiro foi criado com sucesso.",
-        })
-      } else {
-        const { error } = await updateScript(editingStep.id, {
-          title: editingStep.title,
-          content: editingStep.content,
-          buttons: editingStep.buttons,
-          tabulations: editingStep.tabulations,
-          alert: editingStep.alert?.message || null,
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Roteiro atualizado",
-          description: "As alterações foram salvas com sucesso.",
-        })
-      }
-      setEditingStep(null)
-      setIsCreating(false)
-    } catch (err: any) {
+    if (isCreating) {
+      createScriptStep(editingStep)
       toast({
-        title: "Erro",
-        description: err.message || "Erro ao salvar roteiro",
-        variant: "destructive",
+        title: "Roteiro criado",
+        description: "O novo roteiro foi criado com sucesso.",
+      })
+    } else {
+      updateScriptStep(editingStep)
+      toast({
+        title: "Roteiro atualizado",
+        description: "As alterações foram salvas com sucesso.",
       })
     }
+
+    refreshSteps()
+    setEditingStep(null)
+    setIsCreating(false)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este roteiro?")) {
-      const { error } = await removeScript(id)
-      if (error) {
-        toast({
-          title: "Erro",
-          description: error,
-          variant: "destructive",
-        })
-        return
-      }
+      deleteScriptStep(id)
+      refreshSteps()
       toast({
         title: "Roteiro excluído",
         description: "O roteiro foi removido com sucesso.",
@@ -307,13 +295,14 @@ export function ScriptsTab() {
     }
   }
 
-  const handleDeleteAllSteps = async (productId: string, productName: string, stepsCount: number) => {
+  const handleDeleteAllSteps = (productId: string, productName: string, stepsCount: number) => {
     if (
       confirm(
         `Tem certeza que deseja excluir TODAS as ${stepsCount} telas do produto "${productName}"?\n\nEsta ação não pode ser desfeita!`,
       )
     ) {
-      await deleteScriptsForProduct(productId)
+      deleteAllStepsFromProduct(productId)
+      refreshSteps()
       toast({
         title: "Telas excluídas",
         description: `Todas as ${stepsCount} telas do produto "${productName}" foram removidas.`,

@@ -15,16 +15,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { UserX, Plus, Edit, Trash2, Upload } from "lucide-react"
+import { UserX, Plus, Edit, Trash2, Download, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
+  getAllUsers,
+  updateUser,
+  deleteUser,
   forceLogoutUser,
+  getTodayLoginSessions,
+  getTodayConnectedTime,
   getCurrentUser,
+  saveImmediately,
+  STORAGE_KEYS,
+  cleanupDuplicateUsers,
 } from "@/lib/store"
-import { createClient } from "@/lib/supabase/client"
 import type { User } from "@/lib/types"
-
-const supabase = createClient()
 import * as XLSX from "xlsx"
 
 export function OperatorsTab() {
@@ -40,61 +45,34 @@ export function OperatorsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const loadOperators = async () => {
-      // Fetch operators from Supabase
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("role", "operator")
-        .order("created_at", { ascending: false })
-
-      if (error) {
-        console.error("[v0] Error loading operators:", error)
-        return
-      }
-
-      const ops: User[] = (data || []).map((u: any) => ({
-        id: u.id,
-        username: u.username,
-        fullName: u.name,
-        isOnline: u.is_online || false,
-        role: u.role,
-        createdAt: new Date(u.created_at),
-        loginSessions: [],
-        permissions: {
-          dashboard: true,
-          scripts: true,
-          products: true,
-          attendanceConfig: false,
-          tabulations: false,
-          situations: false,
-          channels: false,
-          notes: true,
-          operators: false,
-          messagesQuiz: false,
-          chat: true,
-          settings: false,
-        },
-      }))
+    const loadOperators = () => {
+      const allUsers = getAllUsers()
+      const ops = allUsers.filter((u) => u.role === "operator")
       setOperators(ops)
     }
 
     loadOperators()
 
-    // Subscribe to realtime changes
-    const channel = supabase
-      .channel("operators-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "users", filter: "role=eq.operator" },
-        () => {
-          loadOperators()
-        }
-      )
-      .subscribe()
+    const cleanup = cleanupDuplicateUsers()
+    if (cleanup.removed > 0) {
+      toast({
+        title: "Duplicatas Removidas",
+        description: `${cleanup.removed} usuário(s) duplicado(s) foram removidos automaticamente`,
+      })
+      loadOperators()
+    }
+
+    const interval = setInterval(loadOperators, 10000)
+
+    const handleStoreUpdate = () => {
+      loadOperators()
+    }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
 
     return () => {
-      supabase.removeChannel(channel)
+      clearInterval(interval)
+      window.removeEventListener("store-updated", handleStoreUpdate)
     }
   }, [])
 
@@ -115,27 +93,12 @@ export function OperatorsTab() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (operatorId: string) => {
+  const handleDelete = (operatorId: string) => {
     if (confirm("Tem certeza que deseja excluir este operador?")) {
-      // Delete from Supabase
-      const { error } = await supabase
-        .from("users")
-        .delete()
-        .eq("id", operatorId)
-
-      if (error) {
-        toast({
-          title: "Erro",
-          description: "Erro ao excluir operador: " + error.message,
-          variant: "destructive",
-        })
-        return
-      }
-
-      setOperators(operators.filter(op => op.id !== operatorId))
+      deleteUser(operatorId)
       toast({
         title: "Sucesso",
-        description: "Operador excluido com sucesso",
+        description: "Operador excluído com sucesso",
       })
     }
   }
@@ -161,7 +124,7 @@ export function OperatorsTab() {
     })
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!formData.fullName.trim() || !formData.username.trim()) {
       toast({
         title: "Erro",
@@ -176,82 +139,37 @@ export function OperatorsTab() {
     }
 
     if (isEditMode && editingOperator) {
-      // Update in Supabase
-      const { error } = await supabase
-        .from("users")
-        .update({
-          name: formData.fullName.trim(),
-          username: formData.username.trim(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", editingOperator.id)
-
-      if (error) {
-        toast({
-          title: "Erro",
-          description: "Erro ao atualizar operador: " + error.message,
-          variant: "destructive",
-        })
-        return
+      const updatedOperator: User = {
+        ...editingOperator,
+        fullName: formData.fullName,
+        username: formData.username,
       }
-
-      setOperators(operators.map(op => 
-        op.id === editingOperator.id 
-          ? { ...op, fullName: formData.fullName, username: formData.username }
-          : op
-      ))
+      updateUser(updatedOperator)
       toast({
         title: "Sucesso",
         description: "Operador atualizado com sucesso",
       })
     } else {
-      // Check if username exists in Supabase
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("username")
-        .ilike("username", formData.username.trim())
-        .single()
+      const allUsers = getAllUsers()
+      const normalizedNew = normalizeUsername(formData.username)
+      const existingUser = allUsers.find((u) => normalizeUsername(u.username) === normalizedNew)
 
       if (existingUser) {
         toast({
           title: "Erro",
-          description: `Usuario "${existingUser.username}" ja existe no sistema`,
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Insert into Supabase
-      const { data: newUser, error } = await supabase
-        .from("users")
-        .insert({
-          username: formData.username.trim(),
-          name: formData.fullName.trim(),
-          email: `${formData.username.trim()}@operador.com`,
-          role: "operator",
-          is_active: true,
-          is_online: false,
-          allowed_tabs: ["dashboard", "scripts", "products", "notes", "chat"],
-        })
-        .select()
-        .single()
-
-      if (error) {
-        toast({
-          title: "Erro",
-          description: "Erro ao criar operador: " + error.message,
+          description: `Usuário "${existingUser.username}" já existe no sistema`,
           variant: "destructive",
         })
         return
       }
 
       const newOperator: User = {
-        id: newUser.id,
-        username: newUser.username,
-        fullName: newUser.name,
+        id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        username: formData.username.trim(),
+        fullName: formData.fullName.trim(),
         isOnline: false,
         role: "operator",
-        createdAt: new Date(newUser.created_at),
+        createdAt: new Date(),
         loginSessions: [],
         permissions: {
           dashboard: true,
@@ -268,6 +186,12 @@ export function OperatorsTab() {
           settings: false,
         },
       }
+
+      allUsers.push(newOperator)
+
+      console.log("[v0] Adding new operator:", newOperator.username, "Total users:", allUsers.length)
+
+      saveImmediately(STORAGE_KEYS.USERS, allUsers)
 
       setOperators([...operators, newOperator])
 
@@ -351,71 +275,41 @@ export function OperatorsTab() {
         return
       }
 
+      const normalizeUsername = (username: string): string => {
+        return username.toLowerCase().trim().replace(/\s+/g, "")
+      }
+
+      const allUsers = getAllUsers()
       let importedCount = 0
       let skippedCount = 0
       const errors: string[] = []
 
-      for (let index = 0; index < rows.length; index++) {
-        const row = rows[index]
+      rows.forEach((row, index) => {
         const fullName = row[nameColumnIndex]?.trim()
         const username = row[usernameColumnIndex]?.trim()
 
         if (!fullName || !username) {
           errors.push(`Linha ${index + 2}: Dados incompletos`)
           skippedCount++
-          continue
+          return
         }
 
-        // Check if username already exists in Supabase
-        const { data: existingUser } = await supabase
-          .from("users")
-          .select("username")
-          .ilike("username", username)
-          .single()
+        const normalizedNew = normalizeUsername(username)
+        const existingUser = allUsers.find((u) => normalizeUsername(u.username) === normalizedNew)
 
         if (existingUser) {
-          errors.push(`Linha ${index + 2}: Usuário "${username}" já existe`)
+          errors.push(`Linha ${index + 2}: Usuário "${username}" já existe como "${existingUser.username}"`)
           skippedCount++
-          continue
+          return
         }
 
-        // Insert into Supabase
-        const { error: insertError } = await supabase
-          .from("users")
-          .insert({
-            username: username,
-            name: fullName,
-            email: `${username.toLowerCase().replace(/\s+/g, "")}@operador.com`,
-            role: "operator",
-            is_active: true,
-            is_online: false,
-            allowed_tabs: ["dashboard", "scripts", "products", "notes", "chat"],
-          })
-
-        if (insertError) {
-          errors.push(`Linha ${index + 2}: Erro ao inserir - ${insertError.message}`)
-          skippedCount++
-          continue
-        }
-
-        importedCount++
-      }
-
-      // Reload operators from Supabase
-      const { data: updatedOps } = await supabase
-        .from("users")
-        .select("*")
-        .eq("role", "operator")
-        .order("created_at", { ascending: false })
-
-      if (updatedOps) {
-        const ops: User[] = updatedOps.map((u: any) => ({
-          id: u.id,
-          username: u.username,
-          fullName: u.name,
-          isOnline: u.is_online || false,
-          role: u.role,
-          createdAt: new Date(u.created_at),
+        const newOperator: User = {
+          id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${index}`,
+          username: username,
+          fullName: fullName,
+          isOnline: false,
+          role: "operator",
+          createdAt: new Date(),
           loginSessions: [],
           permissions: {
             dashboard: true,
@@ -431,9 +325,17 @@ export function OperatorsTab() {
             chat: true,
             settings: false,
           },
-        }))
-        setOperators(ops)
-      }
+        }
+
+        allUsers.push(newOperator)
+        importedCount++
+      })
+
+      console.log("[v0] Saving", importedCount, "imported operators to Firebase immediately")
+      saveImmediately(STORAGE_KEYS.USERS, allUsers)
+
+      setOperators(allUsers.filter((u) => u.role === "operator"))
+      console.log("[v0] Imported", importedCount, "operators. Total users now:", allUsers.length)
 
       if (importedCount > 0) {
         toast({
@@ -464,6 +366,83 @@ export function OperatorsTab() {
     }
   }
 
+  const formatDuration = (milliseconds: number): string => {
+    const hours = Math.floor(milliseconds / (1000 * 60 * 60))
+    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${minutes}min`
+  }
+
+  const handleExportReport = () => {
+    const headers = ["Nome", "Quantidade Logins no Dia", "Tempo Conectado"]
+    const rows = operators.map((operator) => {
+      const todaySessions = getTodayLoginSessions(operator.id)
+      const connectedTime = getTodayConnectedTime(operator.id)
+
+      return [
+        operator.fullName,
+        todaySessions.length.toString(),
+        connectedTime > 0 ? formatDuration(connectedTime) : "0h 0min",
+      ]
+    })
+
+    const htmlTable = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8">
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Relatório Operadores</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          table { border-collapse: collapse; width: 100%; }
+          th { background-color: #4472C4; color: white; font-weight: bold; padding: 8px; border: 1px solid #ddd; }
+          td { padding: 8px; border: 1px solid #ddd; }
+          tr:nth-child(even) { background-color: #f2f2f2; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <thead>
+            <tr>
+              ${headers.map((header) => `<th>${header}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `
+
+    const blob = new Blob([htmlTable], { type: "application/vnd.ms-excel" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+
+    const today = new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `relatorio-operadores-${today}.xls`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({
+      title: "Relatório exportado",
+      description: "O relatório Excel foi baixado com sucesso",
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -484,6 +463,10 @@ export function OperatorsTab() {
           <Button variant="outline" onClick={handleImportClick} className="gap-2 bg-transparent">
             <Upload className="h-4 w-4" />
             Importar Usuários
+          </Button>
+          <Button variant="outline" onClick={handleExportReport} className="gap-2 bg-transparent">
+            <Download className="h-4 w-4" />
+            Exportar Relatório
           </Button>
           <Button onClick={handleOpenDialog} className="gap-2">
             <Plus className="h-4 w-4 mr-2" />
