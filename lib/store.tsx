@@ -1,5 +1,10 @@
-// Client-side state management using localStorage for prototype
-// This will be replaced with real database integration later
+// Client-side state management using Supabase for realtime sync
+// Falls back to localStorage when offline
+
+import { useState, useEffect, useCallback } from "react"
+import { createClient } from "@/lib/supabase/client"
+
+const supabaseClient = createClient()
 
 import type {
   User,
@@ -30,16 +35,18 @@ import type {
   QualityPost,
   QualityComment,
 } from "./types"
-import { db, auth } from "./firebase"
-import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
-import { signInAnonymously } from "firebase/auth"
+// Firebase disabled - now using Supabase
+// import { db, auth } from "./firebase"
+// import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
+// import { signInAnonymously } from "firebase/auth"
 import debounce from "lodash.debounce" // Import debounce
 
-// Define handleFirebaseError as a placeholder or import it if it exists elsewhere
+// Firebase sync disabled - using Supabase instead
+let firebaseSyncDisabled = true
+
+// Define handleFirebaseError as a placeholder
 const handleFirebaseError = (error: unknown) => {
   console.error("Firebase error handler called:", error)
-  // Implement actual error handling logic here, e.g., setting firebaseSyncDisabled
-  // For now, we'll just log it.
 }
 
 const FIREBASE_COLLECTION = "app_data"
@@ -140,7 +147,7 @@ function sanitizePresentationsForFirebase(presentations: unknown[]): unknown[] {
   })
 }
 
-let firebaseSyncDisabled = false
+// firebaseSyncDisabled is now defined at the top of the file as true
 let duplicateCleaningInProgress = false // Add flag to prevent duplicate cleaning loop
 let pendingFirebaseWrites = 0
 const MAX_PENDING_WRITES = 5 // Reduced from 10 to 5 to prevent overload
@@ -154,125 +161,9 @@ let batchTimer: NodeJS.Timeout | null = null
 let saveMutex = false
 const saveQueue: Array<{ key: string; data: any }> = []
 
-async function processSaveQueue() {
-  if (saveMutex || saveQueue.length === 0) return
-
-  saveMutex = true
-  const { key, data } = saveQueue.shift()!
-
-  try {
-    const sanitizedData = Array.isArray(data)
-      ? data.map((item) =>
-          typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
-        )
-      : typeof data === "object" && data !== null
-        ? sanitizeForFirebase(data as Record<string, unknown>)
-        : data
-
-    await setDoc(doc(db, FIREBASE_COLLECTION, key), {
-      data: sanitizedData,
-      timestamp: Date.now(),
-    })
-    console.log(`[v0] 💾 Saved to Firebase: ${key} (${Array.isArray(data) ? data.length : "N/A"} items)`)
-  } catch (error: any) {
-    const isPermissionError =
-      error?.code === "permission-denied" || error?.message?.includes("Missing or insufficient permissions")
-
-    if (isPermissionError) {
-      // Firebase authentication is anonymous, so write permissions are expected to fail
-      // Data flows: Firebase (source of truth) -> localStorage (read-only sync)
-      return
-    } else {
-      console.error(`[v0] ❌ Error saving ${key} to Firebase:`, error)
-      // Only re-add to queue if it's not a permissions error
-      saveQueue.unshift({ key, data })
-    }
-  } finally {
-    saveMutex = false
-    if (saveQueue.length > 0) {
-      // Use a small timeout to allow other operations to potentially enqueue
-      setTimeout(processSaveQueue, 100)
-    }
-  }
-}
-
+// Firebase sync disabled - using localStorage only
 function syncToFirebase(key: string, data: unknown) {
-  if (firebaseSyncDisabled) {
-    return
-  }
-
-  const currentUser = getCurrentUser()
-  const isUserData = key === STORAGE_KEYS.USERS
-
-  if (isUserData && currentUser?.role !== "admin") {
-    return
-  }
-
-  if (pendingFirebaseWrites >= MAX_PENDING_WRITES) {
-    console.log("[v0] ⚠️ Too many pending writes, Firebase sync temporarily disabled")
-    return
-  }
-
-  const now = Date.now()
-  if (now - lastFirebaseWrite < MIN_WRITE_INTERVAL) {
-    return
-  }
-
-  lastFirebaseWrite = Date.now()
-  pendingFirebaseWrites++
-
-  const syncDelay = isUserData ? 0 : BATCH_INTERVAL * 2 // Doubled batch interval
-
-  setTimeout(async () => {
-    try {
-      if (db && !firebaseSyncDisabled) {
-        let dataToSync: unknown
-
-        if (key === STORAGE_KEYS.PRESENTATIONS && Array.isArray(data)) {
-          dataToSync = sanitizePresentationsForFirebase(data)
-        } else {
-          dataToSync = Array.isArray(data)
-            ? data.map((item) =>
-                typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
-              )
-            : typeof data === "object" && data !== null
-              ? sanitizeForFirebase(data as Record<string, unknown>)
-              : data
-        }
-
-        if (key === STORAGE_KEYS.USERS && Array.isArray(dataToSync)) {
-          console.log(`[v0] Writing ${dataToSync.length} users to Firebase (${key})`)
-          console.log(
-            "[v0] User roles:",
-            dataToSync.map((u: any) => ({ username: u.username, role: u.role })),
-          )
-        }
-
-        await setDoc(doc(db, FIREBASE_COLLECTION, key), {
-          data: dataToSync,
-          updatedAt: new Date().toISOString(),
-        })
-
-        console.log(
-          `[v0] Successfully synced ${key} to Firebase with ${Array.isArray(dataToSync) ? dataToSync.length : 1} items`,
-        )
-      }
-    } catch (error: any) {
-      if (error?.code === "resource-exhausted" || error?.message?.includes("Quota exceeded")) {
-        console.error("\n⚠️  Firebase Quota Exceeded\n")
-        console.error("Your Firebase project has reached its quota limit.")
-        console.error("\nThe app will continue working with localStorage only.\n")
-        console.error("To fix this:")
-        console.error("1. Wait for the quota to reset (usually 24 hours)")
-        console.error("2. Or upgrade your Firebase plan at: https://console.firebase.google.com/\n")
-        firebaseSyncDisabled = true
-      }
-      console.error(`[v0] Error syncing ${key} to Firebase:`, error?.message || error)
-      handleFirebaseError(error) // Using the placeholder handler
-    } finally {
-      pendingFirebaseWrites = Math.max(0, pendingFirebaseWrites - 1)
-    }
-  }, syncDelay)
+  return
 }
 
 function flushBatchQueue() {
@@ -292,18 +183,9 @@ export function saveImmediately(key: string, data: unknown) {
 
   // Save to localStorage immediately
   localStorage.setItem(key, JSON.stringify(data))
-  const itemCount = Array.isArray(data) ? data.length : "1"
-  console.log(`[v0] 💾 Saved ${key}: ${itemCount} item(s)`)
+  localStorage.setItem(`${key}_timestamp`, String(Date.now()))
 
   notifyUpdateImmediate()
-
-  if (!db) {
-    console.warn("[v0] Firebase not initialized, data saved locally only")
-    return
-  }
-
-  saveQueue.push({ key, data })
-  processSaveQueue()
 }
 
 export function save(key: string, data: unknown) {
@@ -329,14 +211,7 @@ export const debouncedSave = debounce(async (key: string, data: any) => {
   if (typeof window === "undefined") return
 
   localStorage.setItem(key, JSON.stringify(data))
-
-  if (!db) {
-    console.warn("[v0] Firebase not initialized, data saved locally only")
-    return
-  }
-
-  saveQueue.push({ key, data })
-  processSaveQueue()
+  localStorage.setItem(`${key}_timestamp`, String(Date.now()))
 }, 1000) // Batch writes every 1000ms
 
 let unsubscribers: (() => void)[] = []
@@ -344,221 +219,14 @@ let unsubscribers: (() => void)[] = []
 
 let syncEnabled = false
 
+// Firebase sync disabled - using localStorage only
 async function enableFirebaseSync() {
-  console.log("[v0] Attempting to enable Firebase realtime sync...")
-
-  try {
-    // Sign in anonymously to Firebase
-    await signInAnonymously(auth)
-    console.log("[v0] ✅ Signed in anonymously to Firebase")
-
-    // Now setup listeners
-    setupListeners()
-  } catch (error: any) {
-    console.error("[v0] ❌ Failed to authenticate with Firebase:", error.message)
-    console.error("\n⚠️  Firebase Authentication Error\n")
-    console.error("To fix this:")
-    console.error("1. Go to Firebase Console: https://console.firebase.google.com/")
-    console.error("2. Select your project: banco-de-dados-roteiro")
-    console.error("3. Go to Authentication > Sign-in method")
-    console.error("4. Enable 'Anonymous' provider")
-    console.error("5. Save changes\n")
-    firebaseSyncDisabled = true
-  }
+  return
 }
 
+// Firebase listeners disabled - using localStorage only
 function setupListeners() {
-  if (firebaseSyncDisabled) {
-    console.log("[v0] Firebase sync is disabled, skipping listeners setup")
-    return
-  }
-
-  let firstPermissionError = true
-
-  // Unsubscribe existing listeners if any
-  unsubscribers.forEach((unsub) => unsub())
-  unsubscribers = []
-
-  const keysToSync = Object.values(STORAGE_KEYS)
-
-  keysToSync.forEach((key) => {
-    const unsub = onSnapshot(
-      doc(db, FIREBASE_COLLECTION, key),
-      (docSnapshot) => {
-        if (docSnapshot.exists()) {
-          const data = docSnapshot.data()
-          if (data && data.data) {
-            const currentValue = localStorage.getItem(key)
-
-            if (key === STORAGE_KEYS.USERS && !duplicateCleaningInProgress) {
-              // Skip duplicate detection if cleaning is already in progress
-              const remoteUsers = data.data as User[]
-              const seenUsernames = new Map<string, User>()
-              const duplicateIds: string[] = []
-
-              remoteUsers.forEach((user) => {
-                const normalized = user.username.toLowerCase().trim() // Correctly use username for normalization
-                const existing = seenUsernames.get(normalized)
-
-                if (existing) {
-                  const existingDate = new Date(existing.createdAt).getTime()
-                  const currentDate = new Date(user.createdAt).getTime()
-
-                  if (currentDate < existingDate) {
-                    duplicateIds.push(existing.id)
-                    seenUsernames.set(normalized, user)
-                  } else {
-                    duplicateIds.push(user.id)
-                  }
-                } else {
-                  seenUsernames.set(normalized, user)
-                }
-              })
-
-              let cleanedRemoteUsers = remoteUsers
-              if (duplicateIds.length > 0) {
-                duplicateCleaningInProgress = true
-
-                cleanedRemoteUsers = remoteUsers.filter((u) => !duplicateIds.includes(u.id))
-                console.log(
-                  `[v0] 🧹 Cleaned ${duplicateIds.length} duplicate users from Firebase. Before: ${remoteUsers.length}, After: ${cleanedRemoteUsers.length}`,
-                )
-
-                // Save cleaned data back to Firebase immediately
-                localStorage.setItem(key, JSON.stringify(cleanedRemoteUsers))
-                localStorage.setItem(`${key}_timestamp`, String(Date.now()))
-                saveImmediately(key, cleanedRemoteUsers)
-                window.dispatchEvent(new CustomEvent("store-updated"))
-
-                setTimeout(() => {
-                  duplicateCleaningInProgress = false
-                }, 5000)
-
-                return
-              }
-
-              duplicateCleaningInProgress = false
-
-              const newValue = JSON.stringify(cleanedRemoteUsers) // Use cleanedRemoteUsers
-              const currentUsers = currentValue ? JSON.parse(currentValue) : []
-
-              if (remoteUsers.length === 0 && currentUsers.length > 0) {
-                console.error(
-                  `[v0] ⚠️ CRITICAL: Firebase sent 0 users but local has ${currentUsers.length} users - re-saving local data`,
-                )
-                saveImmediately(key, currentUsers)
-                return
-              }
-
-              const remoteOperators = cleanedRemoteUsers.filter((u) => u.role === "operator") // Use cleanedRemoteUsers
-              const currentOperators = currentUsers.filter((u: User) => u.role === "operator")
-
-              if (currentOperators.length > 0 && remoteOperators.length < currentOperators.length) {
-                const missingOperators = currentOperators.filter(
-                  (localOp: User) => !remoteOperators.find((remoteOp) => remoteOp.id === localOp.id),
-                )
-
-                console.log(`[v0] 🔄 Syncing ${missingOperators.length} missing operator(s) to Firebase...`)
-                saveImmediately(key, currentUsers)
-                return
-              }
-
-              const threshold = 0.2
-              const difference = Math.abs(cleanedRemoteUsers.length - currentUsers.length) // Use cleanedRemoteUsers
-              const percentageDiff = currentUsers.length > 0 ? difference / currentUsers.length : 0
-
-              if (
-                percentageDiff > threshold &&
-                currentUsers.length > 10 &&
-                cleanedRemoteUsers.length < currentUsers.length
-              ) {
-                // Use cleanedRemoteUsers
-                const remoteTimestamp = data.timestamp || 0
-                const localTimestamp = Number.parseInt(localStorage.getItem(`${key}_timestamp`) || "0", 10)
-
-                if (remoteTimestamp < localTimestamp) {
-                  console.warn(`[v0] ⚠️ Remote data is older than local - keeping local data`)
-                  saveImmediately(key, currentUsers)
-                  return
-                }
-
-                console.warn(
-                  `[v0] ⚠️ Large difference detected (${(percentageDiff * 100).toFixed(1)}%) - re-saving local data`,
-                )
-                saveImmediately(key, currentUsers)
-                return
-              }
-
-              if (currentValue !== newValue) {
-                localStorage.setItem(key, newValue)
-                localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
-                if (cleanedRemoteUsers.length !== currentUsers.length) {
-                  // Use cleanedRemoteUsers for logging length
-                  console.log(`[v0] ✅ Synced ${cleanedRemoteUsers.length} users from Firebase`) // Use cleanedRemoteUsers
-                }
-                window.dispatchEvent(new CustomEvent("store-updated"))
-              }
-            } else if (key === STORAGE_KEYS.FEEDBACKS) {
-              const remoteFeedbacks = data.data as Feedback[]
-              const currentFeedbacks = currentValue ? JSON.parse(currentValue) : []
-              const newValue = JSON.stringify(remoteFeedbacks) // Fixed the undeclared variable issue
-
-              if (currentValue !== newValue) {
-                localStorage.setItem(key, newValue)
-                localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
-                console.log(`[v0] ✅ Synced ${remoteFeedbacks.length} feedback(s) from Firebase`)
-                console.log(
-                  `[v0] 📋 Feedback details:`,
-                  remoteFeedbacks.map((f) => ({
-                    id: f.id,
-                    operatorId: f.operatorId,
-                    operatorName: f.operatorName,
-                  })),
-                )
-                window.dispatchEvent(new CustomEvent("store-updated"))
-              }
-            } else {
-              const newValue = JSON.stringify(data.data)
-              // For other data, simple sync
-              if (currentValue !== newValue) {
-                localStorage.setItem(key, newValue)
-                window.dispatchEvent(new CustomEvent("store-updated"))
-              }
-            }
-          }
-        }
-      },
-      (error: any) => {
-        if (error?.code === "resource-exhausted" || error?.message?.includes("Quota exceeded")) {
-          if (!firebaseSyncDisabled) {
-            console.error("\n⚠️  Firebase Quota Exceeded - Listeners Disabled\n")
-            firebaseSyncDisabled = true
-            cleanupRealtimeSync()
-          }
-          return
-        }
-
-        if (!firebaseSyncDisabled && firstPermissionError) {
-          console.error(`\n⚠️  Firebase Firestore Permission Error\n`)
-          console.error(`Your Firestore Security Rules are blocking access.`)
-          console.error(`\nTo fix this:\n`)
-          console.error(`1. Go to Firebase Console: https://console.firebase.google.com/`)
-          console.error(`2. Select your project: banco-de-dados-roteiro`)
-          console.error(`3. Go to Firestore Database > Rules`)
-          console.error(`4. Update your rules to allow authenticated access`)
-          console.error(`5. Click "Publish"\n`)
-          console.error(`⚠️  The app will work with local storage only until Firebase is configured.\n`)
-          firebaseSyncDisabled = true
-          firstPermissionError = false
-        }
-      },
-    )
-    unsubscribers.push(unsub)
-  })
-
-  if (!firebaseSyncDisabled) {
-    console.log("[v0] Realtime sync enabled successfully")
-  }
+  return
 }
 
 export function loadScriptsFromDataFolder() {
@@ -1355,6 +1023,103 @@ export function logout() {
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER)
 }
 
+// Supabase realtime sync for scripts and products
+let supabaseScriptsLoaded = false
+let supabaseProductsLoaded = false
+
+async function syncScriptsFromSupabase() {
+  try {
+    const { data: scripts, error } = await supabaseClient
+      .from("scripts")
+      .select("*")
+      .order("step_order", { ascending: true })
+    
+    if (!error && scripts && scripts.length > 0) {
+      const mappedSteps: ScriptStep[] = scripts.map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        content: s.content,
+        productId: s.product_id,
+        productName: s.product_name,
+        order: s.step_order || 0,
+        buttons: s.buttons || [],
+        tabulations: s.tabulations || [],
+        alert: s.alert,
+        isActive: s.is_active ?? true,
+        createdAt: new Date(s.created_at),
+        updatedAt: s.updated_at ? new Date(s.updated_at) : new Date(s.created_at),
+      }))
+      
+      localStorage.setItem(STORAGE_KEYS.SCRIPT_STEPS, JSON.stringify(mappedSteps))
+      supabaseScriptsLoaded = true
+      notifyUpdateImmediate()
+    }
+  } catch (e) {
+    console.error("[Store] Error syncing scripts from Supabase:", e)
+  }
+}
+
+async function syncProductsFromSupabase() {
+  try {
+    const { data: products, error } = await supabaseClient
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("name", { ascending: true })
+    
+    if (!error && products && products.length > 0) {
+      const mappedProducts: Product[] = products.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description || "",
+        scriptId: `${p.id}-inicio`,
+        category: p.category || "outros",
+        isActive: p.is_active ?? true,
+        details: p.details || {},
+        createdAt: new Date(p.created_at),
+        updatedAt: p.updated_at ? new Date(p.updated_at) : new Date(p.created_at),
+      }))
+      
+      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(mappedProducts))
+      supabaseProductsLoaded = true
+      notifyUpdateImmediate()
+    }
+  } catch (e) {
+    console.error("[Store] Error syncing products from Supabase:", e)
+  }
+}
+
+// Initialize Supabase sync on load
+if (typeof window !== "undefined") {
+  // Initial sync
+  syncScriptsFromSupabase()
+  syncProductsFromSupabase()
+  
+  // Subscribe to realtime changes for scripts
+  const scriptsChannel = supabaseClient
+    .channel("scripts-realtime")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "scripts" },
+      () => {
+        syncScriptsFromSupabase()
+      }
+    )
+    .subscribe()
+  
+  // Subscribe to realtime changes for products
+  const productsChannel = supabaseClient
+    .channel("products-realtime")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "products" },
+      () => {
+        syncProductsFromSupabase()
+      }
+    )
+    .subscribe()
+}
+
 // Script steps
 export function getScriptSteps(): ScriptStep[] {
   if (typeof window === "undefined") return []
@@ -1479,6 +1244,103 @@ export function deleteAllStepsFromProduct(productId: string) {
   debouncedSave(STORAGE_KEYS.SCRIPT_STEPS, steps)
   clearCaches()
   notifyUpdateImmediate()
+}
+
+// Supabase sync for tabulations, situations, channels
+async function syncTabulationsFromSupabase() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("tabulations")
+      .select("*")
+      .eq("is_active", true)
+      .order("name", { ascending: true })
+    
+    if (!error && data && data.length > 0) {
+      const mapped: Tabulation[] = data.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description || "",
+        color: t.color || "#6b7280",
+        createdAt: new Date(t.created_at),
+      }))
+      localStorage.setItem(STORAGE_KEYS.TABULATIONS, JSON.stringify(mapped))
+      notifyUpdateImmediate()
+    }
+  } catch (e) {
+    console.error("[Store] Error syncing tabulations:", e)
+  }
+}
+
+async function syncSituationsFromSupabase() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("situations")
+      .select("*")
+      .eq("is_active", true)
+      .order("name", { ascending: true })
+    
+    if (!error && data && data.length > 0) {
+      const mapped: ServiceSituation[] = data.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        description: s.description || "",
+        isActive: s.is_active ?? true,
+        createdAt: new Date(s.created_at),
+      }))
+      localStorage.setItem(STORAGE_KEYS.SITUATIONS, JSON.stringify(mapped))
+      notifyUpdateImmediate()
+    }
+  } catch (e) {
+    console.error("[Store] Error syncing situations:", e)
+  }
+}
+
+async function syncChannelsFromSupabase() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("channels")
+      .select("*")
+      .eq("is_active", true)
+      .order("name", { ascending: true })
+    
+    if (!error && data && data.length > 0) {
+      const mapped: Channel[] = data.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description || "",
+        icon: c.icon || "phone",
+        isActive: c.is_active ?? true,
+        createdAt: new Date(c.created_at),
+      }))
+      localStorage.setItem(STORAGE_KEYS.CHANNELS, JSON.stringify(mapped))
+      notifyUpdateImmediate()
+    }
+  } catch (e) {
+    console.error("[Store] Error syncing channels:", e)
+  }
+}
+
+// Initialize sync for tabulations, situations, channels
+if (typeof window !== "undefined") {
+  syncTabulationsFromSupabase()
+  syncSituationsFromSupabase()
+  syncChannelsFromSupabase()
+  
+  // Realtime subscriptions
+  supabaseClient
+    .channel("tabulations-realtime")
+    .on("postgres_changes", { event: "*", schema: "public", table: "tabulations" }, () => syncTabulationsFromSupabase())
+    .subscribe()
+  
+  supabaseClient
+    .channel("situations-realtime")
+    .on("postgres_changes", { event: "*", schema: "public", table: "situations" }, () => syncSituationsFromSupabase())
+    .subscribe()
+  
+  supabaseClient
+    .channel("channels-realtime")
+    .on("postgres_changes", { event: "*", schema: "public", table: "channels" }, () => syncChannelsFromSupabase())
+    .subscribe()
 }
 
 // Tabulations
@@ -2933,34 +2795,10 @@ function scheduleNotification() {
 }
 
 export async function loadFromFirebase() {
-  if (typeof window === "undefined") return
-  if (!db) return
-
-  console.log("[v0] Loading all data from Firebase...")
-
-  try {
-    const promises = Object.entries(STORAGE_KEYS).map(async ([key, storageKey]) => {
-      try {
-        const docRef = doc(db, "app_data", storageKey)
-        const docSnap = await getDoc(docRef)
-
-        if (docSnap.exists()) {
-          const data = docSnap.data()
-          if (data && data.data) {
-            localStorage.setItem(storageKey, JSON.stringify(data.data))
-            console.log(`[v0] Loaded ${storageKey} from Firebase:`, data.data.length, "items")
-          }
-        }
-      } catch (error) {
-        console.error(`[v0] Error loading ${storageKey} from Firebase:`, error)
-      }
-    })
-
-    await Promise.all(promises)
-    console.log("[v0] Finished loading from Firebase")
-  } catch (error) {
-    console.error("[v0] Error in loadFromFirebase:", error)
-  }
+  // Firebase disabled - now using Supabase
+  // This function is kept for backwards compatibility but does nothing
+  console.log("[v0] loadFromFirebase called but Firebase is disabled - using Supabase instead")
+  return
 }
 
 // File presentation progress tracking
@@ -3629,4 +3467,20 @@ export function getQualityCenterStats(): {
     totalUsers: users.length,
     onlineNow: onlineUsers.length,
   }
+}
+
+// Hook to subscribe to store updates and trigger re-renders
+export function useStoreSubscription(): number {
+  const [version, setVersion] = useState(0)
+  
+  useEffect(() => {
+    const handleUpdate = () => {
+      setVersion((v) => v + 1)
+    }
+    
+    window.addEventListener("store-updated", handleUpdate)
+    return () => window.removeEventListener("store-updated", handleUpdate)
+  }, [])
+  
+  return version
 }

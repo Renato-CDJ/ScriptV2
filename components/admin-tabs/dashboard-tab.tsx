@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,13 +16,9 @@ import {
   LogIn,
   FileText,
   Filter,
+  Loader2,
 } from "lucide-react"
-import {
-  getOperatorsWithStatus,
-  getOnlineOperatorsCount,
-  getAllUsers,
-  convertFirestoreTimestamp,
-} from "@/lib/store"
+import { useAllUsers, useOperatorPresence } from "@/hooks/use-supabase-realtime"
 import type { User } from "@/lib/types"
 
 type StatusDetail = "online" | "idle" | "offline"
@@ -30,7 +26,7 @@ type StatusDetail = "online" | "idle" | "offline"
 function safeDate(date: any): Date | null {
   if (!date) return null
   try {
-    const d = convertFirestoreTimestamp(date)
+    const d = new Date(date)
     if (isNaN(d.getTime())) return null
     return d
   } catch {
@@ -81,36 +77,22 @@ function StatusIndicator({ status }: { status: StatusDetail }) {
 }
 
 export function DashboardTab() {
-  const [operators, setOperators] = useState<(User & { statusDetail: StatusDetail })[]>([])
+  // Use Supabase realtime hook for operator presence
+  const { 
+    operators, 
+    loading, 
+    onlineCount, 
+    idleCount, 
+    offlineCount, 
+    totalCount 
+  } = useOperatorPresence()
+  
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<"all" | StatusDetail>("all")
   const [filterScript, setFilterScript] = useState<"all" | "accessed" | "not-accessed">("all")
-  const [onlineCount, setOnlineCount] = useState(0)
 
-  useEffect(() => {
-    const updateData = () => {
-      setOperators(getOperatorsWithStatus())
-      setOnlineCount(getOnlineOperatorsCount())
-    }
-
-    updateData()
-
-    // Refresh every 10 seconds for near real-time
-    const interval = setInterval(updateData, 10000)
-
-    const handleStoreUpdate = () => updateData()
-    window.addEventListener("store-updated", handleStoreUpdate)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener("store-updated", handleStoreUpdate)
-    }
-  }, [])
-
-  const totalOperators = operators.length
-  const idleCount = operators.filter((o) => o.statusDetail === "idle").length
-  const offlineCount = operators.filter((o) => o.statusDetail === "offline").length
-  const activeOnline = operators.filter((o) => o.statusDetail === "online").length
+  const totalOperators = totalCount
+  const activeOnline = onlineCount
 
   // Today's script access
   const today = new Date()
@@ -161,6 +143,14 @@ export function DashboardTab() {
 
     return list
   }, [operators, searchQuery, filterStatus, filterScript])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

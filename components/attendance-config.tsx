@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { getProducts, getAttendanceTypes, getPersonTypes } from "@/lib/store"
+import { useProducts } from "@/hooks/use-supabase-admin"
+import { getAttendanceTypes, getPersonTypes } from "@/lib/store"
 import type { AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 
@@ -12,23 +13,27 @@ interface AttendanceConfigProps {
 }
 
 export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
+  const { data: productsData } = useProducts()
   const [attendanceType, setAttendanceType] = useState<string | null>(null)
   const [personType, setPersonType] = useState<string | null>(null)
   const [product, setProduct] = useState<string>("")
-  const [products, setProducts] = useState(getProducts().filter((p) => p.isActive))
-  const [attendanceTypes, setAttendanceTypes] = useState(getAttendanceTypes())
-  const [personTypes, setPersonTypes] = useState(getPersonTypes())
 
-  useEffect(() => {
-    const handleStoreUpdate = () => {
-      setProducts(getProducts().filter((p) => p.isActive))
-      setAttendanceTypes(getAttendanceTypes())
-      setPersonTypes(getPersonTypes())
-    }
+  // Map products from Supabase to component format
+  const products = useMemo(() => productsData
+    .filter((p: any) => p.is_active)
+    .map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      isActive: p.is_active,
+      attendanceTypes: p.details?.attendanceTypes || [],
+      personTypes: p.details?.personTypes || [],
+      scriptId: p.details?.scriptId || "",
+    })), [productsData])
 
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [])
+  // These are still from localStorage for now (UI config)
+  const attendanceTypes = getAttendanceTypes()
+  const personTypes = getPersonTypes()
 
   const isReceptivo = attendanceType === "receptivo"
 

@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { getActiveResultCodes } from "@/lib/store"
+import { useResultCodes } from "@/hooks/use-supabase-admin"
 import type { ResultCode } from "@/lib/types"
-import { Search, ListChecks, ShieldCheck, ShieldAlert, X } from "lucide-react"
+import { Search, ListChecks, ShieldCheck, ShieldAlert, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface OperatorResultCodesModalProps {
@@ -16,24 +16,19 @@ interface OperatorResultCodesModalProps {
 }
 
 export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultCodesModalProps) {
-  const [resultCodes, setResultCodes] = useState<ResultCode[]>([])
+  const { data: resultCodesData, loading } = useResultCodes()
   const [searchQuery, setSearchQuery] = useState("")
 
-  useEffect(() => {
-    if (open) {
-      setResultCodes(getActiveResultCodes())
-    }
-  }, [open])
-
-  useEffect(() => {
-    const handleStoreUpdate = () => {
-      if (open) {
-        setResultCodes(getActiveResultCodes())
-      }
-    }
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [open])
+  // Map Supabase data to component format
+  const resultCodes = useMemo(() => resultCodesData
+    .filter((c: any) => c.is_active)
+    .map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description || "",
+      phase: c.category === "before" ? "before" : "after",
+      isActive: c.is_active,
+    })), [resultCodesData])
 
   const beforeCodes = useMemo(() => {
     return resultCodes
@@ -106,7 +101,11 @@ export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultC
 
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-auto px-3 py-4">
-          {resultCodes.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : resultCodes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center mb-4">
                 <ListChecks className="h-8 w-8 text-muted-foreground/50" />

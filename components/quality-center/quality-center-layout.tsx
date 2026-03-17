@@ -7,33 +7,23 @@ import { QualityCenterSidebar } from "./quality-center-sidebar"
 import { QualityCenterFeed } from "./quality-center-feed"
 import { QualityCenterOnlineUsers } from "./quality-center-online-users"
 import { QualityCenterAdminPanel } from "./quality-center-admin-panel"
-import { getAllUsers, getAdminQuestions } from "@/lib/store"
+import { useAllUsers, useAdminQuestions } from "@/hooks/use-supabase-realtime"
 import type { User } from "@/lib/types"
 
 export function QualityCenterLayout() {
   const { user } = useAuth()
   const [showAdminPanel, setShowAdminPanel] = useState(false)
-  const [onlineUsers, setOnlineUsers] = useState<User[]>([])
-  const [pendingQuestions, setPendingQuestions] = useState(0)
+  
+  const { users: allUsers } = useAllUsers()
+  const { questions: adminQuestions } = useAdminQuestions()
 
-  const loadData = () => {
-    const users = getAllUsers().filter((u) => u.role === "operator" && u.isOnline)
-    setOnlineUsers(users)
-    const questions = getAdminQuestions()
-    setPendingQuestions(questions.length)
-  }
-
-  useEffect(() => {
-    loadData()
-    const handleUpdate = () => loadData()
-    window.addEventListener("store-updated", handleUpdate)
-    return () => window.removeEventListener("store-updated", handleUpdate)
-  }, [])
+  const onlineUsers = allUsers.filter((u) => u.role === "operator" && u.isOnline)
+  const pendingQuestions = adminQuestions.length
 
   const isAdmin = user?.role === "admin"
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <QualityCenterHeader 
         pendingQuestions={pendingQuestions} 
         showAdminPanel={showAdminPanel}
@@ -47,17 +37,21 @@ export function QualityCenterLayout() {
           onShowAdminPanel={() => setShowAdminPanel(true)}
         />
         
-        <main className="flex-1 max-w-3xl mx-auto px-4 py-6">
-          {showAdminPanel && isAdmin ? (
+        {showAdminPanel && isAdmin ? (
+          <main className="flex-1 overflow-auto">
             <QualityCenterAdminPanel pendingQuestions={pendingQuestions} />
-          ) : (
-            <QualityCenterFeed />
-          )}
-        </main>
-        
-        <aside className="hidden lg:block w-72 p-4">
-          <QualityCenterOnlineUsers users={onlineUsers} />
-        </aside>
+          </main>
+        ) : (
+          <>
+            <main className="flex-1 max-w-3xl mx-auto px-4 py-6">
+              <QualityCenterFeed />
+            </main>
+            
+            <aside className="hidden lg:block w-72 p-4">
+              <QualityCenterOnlineUsers users={onlineUsers} />
+            </aside>
+          </>
+        )}
       </div>
     </div>
   )
