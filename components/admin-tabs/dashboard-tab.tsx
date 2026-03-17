@@ -17,6 +17,7 @@ import {
   FileText,
   Filter,
   Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { useAllUsers, useOperatorPresence } from "@/hooks/use-supabase-realtime"
 import type { User } from "@/lib/types"
@@ -84,8 +85,17 @@ export function DashboardTab() {
     onlineCount, 
     idleCount, 
     offlineCount, 
-    totalCount 
+    totalCount,
+    refetch,
   } = useOperatorPresence()
+  
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await refetch()
+    setTimeout(() => setIsRefreshing(false), 500)
+  }
   
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<"all" | StatusDetail>("all")
@@ -154,11 +164,23 @@ export function DashboardTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
-        <p className="text-muted-foreground mt-1">
-          Monitoramento de operadores em tempo real
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
+          <p className="text-muted-foreground mt-1">
+            Monitoramento de operadores em tempo real
+          </p>
+        </div>
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          size="sm"
+          disabled={isRefreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          Atualizar
+        </Button>
       </div>
 
       {/* Stats Cards */}

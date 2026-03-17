@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,11 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Search, Bell, Moon, Sun, LogOut, User, Settings, ArrowLeft, Calendar as CalendarIcon } from "lucide-react"
+import { Search, Bell, Moon, Sun, LogOut, User, Settings, Calendar } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { cn } from "@/lib/utils"
 
 interface QualityCenterHeaderProps {
   pendingQuestions: number
@@ -31,7 +29,6 @@ export function QualityCenterHeader({ pendingQuestions, showAdminPanel, onToggle
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [searchQuery, setSearchQuery] = useState("")
-  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
   const [showNotifications, setShowNotifications] = useState(false)
 
   const initials = user?.fullName
@@ -41,82 +38,82 @@ export function QualityCenterHeader({ pendingQuestions, showAdminPanel, onToggle
     .toUpperCase()
     .slice(0, 2) || "U"
 
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      "bg-blue-500",
+      "bg-green-500",
+      "bg-orange-500",
+      "bg-purple-500",
+      "bg-pink-500",
+      "bg-cyan-500",
+    ]
+    const index = (name?.charCodeAt(0) || 0) % colors.length
+    return colors[index]
+  }
+
   const handleLogout = () => {
     logout()
     router.push("/")
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-      <div className="flex items-center justify-between px-6 h-14">
+    <header className="sticky top-0 z-50 bg-card border-b border-border/50">
+      <div className="flex items-center justify-between px-4 h-14">
         {/* Logo and Title */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(user?.role === "admin" ? "/admin" : "/operator")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <h1 className="text-lg font-semibold text-orange-500">Central da Qualidade</h1>
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-orange-500 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">Q</span>
+          </div>
+          <span className="text-lg font-bold text-foreground hidden sm:inline">Central da Qualidade</span>
         </div>
 
-        {/* Search and Filter */}
-        <div className="flex items-center gap-3 flex-1 max-w-2xl mx-8">
-          <div className="relative flex-1">
+        {/* Search */}
+        <div className="flex-1 max-w-md mx-4">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Pesquisar publicacoes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-muted/50 border-border focus-visible:ring-1 focus-visible:ring-orange-500"
+              className="pl-10 h-9 bg-muted/50 border-border/50 rounded-lg text-sm"
             />
           </div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 border-border">
-                <CalendarIcon className="h-4 w-4" />
-                Filtrar data
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={dateFilter}
-                onSelect={setDateFilter}
-                locale={ptBR}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1">
+          {/* Filter by Date */}
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-9 gap-2 border-border/50 text-muted-foreground hover:text-foreground"
+          >
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">Filtrar data</span>
+          </Button>
+
           {/* Theme Toggle */}
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground"
           >
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 
-          {/* Notifications Bell */}
+          {/* Notifications */}
           <Popover open={showNotifications} onOpenChange={setShowNotifications}>
             <PopoverTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="relative text-muted-foreground hover:text-foreground"
+                className="relative h-9 w-9 text-muted-foreground hover:text-foreground"
               >
                 <Bell className="h-5 w-5" />
                 {pendingQuestions > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-medium animate-pulse">
+                  <span className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-orange-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
                     {pendingQuestions > 9 ? "9+" : pendingQuestions}
                   </span>
                 )}
@@ -149,24 +146,12 @@ export function QualityCenterHeader({ pendingQuestions, showAdminPanel, onToggle
             </PopoverContent>
           </Popover>
 
-          {/* Admin Panel Toggle */}
-          {user?.role === "admin" && (
-            <Button
-              variant={showAdminPanel ? "default" : "ghost"}
-              size="icon"
-              onClick={onToggleAdminPanel}
-              className={showAdminPanel ? "bg-orange-500 hover:bg-orange-600 text-white" : "text-muted-foreground hover:text-foreground"}
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
-          )}
-
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full ml-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-orange-500/20 text-orange-500 text-sm font-medium">
+              <Button variant="ghost" size="icon" className="rounded-full ml-1">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback className={cn(getAvatarColor(user?.fullName || ""), "text-white text-sm font-semibold")}>
                     {initials}
                   </AvatarFallback>
                 </Avatar>
@@ -178,12 +163,12 @@ export function QualityCenterHeader({ pendingQuestions, showAdminPanel, onToggle
                 <p className="text-xs text-muted-foreground">{user?.role === "admin" ? "Administrador" : "Operador"}</p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push(user?.role === "admin" ? "/admin" : "/operator")}>
                 <User className="mr-2 h-4 w-4" />
-                Perfil
+                Voltar ao Painel
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+              <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
               </DropdownMenuItem>

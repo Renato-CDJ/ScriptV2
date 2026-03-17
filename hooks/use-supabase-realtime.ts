@@ -1,17 +1,20 @@
 "use client"
 
-import { useEffect, useState, useCallback, useMemo } from "react"
+import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { User, QualityPost } from "@/lib/types"
 
-const supabase = createClient()
+// Use singleton client
+const getSupabase = () => createClient()
 
 // Users hook with realtime
 export function useSupabaseUsers() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const channelRef = useRef<ReturnType<ReturnType<typeof getSupabase>["channel"]> | null>(null)
 
   const fetchUsers = useCallback(async () => {
+    const supabase = getSupabase()
     const { data, error } = await supabase
       .from("users")
       .select("*")
@@ -30,6 +33,12 @@ export function useSupabaseUsers() {
         isOnline: u.is_online,
         isActive: u.is_active,
         createdAt: new Date(u.created_at),
+        // Presence fields for Dashboard
+        lastActivity: u.last_activity,
+        lastLogin: u.last_login,
+        lastScriptAccess: u.last_script_access,
+        currentProduct: u.current_product,
+        currentScreen: u.current_screen,
       }))
       setUsers(mappedUsers)
     }
@@ -37,11 +46,18 @@ export function useSupabaseUsers() {
   }, [])
 
   useEffect(() => {
+    const supabase = getSupabase()
     fetchUsers()
 
-    // Setup realtime subscription
+    // Cleanup existing channel first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    // Setup realtime subscription with unique channel name
+    const channelName = `users-changes-${Date.now()}`
     const channel = supabase
-      .channel("users-changes")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "users" },
@@ -51,8 +67,13 @@ export function useSupabaseUsers() {
       )
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [fetchUsers])
 
@@ -63,8 +84,10 @@ export function useSupabaseUsers() {
 export function useQualityPosts() {
   const [posts, setPosts] = useState<QualityPost[]>([])
   const [loading, setLoading] = useState(true)
+  const channelRef = useRef<ReturnType<ReturnType<typeof getSupabase>["channel"]> | null>(null)
 
   const fetchPosts = useCallback(async () => {
+    const supabase = getSupabase()
     const { data, error } = await supabase
       .from("quality_posts")
       .select(`
@@ -101,10 +124,17 @@ export function useQualityPosts() {
   }, [])
 
   useEffect(() => {
+    const supabase = getSupabase()
     fetchPosts()
 
+    // Cleanup existing channel first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    const channelName = `quality-posts-changes-${Date.now()}`
     const channel = supabase
-      .channel("quality-posts-changes")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "quality_posts" },
@@ -117,8 +147,13 @@ export function useQualityPosts() {
       )
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [fetchPosts])
 
@@ -129,8 +164,10 @@ export function useQualityPosts() {
 export function useAdminQuestions(filterByUserId?: string) {
   const [questions, setQuestions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const channelRef = useRef<ReturnType<ReturnType<typeof getSupabase>["channel"]> | null>(null)
 
   const fetchQuestions = useCallback(async () => {
+    const supabase = getSupabase()
     let query = supabase
       .from("admin_questions")
       .select("*")
@@ -166,10 +203,17 @@ export function useAdminQuestions(filterByUserId?: string) {
   }, [filterByUserId])
 
   useEffect(() => {
+    const supabase = getSupabase()
     fetchQuestions()
 
+    // Cleanup existing channel first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    const channelName = `admin-questions-changes-${Date.now()}`
     const channel = supabase
-      .channel("admin-questions-changes")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "admin_questions" },
@@ -177,8 +221,13 @@ export function useAdminQuestions(filterByUserId?: string) {
       )
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [fetchQuestions])
 
@@ -192,7 +241,7 @@ export function useAllUsers() {
 
 // Operator Presence hook - shows online/idle/offline status in realtime
 export function useOperatorPresence() {
-  const { users, loading } = useSupabaseUsers()
+  const { users, loading, refetch } = useSupabaseUsers()
 
   const operatorsWithStatus = useMemo(() => {
     const now = Date.now()
@@ -200,15 +249,15 @@ export function useOperatorPresence() {
     const IDLE_THRESHOLD = 10 * 60 * 1000 // 10 minutes
 
     return users
-      .filter((u: any) => u.role === "operator")
+      .filter((u: any) => u.role === "operator" && u.isActive !== false)
       .map((u: any) => {
-        const lastActivity = u.lastActivity ? new Date(u.lastActivity).getTime() : 0
-        const diff = now - lastActivity
+        const lastActivityTime = u.lastActivity ? new Date(u.lastActivity).getTime() : 0
+        const diff = now - lastActivityTime
 
         let statusDetail: "online" | "idle" | "offline" = "offline"
-        if (diff < ONLINE_THRESHOLD) {
+        if (lastActivityTime > 0 && diff < ONLINE_THRESHOLD) {
           statusDetail = "online"
-        } else if (diff < IDLE_THRESHOLD) {
+        } else if (lastActivityTime > 0 && diff < IDLE_THRESHOLD) {
           statusDetail = "idle"
         }
 
@@ -221,9 +270,11 @@ export function useOperatorPresence() {
           isActive: u.isActive,
           statusDetail,
           lastActivity: u.lastActivity,
-          lastLogin: u.lastLogin,
+          lastHeartbeat: u.lastActivity, // alias for dashboard
+          lastLoginAt: u.lastLogin,
           lastScriptAccess: u.lastScriptAccess,
           currentProduct: u.currentProduct,
+          currentProductName: u.currentProduct || null, // alias for dashboard
           currentScreen: u.currentScreen,
         }
       })
@@ -239,7 +290,8 @@ export function useOperatorPresence() {
     onlineCount, 
     idleCount, 
     offlineCount,
-    totalCount: operatorsWithStatus.length 
+    totalCount: operatorsWithStatus.length,
+    refetch,
   }
 }
 
@@ -249,6 +301,7 @@ export async function updateOperatorPresence(userId: string, data?: {
   currentScreen?: string
   lastScriptAccess?: boolean
 }) {
+  const supabase = getSupabase()
   const updates: any = {
     last_activity: new Date().toISOString(),
   }
@@ -299,6 +352,7 @@ export async function createQualityPostSupabase(post: {
   recipientNames?: string[]
   sendToAll?: boolean
 }): Promise<QualityPost | null> {
+  const supabase = getSupabase()
   const { data, error } = await supabase
     .from("quality_posts")
     .insert({
@@ -337,6 +391,7 @@ export async function createQualityPostSupabase(post: {
 }
 
 export async function likePostSupabase(postId: string, userId: string): Promise<void> {
+  const supabase = getSupabase()
   const { data: post } = await supabase
     .from("quality_posts")
     .select("likes")
@@ -361,6 +416,7 @@ export async function addCommentSupabase(
   postId: string,
   comment: { authorId: string; authorName: string; content: string }
 ): Promise<void> {
+  const supabase = getSupabase()
   await supabase.from("quality_comments").insert({
     post_id: postId,
     author_id: comment.authorId,
@@ -374,6 +430,7 @@ export async function voteOnQuizSupabase(
   optionId: string,
   userId: string
 ): Promise<void> {
+  const supabase = getSupabase()
   const { data: post } = await supabase
     .from("quality_posts")
     .select("quiz_options")
@@ -401,6 +458,7 @@ export async function getQualityStatsSupabase(): Promise<{
   totalComments: number
   totalUsers: number
 }> {
+  const supabase = getSupabase()
   const { data: posts } = await supabase.from("quality_posts").select("likes")
   const { count: commentsCount } = await supabase
     .from("quality_comments")
@@ -425,8 +483,10 @@ export async function getQualityStatsSupabase(): Promise<{
 export function useFeedbacks() {
   const [feedbacks, setFeedbacks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const channelRef = useRef<ReturnType<ReturnType<typeof getSupabase>["channel"]> | null>(null)
 
   const fetchFeedbacks = useCallback(async () => {
+    const supabase = getSupabase()
     const { data, error } = await supabase
       .from("feedbacks")
       .select("*")
@@ -447,10 +507,16 @@ export function useFeedbacks() {
   }, [])
 
   useEffect(() => {
+    const supabase = getSupabase()
     fetchFeedbacks()
 
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    const channelName = `feedbacks-changes-${Date.now()}`
     const channel = supabase
-      .channel("feedbacks-changes")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "feedbacks" },
@@ -458,8 +524,13 @@ export function useFeedbacks() {
       )
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [fetchFeedbacks])
 
@@ -475,6 +546,7 @@ export function useQualityStats() {
     totalUsers: 0,
   })
   const [loading, setLoading] = useState(true)
+  const channelRef = useRef<ReturnType<ReturnType<typeof getSupabase>["channel"]> | null>(null)
 
   const fetchStats = useCallback(async () => {
     const data = await getQualityStatsSupabase()
@@ -483,11 +555,16 @@ export function useQualityStats() {
   }, [])
 
   useEffect(() => {
+    const supabase = getSupabase()
     fetchStats()
 
-    // Listen to changes on posts, comments, and users
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    const channelName = `quality-stats-changes-${Date.now()}`
     const channel = supabase
-      .channel("quality-stats-changes")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "quality_posts" },
@@ -505,8 +582,13 @@ export function useQualityStats() {
       )
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [fetchStats])
 
@@ -520,6 +602,7 @@ export async function answerAdminQuestion(
   adminId: string,
   adminName: string
 ): Promise<void> {
+  const supabase = getSupabase()
   await supabase
     .from("admin_questions")
     .update({
@@ -539,6 +622,7 @@ export async function answerAdminQuestionSecond(
   adminId: string,
   adminName: string
 ): Promise<void> {
+  const supabase = getSupabase()
   await supabase
     .from("admin_questions")
     .update({
@@ -555,6 +639,7 @@ export async function markQuestionUnderstood(
   questionId: string,
   understood: boolean
 ): Promise<void> {
+  const supabase = getSupabase()
   const updates: any = { understood }
   
   // If operator didn't understand after second reply, mark for in-person feedback
@@ -580,6 +665,7 @@ export async function createAdminQuestion(data: {
   authorId: string
   authorName: string
 }): Promise<void> {
+  const supabase = getSupabase()
   await supabase.from("admin_questions").insert({
     question: data.question,
     author_id: data.authorId,
@@ -592,6 +678,7 @@ export async function createAdminQuestion(data: {
 
 // Delete quality post
 export async function deleteQualityPostSupabase(postId: string): Promise<void> {
+  const supabase = getSupabase()
   // First delete all comments associated with this post
   await supabase.from("quality_comments").delete().eq("post_id", postId)
   // Then delete the post
@@ -600,6 +687,7 @@ export async function deleteQualityPostSupabase(postId: string): Promise<void> {
 
 // Edit quality post
 export async function editQualityPostSupabase(postId: string, content: string): Promise<void> {
+  const supabase = getSupabase()
   await supabase
     .from("quality_posts")
     .update({ content, updated_at: new Date().toISOString() })
@@ -608,11 +696,13 @@ export async function editQualityPostSupabase(postId: string, content: string): 
 
 // Delete comment
 export async function deleteCommentSupabase(commentId: string): Promise<void> {
+  const supabase = getSupabase()
   await supabase.from("quality_comments").delete().eq("id", commentId)
 }
 
 // Edit comment
 export async function editCommentSupabase(commentId: string, content: string): Promise<void> {
+  const supabase = getSupabase()
   await supabase
     .from("quality_comments")
     .update({ content, updated_at: new Date().toISOString() })
@@ -621,6 +711,7 @@ export async function editCommentSupabase(commentId: string, content: string): P
 
 // Mark feedback as read
 export async function markFeedbackAsRead(feedbackId: string): Promise<void> {
+  const supabase = getSupabase()
   await supabase.from("feedbacks").update({ is_read: true }).eq("id", feedbackId)
 }
 
@@ -634,6 +725,7 @@ export async function createFeedbackSupabase(feedback: {
   details: string
   score?: number
 }): Promise<void> {
+  const supabase = getSupabase()
   await supabase.from("feedbacks").insert({
     type: feedback.feedbackType,
     message: feedback.details,
@@ -647,6 +739,7 @@ export async function createFeedbackSupabase(feedback: {
 
 // User management functions
 export async function getUserByUsername(username: string): Promise<User | null> {
+  const supabase = getSupabase()
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -672,6 +765,7 @@ export async function getUserByUsername(username: string): Promise<User | null> 
 }
 
 export async function updateUserOnlineStatus(userId: string, isOnline: boolean): Promise<void> {
+  const supabase = getSupabase()
   await supabase
     .from("users")
     .update({ is_online: isOnline, last_seen: new Date().toISOString() })
@@ -679,6 +773,7 @@ export async function updateUserOnlineStatus(userId: string, isOnline: boolean):
 }
 
 export async function getAllUsersFromSupabase(): Promise<User[]> {
+  const supabase = getSupabase()
   const { data, error } = await supabase
     .from("users")
     .select("*")

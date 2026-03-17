@@ -132,7 +132,6 @@ export function OperatorsTab() {
         return
       }
 
-      deleteUser(operatorId)
       setOperators(operators.filter(op => op.id !== operatorId))
       toast({
         title: "Sucesso",
@@ -196,12 +195,11 @@ export function OperatorsTab() {
         return
       }
 
-      const updatedOperator: User = {
-        ...editingOperator,
-        fullName: formData.fullName,
-        username: formData.username,
-      }
-      updateUser(updatedOperator)
+      setOperators(operators.map(op => 
+        op.id === editingOperator.id 
+          ? { ...op, fullName: formData.fullName, username: formData.username }
+          : op
+      ))
       toast({
         title: "Sucesso",
         description: "Operador atualizado com sucesso",

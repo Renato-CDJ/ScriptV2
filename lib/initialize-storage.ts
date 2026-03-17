@@ -1,8 +1,56 @@
 'use client'
 
+// Helper function to ensure attendance types exist
+function ensureAttendanceTypes() {
+  const existing = localStorage.getItem('callcenter_attendance_types')
+  if (!existing || existing === '[]') {
+    const defaultAttendanceTypes = [
+      {
+        id: "att-ativo",
+        value: "ativo",
+        label: "Ativo",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "att-receptivo",
+        value: "receptivo",
+        label: "Receptivo",
+        createdAt: new Date().toISOString(),
+      },
+    ]
+    localStorage.setItem('callcenter_attendance_types', JSON.stringify(defaultAttendanceTypes))
+  }
+}
+
+// Helper function to ensure person types exist
+function ensurePersonTypes() {
+  const existing = localStorage.getItem('callcenter_person_types')
+  if (!existing || existing === '[]') {
+    const defaultPersonTypes = [
+      {
+        id: "per-fisica",
+        value: "fisica",
+        label: "Física",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "per-juridica",
+        value: "juridica",
+        label: "Jurídica",
+        createdAt: new Date().toISOString(),
+      },
+    ]
+    localStorage.setItem('callcenter_person_types', JSON.stringify(defaultPersonTypes))
+  }
+}
+
 // Script para inicializar localStorage com dados padrão na primeira vez
 export function initializeDefaultData() {
   if (typeof window === 'undefined') return
+
+  // Always ensure attendance types and person types exist
+  ensureAttendanceTypes()
+  ensurePersonTypes()
 
   const hasInitialized = localStorage.getItem('roteiro_initialized')
   if (hasInitialized) return
@@ -45,5 +93,6 @@ export function initializeDefaultData() {
   localStorage.setItem('roteiro_current_user', JSON.stringify(null))
   localStorage.setItem('roteiro_quality_posts', JSON.stringify([]))
   localStorage.setItem('roteiro_feedbacks', JSON.stringify([]))
+
   localStorage.setItem('roteiro_initialized', 'true')
 }

@@ -146,7 +146,7 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="!max-w-[98vw] w-[98vw] !max-h-[90vh] h-[85vh] p-0 gap-0 overflow-hidden flex flex-col bg-background">
+      <DialogContent className="!max-w-[90vw] w-[90vw] !max-h-[90vh] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col bg-background">
         {/* Header */}
         <DialogHeader className="border-b px-6 py-3 flex-shrink-0 bg-card">
           <div className="flex items-center justify-between">
@@ -232,19 +232,13 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
 
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
-          <aside className="w-56 bg-card border-r border-border p-4 shrink-0 flex flex-col">
-            <nav className="space-y-1 flex-1">
+          <aside className="w-52 bg-card border-r border-border p-3 shrink-0 flex flex-col">
+            <nav className="space-y-0.5 flex-1">
               <SidebarButton
                 icon={<Home className="h-5 w-5" />}
                 label="Inicio"
                 active={activeView === "inicio"}
                 onClick={() => setActiveView("inicio")}
-              />
-              <SidebarButton
-                icon={<User className="h-5 w-5" />}
-                label="Meu Perfil"
-                active={activeView === "perfil"}
-                onClick={() => setActiveView("perfil")}
               />
               <SidebarButton
                 icon={<Users className="h-5 w-5" />}
@@ -331,9 +325,9 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1">
-              <div className="p-6">
+          <main className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4">
                 {activeView === "inicio" && (
                   <FeedView
                     posts={filteredPostsByDate}
@@ -343,9 +337,6 @@ export function QualityCenterModal({ isOpen, onClose }: QualityCenterModalProps)
                     formatTimeAgo={formatTimeAgo}
                     allUsers={allUsers}
                   />
-                )}
-                {activeView === "perfil" && (
-                  <ProfileView user={user} getInitials={getInitials} />
                 )}
                 {activeView === "admin" && isAdmin && (
                   <AdminPanelView user={user} getInitials={getInitials} formatTimeAgo={formatTimeAgo} />
@@ -443,9 +434,9 @@ function SidebarButton({
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200",
+        "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left transition-all duration-200 text-sm",
         active
-          ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md"
+          ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
         highlight && !active && "text-orange-500 dark:text-orange-400 font-medium"
       )}
@@ -457,230 +448,6 @@ function SidebarButton({
 }
 
 // Profile View Component
-function ProfileView({ user, getInitials }: { user: any; getInitials: (name: string) => string }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [profile, setProfile] = useState({
-    nome: user?.fullName || user?.username || "",
-    idade: "",
-    interesses: "",
-    curso: "",
-    instituicao: "",
-    email: user?.email || "",
-    telefone: "",
-    cidade: "",
-  })
-
-  return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Meu Perfil</h2>
-          <p className="text-muted-foreground text-sm">Gerencie suas informacoes pessoais</p>
-        </div>
-        <Button
-          variant={isEditing ? "default" : "outline"}
-          onClick={() => setIsEditing(!isEditing)}
-          className={isEditing ? "bg-orange-500 hover:bg-orange-600" : ""}
-        >
-          {isEditing ? (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar
-            </>
-          ) : (
-            <>
-              <Edit3 className="h-4 w-4 mr-2" />
-              Editar
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Profile Header Card */}
-      <Card className="border-0 shadow-sm overflow-hidden">
-        <div className="h-24 bg-gradient-to-r from-zinc-800 to-zinc-700 dark:from-zinc-700 dark:to-zinc-600" />
-        <CardContent className="relative pt-0 pb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 -mt-12">
-            <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
-              <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-                {getInitials(profile.nome)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 pb-2">
-              <h3 className="text-xl font-bold">{profile.nome || "Seu Nome"}</h3>
-              <p className="text-muted-foreground text-sm capitalize">{user?.role || "Operador"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Personal Info */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <User className="h-4 w-4 text-orange-500" />
-              Informacoes Pessoais
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider">Nome Completo</Label>
-              {isEditing ? (
-                <Input
-                  value={profile.nome}
-                  onChange={(e) => setProfile({ ...profile, nome: e.target.value })}
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">{profile.nome || "-"}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                <Cake className="h-3 w-3" /> Idade
-              </Label>
-              {isEditing ? (
-                <Input
-                  value={profile.idade}
-                  onChange={(e) => setProfile({ ...profile, idade: e.target.value })}
-                  placeholder="Ex: 25 anos"
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">{profile.idade || "-"}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> Cidade
-              </Label>
-              {isEditing ? (
-                <Input
-                  value={profile.cidade}
-                  onChange={(e) => setProfile({ ...profile, cidade: e.target.value })}
-                  placeholder="Ex: Sao Paulo, SP"
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">{profile.cidade || "-"}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Education */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-blue-500" />
-              Formacao
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider">Curso</Label>
-              {isEditing ? (
-                <Input
-                  value={profile.curso}
-                  onChange={(e) => setProfile({ ...profile, curso: e.target.value })}
-                  placeholder="Ex: Administracao"
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">{profile.curso || "-"}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider">Instituicao</Label>
-              {isEditing ? (
-                <Input
-                  value={profile.instituicao}
-                  onChange={(e) => setProfile({ ...profile, instituicao: e.target.value })}
-                  placeholder="Ex: Universidade XYZ"
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">{profile.instituicao || "-"}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Interests */}
-        <Card className="border-0 shadow-sm md:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Heart className="h-4 w-4 text-red-500" />
-              Interesses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wider">O que voce gosta?</Label>
-              {isEditing ? (
-                <Textarea
-                  value={profile.interesses}
-                  onChange={(e) => setProfile({ ...profile, interesses: e.target.value })}
-                  placeholder="Ex: Musica, Esportes, Tecnologia, Viagens..."
-                  className="min-h-[80px] resize-none"
-                />
-              ) : (
-                <p className="text-sm font-medium">{profile.interesses || "-"}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Contact */}
-        <Card className="border-0 shadow-sm md:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Mail className="h-4 w-4 text-green-500" />
-              Contato
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                  <Mail className="h-3 w-3" /> E-mail
-                </Label>
-                {isEditing ? (
-                  <Input
-                    value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    placeholder="seu@email.com"
-                    className="h-9"
-                  />
-                ) : (
-                  <p className="text-sm font-medium">{profile.email || "-"}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                  <Phone className="h-3 w-3" /> Telefone
-                </Label>
-                {isEditing ? (
-                  <Input
-                    value={profile.telefone}
-                    onChange={(e) => setProfile({ ...profile, telefone: e.target.value })}
-                    placeholder="(11) 99999-9999"
-                    className="h-9"
-                  />
-                ) : (
-                  <p className="text-sm font-medium">{profile.telefone || "-"}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
-}
-
 // Filtered Feed View Component
 function FilteredFeedView({
   posts,
@@ -762,13 +529,9 @@ function FeedView({
   allUsers?: any[]
 }) {
   const [newPostContent, setNewPostContent] = useState("")
-  const [isQuestionToAdmin, setIsQuestionToAdmin] = useState(false)
   const [expandedComments, setExpandedComments] = useState<string[]>([])
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
-  const [showMentions, setShowMentions] = useState(false)
-  const [mentionSearch, setMentionSearch] = useState("")
-  const [selectedMentions, setSelectedMentions] = useState<string[]>([])
-  const [visibilityMode, setVisibilityMode] = useState<"all" | "selected">("all")
+  const [mentionType, setMentionType] = useState<"all" | "admins">("admins") // "all" = Todos podem ver, "admins" = ADM's (default)
 
   const filteredPosts = posts.filter((post) => {
     if (!searchQuery) return true
@@ -777,32 +540,6 @@ function FeedView({
       post.authorName.toLowerCase().includes(searchQuery.toLowerCase())
     )
   })
-
-  // Filter users for mention suggestions
-  const filteredUsersForMention = allUsers.filter((u) => {
-    if (u.id === user?.id) return false // Exclude current user
-    if (!mentionSearch) return true
-    return (
-      u.fullName?.toLowerCase().includes(mentionSearch.toLowerCase()) ||
-      u.username?.toLowerCase().includes(mentionSearch.toLowerCase())
-    )
-  })
-
-  const handleMentionSelect = (mentionedUser: any) => {
-    if (selectedMentions.includes(mentionedUser.id)) {
-      setSelectedMentions((prev) => prev.filter((id) => id !== mentionedUser.id))
-    } else {
-      setSelectedMentions((prev) => [...prev, mentionedUser.id])
-    }
-  }
-
-  const getMentionedNames = () => {
-    return selectedMentions
-      .map((id) => allUsers.find((u) => u.id === id))
-      .filter(Boolean)
-      .map((u) => u.fullName || u.username)
-      .join(", ")
-  }
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() || !user) return
@@ -813,36 +550,25 @@ function FeedView({
       return
     }
 
-    // Operadores sempre publicam como "pergunta", admins podem escolher
+    // Operadores sempre publicam como "pergunta", admins publicam comunicados
     const isOperator = user.role === "operator"
-    const postType = isOperator ? "pergunta" : (isQuestionToAdmin ? "pergunta" : "comunicado")
+    const postType = isOperator ? "pergunta" : "comunicado"
 
-    // Add mentions to content if any
-    let finalContent = newPostContent
-    if (visibilityMode === "all") {
-      finalContent = `<span class="text-orange-500 font-medium">@Todos</span> ${newPostContent}`
-    } else if (selectedMentions.length > 0) {
-      const mentionTags = selectedMentions
-        .map((id) => {
-          const mentionedUser = allUsers.find((u) => u.id === id)
-          return `<span class="text-orange-500 font-medium">@${mentionedUser?.fullName || mentionedUser?.username}</span>`
-        })
-        .join(" ")
-      finalContent = `${mentionTags} ${newPostContent}`
-    }
+    // Determine if sending to admins only or to all
+    const sendToAdminsOnly = mentionType === "admins"
 
     await createQualityPostSupabase({
       type: postType,
-      content: finalContent,
+      content: newPostContent.trim(),
       authorId: user.id,
       authorName: user.fullName || user.username || "Usuario",
+      sendToAll: !sendToAdminsOnly,
+      recipients: sendToAdminsOnly ? ["admins"] : [],
+      recipientNames: sendToAdminsOnly ? ["Administradores"] : [],
     })
 
     setNewPostContent("")
-    setIsQuestionToAdmin(false)
-    setSelectedMentions([])
-    setVisibilityMode("all")
-    setShowMentions(false)
+    setMentionType("all")
   }
 
   const handleLike = async (postId: string) => {
@@ -942,161 +668,86 @@ function FeedView({
   }
 
   return (
-  <div className="max-w-2xl mx-auto space-y-6">
+  <div className="max-w-2xl mx-auto space-y-3">
   {/* New Post Card - Only for operators */}
       {user?.role === "operator" && (
-        <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex gap-3">
-              <Avatar className="h-11 w-11 bg-orange-100 dark:bg-orange-900/50 border-2 border-orange-500/30">
-                <AvatarFallback className="text-orange-600 dark:text-orange-300 font-semibold">
+        <Card className="border-border/50 shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex gap-2.5">
+              <Avatar className="h-9 w-9 bg-orange-100 dark:bg-orange-900/50 border border-orange-500/30">
+                <AvatarFallback className="text-orange-600 dark:text-orange-300 font-medium text-sm">
                   {getInitials(user?.fullName || user?.username)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 space-y-3">
+              <div className="flex-1 space-y-2">
                 <Textarea
                   placeholder="Compartilhe algo com a equipe..."
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
-                  className="min-h-[80px] bg-muted/50 border-0 resize-none focus:ring-2 focus:ring-orange-500/20"
+                  className="min-h-[60px] text-sm bg-muted/30 border-0 resize-none focus:ring-1 focus:ring-orange-500/30 placeholder:text-muted-foreground/60"
                 />
                 
-                {/* Mention/Visibility Section */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <Popover open={showMentions} onOpenChange={setShowMentions}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "gap-2 text-xs",
-                          (visibilityMode === "selected" && selectedMentions.length > 0) &&
-                            "bg-blue-500/10 border-blue-500/50 text-blue-600"
-                        )}
-                      >
-                        <Users className="h-3.5 w-3.5" />
-                        @ Mencionar
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 p-0" align="start">
-                      <div className="p-3 border-b">
-                        <p className="font-medium text-sm mb-2">Quem pode ver?</p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant={visibilityMode === "all" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                              setVisibilityMode("all")
-                              setSelectedMentions([])
-                            }}
-                            className={cn(
-                              "flex-1 text-xs",
-                              visibilityMode === "all" && "bg-orange-500 hover:bg-orange-600"
-                            )}
-                          >
-                            Todos
-                          </Button>
-                          <Button
-                            variant={visibilityMode === "selected" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setVisibilityMode("selected")}
-                            className={cn(
-                              "flex-1 text-xs",
-                              visibilityMode === "selected" && "bg-orange-500 hover:bg-orange-600"
-                            )}
-                          >
-                            Selecionar
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {visibilityMode === "selected" && (
-                        <>
-                          <div className="p-2 border-b">
-                            <Input
-                              placeholder="Buscar usuario..."
-                              value={mentionSearch}
-                              onChange={(e) => setMentionSearch(e.target.value)}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <ScrollArea className="h-48">
-                            <div className="p-2 space-y-1">
-                              {filteredUsersForMention.map((u) => (
-                                <div
-                                  key={u.id}
-                                  onClick={() => handleMentionSelect(u)}
-                                  className={cn(
-                                    "flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors",
-                                    selectedMentions.includes(u.id)
-                                      ? "bg-orange-500/10 border border-orange-500/30"
-                                      : "hover:bg-muted"
-                                  )}
-                                >
-                                  <Avatar className="h-7 w-7">
-                                    <AvatarFallback className="text-xs">
-                                      {getInitials(u.fullName || u.username)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">{u.fullName || u.username}</p>
-                                    <p className="text-xs text-muted-foreground capitalize">{u.role}</p>
-                                  </div>
-                                  {selectedMentions.includes(u.id) && (
-                                    <Check className="h-4 w-4 text-orange-500" />
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </>
-                      )}
-                      
-                      <div className="p-2 border-t bg-muted/30">
+                {/* Mention/Visibility and Publish in same row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
+                          variant="ghost"
                           size="sm"
-                          className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                          onClick={() => setShowMentions(false)}
+                          className={cn(
+                            "h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground",
+                            mentionType === "admins" && "text-orange-600 dark:text-orange-400"
+                          )}
                         >
-                          Confirmar
+                          <AtSign className="h-3.5 w-3.5" />
+                          Mencionar
                         </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  
-                  {/* Show selected mentions */}
-                  {visibilityMode === "all" && (
-                    <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
-                      @Todos podem ver
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-44 bg-popover">
+                        <DropdownMenuItem 
+                          onClick={() => setMentionType("admins")}
+                          className={cn(
+                            "text-sm text-foreground cursor-pointer", 
+                            mentionType === "admins" && "bg-orange-100 dark:bg-orange-900/30"
+                          )}
+                        >
+                          <Shield className="h-3.5 w-3.5 mr-2 text-orange-500" />
+                          <span className="text-foreground">ADMs</span>
+                          {mentionType === "admins" && <Check className="ml-auto h-3.5 w-3.5 text-orange-500" />}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => setMentionType("all")}
+                          className={cn(
+                            "text-sm text-foreground cursor-pointer", 
+                            mentionType === "all" && "bg-orange-100 dark:bg-orange-900/30"
+                          )}
+                        >
+                          <Users className="h-3.5 w-3.5 mr-2 text-blue-500" />
+                          <span className="text-foreground">Todos podem ver</span>
+                          {mentionType === "all" && <Check className="ml-auto h-3.5 w-3.5 text-orange-500" />}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    {/* Show current visibility as small badge */}
+                    <Badge variant="outline" className={cn(
+                      "text-[10px] h-5 px-1.5",
+                      mentionType === "all" 
+                        ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30" 
+                        : "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30"
+                    )}>
+                      {mentionType === "all" ? "@Todos" : "@ADMs"}
                     </Badge>
-                  )}
-                  {visibilityMode === "selected" && selectedMentions.length > 0 && (
-                    <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
-                      @{getMentionedNames()}
-                    </Badge>
-                  )}
-                </div>
+                  </div>
 
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsQuestionToAdmin(!isQuestionToAdmin)}
-                    className={cn(
-                      "gap-2 transition-colors",
-                      isQuestionToAdmin &&
-                        "bg-orange-500/10 border-orange-500/50 text-orange-600 dark:text-orange-400"
-                    )}
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                    Pergunta para Admin
-                  </Button>
                   <Button
                     onClick={handleCreatePost}
                     disabled={!newPostContent.trim()}
-                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white gap-2 shadow-md"
+                    size="sm"
+                    className="h-7 bg-orange-500 hover:bg-orange-600 text-white gap-1 text-xs px-3"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3 w-3" />
                     Publicar
                   </Button>
                 </div>
@@ -1113,17 +764,17 @@ function FeedView({
         const totalVotes = post.quizOptions?.reduce((sum, opt) => sum + (opt.votes?.length || 0), 0) || 0
 
         return (
-          <Card key={post.id} className="border-border shadow-sm hover:shadow-md transition-all">
-            <CardContent className="p-4">
+          <Card key={post.id} className="border-border/50 shadow-sm hover:shadow transition-all">
+            <CardContent className="p-3">
               {/* Post Header */}
-              <div className="flex items-start gap-3 mb-3">
-                <Avatar className="h-11 w-11 bg-muted">
-                  <AvatarFallback className="font-medium">{getInitials(post.authorName)}</AvatarFallback>
+              <div className="flex items-start gap-2.5 mb-2">
+                <Avatar className="h-8 w-8 bg-muted">
+                  <AvatarFallback className="font-medium text-xs">{getInitials(post.authorName)}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold">{post.authorName}</span>
-                    <Badge variant="outline" className={cn("text-xs gap-1", badge.className)}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium text-sm">{post.authorName}</span>
+                    <Badge variant="outline" className={cn("text-[10px] h-4 gap-0.5 px-1", badge.className)}>
                       {badge.icon}
                       {badge.label}
                     </Badge>
@@ -1131,17 +782,17 @@ function FeedView({
                     {!post.sendToAll && post.recipientNames && post.recipientNames.length > 0 && (
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 gap-1 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10">
-                            <AtSign className="h-3.5 w-3.5" />
-                            <span className="text-xs">{post.recipientNames.length}</span>
+                          <Button variant="ghost" size="sm" className="h-5 px-1.5 gap-0.5 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10">
+                            <AtSign className="h-3 w-3" />
+                            <span className="text-[10px]">{post.recipientNames.length}</span>
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-56 p-3" align="start">
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">Mencionados:</p>
-                            <div className="flex flex-wrap gap-1.5">
+                        <PopoverContent className="w-48 p-2" align="start">
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] font-medium text-muted-foreground">Mencionados:</p>
+                            <div className="flex flex-wrap gap-1">
                               {post.recipientNames.map((name, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
+                                <Badge key={idx} variant="secondary" className="text-[10px] h-4 px-1">
                                   @{name}
                                 </Badge>
                               ))}
@@ -1150,33 +801,27 @@ function FeedView({
                         </PopoverContent>
                       </Popover>
                     )}
-                    {post.sendToAll && (
-                      <Badge variant="secondary" className="text-[10px] gap-1 text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        Todos
-                      </Badge>
-                    )}
                   </div>
-                  <span className="text-sm text-muted-foreground">{formatTimeAgo(post.createdAt)}</span>
+                  <span className="text-xs text-muted-foreground">{formatTimeAgo(post.createdAt)}</span>
                 </div>
                 {/* Post Actions Menu - Only show for post author or admin */}
                 {(post.authorId === user?.id || user?.role === "admin" || user?.role === "master") && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <MoreVertical className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditPost(post)}>
-                        <Pencil className="h-4 w-4 mr-2" />
+                      <DropdownMenuItem onClick={() => handleEditPost(post)} className="text-sm">
+                        <Pencil className="h-3.5 w-3.5 mr-2" />
                         Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => handleDeletePost(post.id)}
-                        className="text-red-600 focus:text-red-600"
+                        className="text-red-600 focus:text-red-600 text-sm"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
                         Excluir
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -1186,7 +831,7 @@ function FeedView({
 
               {/* Post Content - Remove inline mentions since we now have the icon */}
               <div
-                className="mb-4 text-foreground prose prose-sm dark:prose-invert max-w-none [&_.text-orange-500]:hidden"
+                className="mb-2.5 text-sm text-foreground prose prose-sm dark:prose-invert max-w-none [&_.text-orange-500]:hidden"
                 dangerouslySetInnerHTML={{ __html: (post.content || "").replace(/<span class="text-orange-500[^"]*">@[^<]+<\/span>\s*/g, '') }}
               />
 
