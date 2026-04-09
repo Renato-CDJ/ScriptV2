@@ -30,8 +30,9 @@ import type {
   QualityPost,
   QualityComment,
 } from "./types"
-import { db, auth } from "./firebase"
+import { db, auth, realtimeDb } from "./firebase"
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore"
+import { ref, set, onValue, off, get } from "firebase/database"
 import { signInAnonymously } from "firebase/auth"
 import debounce from "lodash.debounce" // Import debounce
 
@@ -275,6 +276,46 @@ function syncToFirebase(key: string, data: unknown) {
   }, syncDelay)
 }
 
+// Sync to Firebase Realtime Database (RTDB) for real-time updates
+async function syncToRealtimeDb(key: string, data: unknown) {
+  if (firebaseSyncDisabled || !realtimeDb) {
+    return
+  }
+
+  const currentUser = getCurrentUser()
+  const isUserData = key === STORAGE_KEYS.USERS
+
+  if (isUserData && currentUser?.role !== "admin") {
+    return
+  }
+
+  try {
+    let dataToSync: unknown
+
+    if (key === STORAGE_KEYS.PRESENTATIONS && Array.isArray(data)) {
+      dataToSync = sanitizePresentationsForFirebase(data)
+    } else {
+      dataToSync = Array.isArray(data)
+        ? data.map((item) =>
+            typeof item === "object" && item !== null ? sanitizeForFirebase(item as Record<string, unknown>) : item,
+          )
+        : typeof data === "object" && data !== null
+          ? sanitizeForFirebase(data as Record<string, unknown>)
+          : data
+    }
+
+    const dbRef = ref(realtimeDb, `app_data/${key}`)
+    await set(dbRef, {
+      data: dataToSync,
+      updatedAt: new Date().toISOString(),
+    })
+
+    console.log(`[v0] ✅ Synced ${key} to Realtime Database`)
+  } catch (error: any) {
+    console.error(`[v0] ❌ Error syncing ${key} to Realtime Database:`, error?.message || error)
+  }
+}
+
 function flushBatchQueue() {
   if (writeQueue.size === 0) return
 
@@ -283,6 +324,7 @@ function flushBatchQueue() {
 
   entries.forEach(([key, { data }]) => {
     syncToFirebase(key, data)
+    syncToRealtimeDb(key, data) // Also sync to Realtime Database
   })
 }
 
@@ -304,6 +346,9 @@ export function saveImmediately(key: string, data: unknown) {
 
   saveQueue.push({ key, data })
   processSaveQueue()
+
+  // Also sync to Realtime Database for real-time updates
+  syncToRealtimeDb(key, data)
 }
 
 export function save(key: string, data: unknown) {
@@ -352,14 +397,16 @@ async function enableFirebaseSync() {
     await signInAnonymously(auth)
     console.log("[v0] ✅ Signed in anonymously to Firebase")
 
-    // Now setup listeners
+    // Now setup listeners for Firestore and Realtime Database
     setupListeners()
+    
+    console.log("[v0] ✅ Firebase Realtime Database sync enabled")
   } catch (error: any) {
     console.error("[v0] ❌ Failed to authenticate with Firebase:", error.message)
     console.error("\n⚠️  Firebase Authentication Error\n")
     console.error("To fix this:")
     console.error("1. Go to Firebase Console: https://console.firebase.google.com/")
-    console.error("2. Select your project: banco-de-dados-roteiro")
+    console.error("2. Select your project: novobanco-4faec")
     console.error("3. Go to Authentication > Sign-in method")
     console.error("4. Enable 'Anonymous' provider")
     console.error("5. Save changes\n")
@@ -557,8 +604,54 @@ function setupListeners() {
   })
 
   if (!firebaseSyncDisabled) {
-    console.log("[v0] Realtime sync enabled successfully")
+    console.log("[v0] Firestore sync enabled successfully")
   }
+
+  // Setup Realtime Database listeners for real-time updates
+  setupRealtimeDbListeners()
+}
+
+// Store Realtime Database listeners for cleanup
+let realtimeDbUnsubscribers: (() => void)[] = []
+
+function setupRealtimeDbListeners() {
+  if (!realtimeDb) {
+    console.log("[v0] Realtime Database not initialized, skipping RTDB listeners")
+    return
+  }
+
+  // Cleanup existing RTDB listeners
+  realtimeDbUnsubscribers.forEach((unsub) => unsub())
+  realtimeDbUnsubscribers = []
+
+  const keysToSync = Object.values(STORAGE_KEYS)
+
+  keysToSync.forEach((key) => {
+    const dbRef = ref(realtimeDb, `app_data/${key}`)
+    
+    const unsubscribe = onValue(dbRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val()
+        if (data && data.data) {
+          const currentValue = localStorage.getItem(key)
+          const newValue = JSON.stringify(data.data)
+          
+          if (currentValue !== newValue) {
+            localStorage.setItem(key, newValue)
+            console.log(`[v0] ✅ Realtime Database: Synced ${key}`)
+            window.dispatchEvent(new CustomEvent("store-updated"))
+          }
+        }
+      }
+    }, (error) => {
+      console.error(`[v0] ❌ Realtime Database error for ${key}:`, error.message)
+    })
+
+    // Store unsubscribe function
+    realtimeDbUnsubscribers.push(() => off(dbRef))
+  })
+
+  console.log("[v0] ✅ Realtime Database listeners enabled successfully")
 }
 
 export function loadScriptsFromDataFolder() {
@@ -2909,8 +3002,14 @@ export function getActiveContracts(): Contract[] {
 }
 
 export function cleanupRealtimeSync() {
+  // Cleanup Firestore listeners
   unsubscribers.forEach((unsub) => unsub())
   unsubscribers = []
+  
+  // Cleanup Realtime Database listeners
+  realtimeDbUnsubscribers.forEach((unsub) => unsub())
+  realtimeDbUnsubscribers = []
+  
   syncEnabled = false
   if (batchTimer) {
     clearTimeout(batchTimer)
@@ -2960,6 +3059,39 @@ export async function loadFromFirebase() {
     console.log("[v0] Finished loading from Firebase")
   } catch (error) {
     console.error("[v0] Error in loadFromFirebase:", error)
+  }
+}
+
+// Load data from Firebase Realtime Database
+export async function loadFromRealtimeDb() {
+  if (typeof window === "undefined") return
+  if (!realtimeDb) return
+
+  console.log("[v0] Loading all data from Realtime Database...")
+
+  try {
+    const promises = Object.entries(STORAGE_KEYS).map(async ([key, storageKey]) => {
+      try {
+        const dbRef = ref(realtimeDb, `app_data/${storageKey}`)
+        const snapshot = await get(dbRef)
+
+        if (snapshot.exists()) {
+          const data = snapshot.val()
+          if (data && data.data) {
+            localStorage.setItem(storageKey, JSON.stringify(data.data))
+            console.log(`[v0] Loaded ${storageKey} from Realtime Database:`, Array.isArray(data.data) ? data.data.length : 1, "items")
+          }
+        }
+      } catch (error) {
+        console.error(`[v0] Error loading ${storageKey} from Realtime Database:`, error)
+      }
+    })
+
+    await Promise.all(promises)
+    console.log("[v0] Finished loading from Realtime Database")
+    window.dispatchEvent(new CustomEvent("store-updated"))
+  } catch (error) {
+    console.error("[v0] Error in loadFromRealtimeDb:", error)
   }
 }
 
