@@ -8,9 +8,6 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Loader2 } from "lucide-react"
 
-const DashboardTab = lazy(() =>
-  import("@/components/admin-tabs/dashboard-tab").then((m) => ({ default: m.DashboardTab })),
-)
 const ScriptsTab = lazy(() => import("@/components/admin-tabs/scripts-tab").then((m) => ({ default: m.ScriptsTab })))
 const ProductsTab = lazy(() => import("@/components/admin-tabs/products-tab").then((m) => ({ default: m.ProductsTab })))
 const AttendanceTypesTab = lazy(() =>
@@ -57,7 +54,7 @@ const LoadingFallback = memo(function LoadingFallback() {
 })
 
 const AdminContent = memo(function AdminContent() {
-  const [activeTab, setActiveTab] = useState("dashboard")
+  const [activeTab, setActiveTab] = useState("scripts")
   const router = useRouter()
   const { logout } = useAuth()
 
@@ -68,12 +65,6 @@ const AdminContent = memo(function AdminContent() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "dashboard":
-        return (
-          <Suspense fallback={<LoadingFallback />}>
-            <DashboardTab />
-          </Suspense>
-        )
       case "scripts":
         return (
           <Suspense fallback={<LoadingFallback />}>
@@ -173,7 +164,7 @@ const AdminContent = memo(function AdminContent() {
       default:
         return (
           <Suspense fallback={<LoadingFallback />}>
-            <DashboardTab />
+            <ScriptsTab />
           </Suspense>
         )
     }
