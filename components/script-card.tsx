@@ -28,7 +28,7 @@ interface ScriptCardProps {
 }
 
 function loadAccessibilitySettings(): { textSize: number; buttonSize: number } {
-  if (typeof window === "undefined") return { textSize: 100, buttonSize: 80 }
+  if (typeof window === "undefined") return { textSize: 100, buttonSize: 50 }
 
   try {
     const saved = localStorage.getItem("callcenter_accessibility_settings")
@@ -39,7 +39,7 @@ function loadAccessibilitySettings(): { textSize: number; buttonSize: number } {
     console.error("[v0] Error loading accessibility settings:", error)
   }
 
-  return { textSize: 100, buttonSize: 80 }
+  return { textSize: 100, buttonSize: 50 }
 }
 
 function saveAccessibilitySettings(textSize: number, buttonSize: number) {

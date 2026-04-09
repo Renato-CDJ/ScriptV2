@@ -205,8 +205,12 @@ function syncToFirebase(key: string, data: unknown) {
   const currentUser = getCurrentUser()
   const isUserData = key === STORAGE_KEYS.USERS
 
-  if (isUserData && currentUser?.role !== "admin") {
-    return
+  if (isUserData) {
+    console.log("[v0] syncToFirebase: Attempting to sync users, currentUser:", currentUser?.username, "role:", currentUser?.role)
+    if (currentUser?.role !== "admin") {
+      console.log("[v0] syncToFirebase: Blocked - user is not admin")
+      return
+    }
   }
 
   if (pendingFirebaseWrites >= MAX_PENDING_WRITES) {
@@ -285,8 +289,12 @@ async function syncToRealtimeDb(key: string, data: unknown) {
   const currentUser = getCurrentUser()
   const isUserData = key === STORAGE_KEYS.USERS
 
-  if (isUserData && currentUser?.role !== "admin") {
-    return
+  if (isUserData) {
+    console.log("[v0] syncToRealtimeDb: Attempting to sync users, currentUser:", currentUser?.username, "role:", currentUser?.role)
+    if (currentUser?.role !== "admin") {
+      console.log("[v0] syncToRealtimeDb: Blocked - user is not admin")
+      return
+    }
   }
 
   try {
@@ -332,10 +340,13 @@ function flushBatchQueue() {
 export function saveImmediately(key: string, data: unknown) {
   if (typeof window === "undefined") return
 
-  // Save to localStorage immediately
+  // Save to localStorage immediately with timestamp
+  const timestamp = Date.now()
   localStorage.setItem(key, JSON.stringify(data))
+  localStorage.setItem(`${key}_timestamp`, String(timestamp))
+  
   const itemCount = Array.isArray(data) ? data.length : "1"
-  console.log(`[v0] 💾 Saved ${key}: ${itemCount} item(s)`)
+  console.log(`[v0] 💾 saveImmediately: Saved ${key} to localStorage: ${itemCount} item(s), timestamp: ${timestamp}`)
 
   notifyUpdateImmediate()
 
@@ -537,6 +548,17 @@ function setupListeners() {
               }
 
               if (currentValue !== newValue) {
+                // Check if local data is newer than remote data
+                const remoteTimestamp = data.timestamp || 0
+                const localTimestamp = Number.parseInt(localStorage.getItem(`${key}_timestamp`) || "0", 10)
+                
+                if (localTimestamp > remoteTimestamp && currentUsers.length >= cleanedRemoteUsers.length) {
+                  console.log(`[v0] ⚠️ Local data is newer (${localTimestamp} > ${remoteTimestamp}) - keeping local data with ${currentUsers.length} users`)
+                  // Re-save local data to Firebase
+                  saveImmediately(key, currentUsers)
+                  return
+                }
+                
                 localStorage.setItem(key, newValue)
                 localStorage.setItem(`${key}_timestamp`, String(data.timestamp || Date.now()))
                 if (cleanedRemoteUsers.length !== currentUsers.length) {
@@ -637,7 +659,17 @@ function setupRealtimeDbListeners() {
           const newValue = JSON.stringify(data.data)
           
           if (currentValue !== newValue) {
+            // Check if local data is newer than remote data
+            const remoteTimestamp = new Date(data.updatedAt || 0).getTime()
+            const localTimestamp = Number.parseInt(localStorage.getItem(`${key}_timestamp`) || "0", 10)
+            
+            if (localTimestamp > remoteTimestamp) {
+              console.log(`[v0] ⚠️ RTDB: Local data is newer (${localTimestamp} > ${remoteTimestamp}) - keeping local data`)
+              return
+            }
+            
             localStorage.setItem(key, newValue)
+            localStorage.setItem(`${key}_timestamp`, String(remoteTimestamp || Date.now()))
             console.log(`[v0] ✅ Realtime Database: Synced ${key}`)
             window.dispatchEvent(new CustomEvent("store-updated"))
           }
@@ -763,6 +795,27 @@ const MOCK_USERS: User[] = [
       operators: true,
       messagesQuiz: true,
       settings: true,
+    },
+  },
+  {
+    id: "6",
+    username: "login",
+    fullName: "Operador",
+    role: "operator",
+    isOnline: false,
+    createdAt: new Date(),
+    permissions: {
+      dashboard: false,
+      scripts: false,
+      products: false,
+      attendanceConfig: false,
+      tabulations: false,
+      situations: false,
+      channels: false,
+      notes: false,
+      operators: false,
+      messagesQuiz: false,
+      settings: false,
     },
   },
 ]

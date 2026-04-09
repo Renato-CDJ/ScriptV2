@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  LayoutDashboard,
   FileText,
   Tags,
   AlertCircle,
@@ -37,7 +36,6 @@ interface AdminSidebarProps {
 }
 
 const menuItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard" },
   { id: "scripts", label: "Roteiros", icon: FileText, permission: "scripts" },
   { id: "products", label: "Produtos", icon: Package, permission: "products" },
   { id: "initial-guide", label: "Guia Inicial", icon: BookOpen, permission: "dashboard" },
