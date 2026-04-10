@@ -8,21 +8,30 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Send, Reply, X } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
-import { getChatMessagesForUser, sendChatMessage, markChatMessageAsRead, getChatSettings } from "@/lib/store"
+import { sendChatMessage, markChatMessageAsRead, getChatSettings } from "@/lib/store"
+import { useChatMessages } from "@/hooks/use-supabase-chat-realtime"
 import type { ChatMessage } from "@/lib/types"
 
 interface OperatorChatModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  isOpen: boolean
+  onClose: () => void
 }
 
-export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenChange }: OperatorChatModalProps) {
+export const OperatorChatModal = memo(function OperatorChatModal({ isOpen, onClose }: OperatorChatModalProps) {
   const { user } = useAuth()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const { messages: realtimeMessages } = useChatMessages()
   const [newMessage, setNewMessage] = useState("")
   const [chatEnabled, setChatEnabled] = useState(true)
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Filter messages for this operator
+  const messages = useMemo(() => {
+    if (!user) return []
+    return realtimeMessages.filter(
+      (m) => m.senderId === user.id || (m.recipientId === user.id || !m.recipientId)
+    )
+  }, [realtimeMessages, user])
 
   const unreadCount = useMemo(() => {
     if (!user) return 0
@@ -30,56 +39,26 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
   }, [messages, user])
 
   useEffect(() => {
-    if (open && user) {
-      loadMessages()
+    if (isOpen && user) {
       const settings = getChatSettings()
       setChatEnabled(settings.isEnabled)
     }
-  }, [open, user])
-
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout
-    let rafId: number
-
-    const handleStoreUpdate = () => {
-      clearTimeout(timeoutId)
-      if (rafId) cancelAnimationFrame(rafId)
-
-      // Use requestAnimationFrame for smoother updates
-      rafId = requestAnimationFrame(() => {
-        if (open && user) {
-          loadMessages()
-          const settings = getChatSettings()
-          setChatEnabled(settings.isEnabled)
-        }
-      })
-    }
-
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => {
-      window.removeEventListener("store-updated", handleStoreUpdate)
-      clearTimeout(timeoutId)
-      if (rafId) cancelAnimationFrame(rafId)
-    }
-  }, [open, user])
+  }, [isOpen, user])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
   const loadMessages = () => {
-    if (!user) return
-    const msgs = getChatMessagesForUser(user.id, user.role)
-    setMessages(msgs)
-
-    msgs.forEach((msg) => {
+    if (!user || !messages) return
+    messages.forEach((msg) => {
       if (!msg.isRead && msg.senderId !== user.id) {
         markChatMessageAsRead(msg.id)
       }
     })
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!user || !newMessage.trim() || !chatEnabled) return
 
     const replyToData = replyingTo
@@ -90,7 +69,7 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
         }
       : undefined
 
-    sendChatMessage(user.id, user.fullName, user.role, newMessage.trim(), undefined, undefined, replyToData)
+    await sendChatMessage(user.id, user.fullName, user.role, newMessage.trim(), undefined, undefined, replyToData)
     setNewMessage("")
     setReplyingTo(null)
     loadMessages()
@@ -114,7 +93,7 @@ export const OperatorChatModal = memo(function OperatorChatModal({ open, onOpenC
   if (!user) return null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
           <div className="flex items-center justify-between">

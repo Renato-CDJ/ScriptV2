@@ -301,16 +301,16 @@ export function QualityQuestionsTab() {
           {filteredQuestions.map((q) => (
             <Card
               key={q.id}
-              className={`overflow-hidden transition-all ${
+              className={`overflow-hidden transition-all border backdrop-blur-sm ${
                 !q.answer && q.reopenReason
-                  ? "border-orange-500/30 bg-orange-500/[0.03]"
+                  ? "border-orange-500/20 bg-orange-500/[0.02]"
                   : !q.answer
-                    ? "border-amber-500/30 bg-amber-500/[0.02]"
+                    ? "border-amber-500/20 bg-amber-500/[0.015]"
                     : q.isResolved && q.wasClear === false
-                      ? "border-red-500/30"
+                      ? "border-red-500/20 bg-red-500/[0.01]"
                       : q.isResolved
-                        ? "border-border/50 opacity-80"
-                        : "border-blue-500/30"
+                        ? "border-border/30 bg-transparent opacity-70"
+                        : "border-blue-500/20 bg-blue-500/[0.015]"
               }`}
             >
               <CardHeader className="pb-3">

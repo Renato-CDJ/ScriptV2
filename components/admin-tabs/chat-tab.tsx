@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
-import { Send, Trash2, MessageCircle, User, Search, ImageIcon, Smile, Reply, X } from "lucide-react"
+import { Send, Trash2, MessageCircle, User, Search, ImageIcon, Smile, Reply, X, Pencil, Check } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import {
   sendChatMessage,
@@ -18,67 +18,24 @@ import {
   updateChatSettings,
   deleteChatMessage,
   getAllUsers,
-  getAllChatMessages,
+  editChatMessage,
 } from "@/lib/store"
 import type { ChatMessage, User as UserType } from "@/lib/types"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useChatMessages } from "@/hooks/use-supabase-chat-realtime"
 
 const EMOJI_LIST = [
-  "😀",
-  "😃",
-  "😄",
-  "😁",
-  "😅",
-  "😂",
-  "🤣",
-  "😊",
-  "😇",
-  "🙂",
-  "😉",
-  "😌",
-  "😍",
-  "🥰",
-  "😘",
-  "😗",
-  "😙",
-  "😚",
-  "😋",
-  "😛",
-  "😝",
-  "😜",
-  "🤪",
-  "🤨",
-  "🧐",
-  "🤓",
-  "😎",
-  "🤩",
-  "🥳",
-  "😏",
-  "👍",
-  "👎",
-  "👌",
-  "✌️",
-  "🤞",
-  "🤝",
-  "👏",
-  "🙌",
-  "🙏",
-  "💪",
-  "❤️",
-  "🧡",
-  "💛",
-  "💚",
-  "💙",
-  "💜",
-  "🖤",
-  "🤍",
-  "💯",
-  "✨",
+  "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂",
+  "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛",
+  "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏",
+  "👍", "👎", "👌", "✌️", "🤞", "🤝", "👏", "🙌", "🙏", "💪",
+  "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💯", "✨",
+  "🔥", "⭐", "🎉", "🎊", "💡", "📌", "✅", "❌", "⚠️", "📢",
 ]
 
 export const ChatTab = memo(function ChatTab() {
   const { user } = useAuth()
-  const [allMessages, setAllMessages] = useState<ChatMessage[]>([])
+  const { messages: realtimeMessages } = useChatMessages()
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState("")
   const [chatEnabled, setChatEnabled] = useState(true)
@@ -87,13 +44,15 @@ export const ChatTab = memo(function ChatTab() {
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null)
   const [attachmentName, setAttachmentName] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null)
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null)
+  const [editText, setEditText] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const filteredMessages = useMemo(() => {
     if (!selectedOperatorId) return []
-    return allMessages.filter((msg) => msg.senderId === selectedOperatorId || msg.recipientId === selectedOperatorId)
-  }, [allMessages, selectedOperatorId])
+    return realtimeMessages.filter((msg) => msg.senderId === selectedOperatorId || msg.recipientId === selectedOperatorId)
+  }, [realtimeMessages, selectedOperatorId])
 
   const filteredOperators = useMemo(() => {
     return operators.filter(
@@ -105,41 +64,14 @@ export const ChatTab = memo(function ChatTab() {
 
   useEffect(() => {
     if (user) {
-      loadAllMessages()
       loadSettings()
       loadOperators()
     }
   }, [user])
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
-
-    const handleStoreUpdate = () => {
-      clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => {
-        if (user) {
-          loadAllMessages()
-          loadSettings()
-          loadOperators()
-        }
-      }, 150)
-    }
-
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => {
-      window.removeEventListener("store-updated", handleStoreUpdate)
-      clearTimeout(timeoutId)
-    }
-  }, [user])
-
-  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [filteredMessages])
-
-  const loadAllMessages = () => {
-    const msgs = getAllChatMessages()
-    setAllMessages(msgs)
-  }
 
   const loadSettings = () => {
     const settings = getChatSettings()
@@ -156,7 +88,7 @@ export const ChatTab = memo(function ChatTab() {
     }
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!user || !newMessage.trim() || !selectedOperatorId) return
 
     const replyToData = replyingTo
@@ -167,7 +99,7 @@ export const ChatTab = memo(function ChatTab() {
         }
       : undefined
 
-    sendChatMessage(
+    await sendChatMessage(
       user.id,
       user.fullName,
       "admin",
@@ -186,7 +118,6 @@ export const ChatTab = memo(function ChatTab() {
     setAttachmentPreview(null)
     setAttachmentName(null)
     setReplyingTo(null)
-    loadAllMessages()
   }
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -208,10 +139,28 @@ export const ChatTab = memo(function ChatTab() {
   }
 
   const handleDeleteMessage = (messageId: string) => {
-    if (confirm("Tem certeza que deseja excluir esta mensagem?")) {
+    if (confirm("🗑️ Tem certeza que deseja excluir esta mensagem?")) {
       deleteChatMessage(messageId)
       loadAllMessages()
     }
+  }
+
+  const handleEditMessage = (msg: ChatMessage) => {
+    setEditingMessage(msg)
+    setEditText(msg.content)
+  }
+
+  const handleSaveEdit = () => {
+    if (!editingMessage || !editText.trim()) return
+    editChatMessage(editingMessage.id, editText.trim())
+    setEditingMessage(null)
+    setEditText("")
+    loadAllMessages()
+  }
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null)
+    setEditText("")
   }
 
   const getUnreadCount = useMemo(() => {
@@ -225,7 +174,7 @@ export const ChatTab = memo(function ChatTab() {
     if (!file) return
 
     if (!file.type.startsWith("image/")) {
-      alert("Por favor, selecione apenas imagens.")
+      alert("⚠️ Por favor, selecione apenas imagens.")
       return
     }
 
@@ -238,7 +187,11 @@ export const ChatTab = memo(function ChatTab() {
   }
 
   const handleEmojiSelect = (emoji: string) => {
-    setNewMessage((prev) => prev + emoji)
+    if (editingMessage) {
+      setEditText((prev) => prev + emoji)
+    } else {
+      setNewMessage((prev) => prev + emoji)
+    }
   }
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -281,14 +234,14 @@ export const ChatTab = memo(function ChatTab() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5" />
-                Chat com Operadores
+                💬 Chat com Operadores
               </CardTitle>
-              <CardDescription>Comunicação em tempo real com os operadores</CardDescription>
+              <CardDescription>Comunicação em tempo real com os operadores 🚀</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={chatEnabled} onCheckedChange={handleToggleChat} id="chat-toggle" />
               <Label htmlFor="chat-toggle" className="cursor-pointer">
-                {chatEnabled ? "Chat Ativado" : "Chat Desativado"}
+                {chatEnabled ? "✅ Chat Ativado" : "❌ Chat Desativado"}
               </Label>
             </div>
           </div>
@@ -297,12 +250,12 @@ export const ChatTab = memo(function ChatTab() {
           <div className="border rounded-lg h-[600px] flex">
             <div className="w-64 border-r bg-muted/30">
               <div className="p-3 border-b bg-muted/50 space-y-2">
-                <h3 className="font-semibold text-sm">Operadores</h3>
+                <h3 className="font-semibold text-sm">👥 Operadores</h3>
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     type="text"
-                    placeholder="Pesquisar..."
+                    placeholder="🔍 Pesquisar..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-8 h-8 text-sm"
@@ -344,7 +297,7 @@ export const ChatTab = memo(function ChatTab() {
                   })}
                   {filteredOperators.length === 0 && (
                     <p className="text-center text-muted-foreground text-sm py-8">
-                      {searchQuery ? "Nenhum operador encontrado" : "Nenhum operador cadastrado"}
+                      {searchQuery ? "😕 Nenhum operador encontrado" : "📭 Nenhum operador cadastrado"}
                     </p>
                   )}
                 </div>
@@ -358,7 +311,7 @@ export const ChatTab = memo(function ChatTab() {
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4" />
                       <div>
-                        <p className="font-semibold text-sm">{selectedOperator.fullName}</p>
+                        <p className="font-semibold text-sm">💁 {selectedOperator.fullName}</p>
                         <p className="text-xs text-muted-foreground">@{selectedOperator.username}</p>
                       </div>
                     </div>
@@ -367,12 +320,15 @@ export const ChatTab = memo(function ChatTab() {
                   <ScrollArea className="flex-1 p-4 [&_[data-radix-scroll-area-viewport]]:max-h-none">
                     <div className="space-y-3 pr-4">
                       {filteredMessages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                          <p>Nenhuma mensagem ainda</p>
+                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
+                          <MessageCircle className="h-12 w-12 mb-3 opacity-50" />
+                          <p className="text-sm">💭 Nenhuma mensagem ainda</p>
+                          <p className="text-xs">Envie uma mensagem para iniciar a conversa!</p>
                         </div>
                       ) : (
                         filteredMessages.map((msg) => {
                           const isOwnMessage = msg.senderId === user.id
+                          const isEditing = editingMessage?.id === msg.id
                           return (
                             <div
                               key={msg.id}
@@ -385,7 +341,9 @@ export const ChatTab = memo(function ChatTab() {
                                   }`}
                                 >
                                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span className="font-semibold text-sm break-words">{msg.senderName}</span>
+                                    <span className="font-semibold text-sm break-words">
+                                      {msg.senderRole === "admin" ? "👨‍💼" : "👤"} {msg.senderName}
+                                    </span>
                                     <Badge variant="outline" className="text-xs flex-shrink-0">
                                       {msg.senderRole === "admin" ? "ADM" : "OP"}
                                     </Badge>
@@ -398,13 +356,43 @@ export const ChatTab = memo(function ChatTab() {
                                           : "bg-muted/50 border-muted-foreground/50"
                                       }`}
                                     >
-                                      <p className="text-xs font-semibold mb-1 break-words">{msg.replyTo.senderName}</p>
+                                      <p className="text-xs font-semibold mb-1 break-words">↩️ {msg.replyTo.senderName}</p>
                                       <p className="text-xs opacity-80 line-clamp-2 break-words">
                                         {msg.replyTo.content}
                                       </p>
                                     </div>
                                   )}
-                                  <p className="text-sm whitespace-pre-wrap break-words hyphens-auto">{msg.content}</p>
+                                  {isEditing ? (
+                                    <div className="space-y-2">
+                                      <Textarea
+                                        value={editText}
+                                        onChange={(e) => setEditText(e.target.value)}
+                                        className="min-h-[60px] text-sm bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                                        autoFocus
+                                      />
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          onClick={handleSaveEdit}
+                                          className="h-7 bg-green-500 hover:bg-green-600 text-white"
+                                        >
+                                          <Check className="h-3 w-3 mr-1" />
+                                          Salvar
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={handleCancelEdit}
+                                          className="h-7 text-white hover:bg-white/20"
+                                        >
+                                          <X className="h-3 w-3 mr-1" />
+                                          Cancelar
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm whitespace-pre-wrap break-words hyphens-auto">{msg.content}</p>
+                                  )}
                                   {msg.attachment && msg.attachment.type === "image" && (
                                     <div className="mt-2 overflow-hidden">
                                       <img
@@ -415,32 +403,50 @@ export const ChatTab = memo(function ChatTab() {
                                       />
                                     </div>
                                   )}
-                                  <span className="text-xs opacity-70 mt-1 block">
-                                    {new Date(msg.createdAt).toLocaleString("pt-BR")}
-                                  </span>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs opacity-70">
+                                      {new Date(msg.createdAt).toLocaleString("pt-BR")}
+                                    </span>
+                                    {msg.isEdited && (
+                                      <span className="text-xs opacity-60 italic">✏️ editada</span>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex gap-1 flex-wrap">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleReply(msg)}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs"
-                                  >
-                                    <Reply className="h-3 w-3 mr-1" />
-                                    <span className="hidden sm:inline">Responder</span>
-                                  </Button>
-                                  {isOwnMessage && (
+                                {!isEditing && (
+                                  <div className="flex gap-1 flex-wrap">
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleDeleteMessage(msg.id)}
+                                      onClick={() => handleReply(msg)}
                                       className="opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs"
                                     >
-                                      <Trash2 className="h-3 w-3 mr-1" />
-                                      <span className="hidden sm:inline">Excluir</span>
+                                      <Reply className="h-3 w-3 mr-1" />
+                                      <span className="hidden sm:inline">Responder</span>
                                     </Button>
-                                  )}
-                                </div>
+                                    {isOwnMessage && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleEditMessage(msg)}
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs"
+                                        >
+                                          <Pencil className="h-3 w-3 mr-1" />
+                                          <span className="hidden sm:inline">Editar</span>
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteMessage(msg.id)}
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs text-red-500 hover:text-red-600"
+                                        >
+                                          <Trash2 className="h-3 w-3 mr-1" />
+                                          <span className="hidden sm:inline">Excluir</span>
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )
@@ -476,7 +482,7 @@ export const ChatTab = memo(function ChatTab() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <Reply className="h-3 w-3" />
-                            <p className="text-xs font-semibold">Respondendo a {replyingTo.senderName}</p>
+                            <p className="text-xs font-semibold">↩️ Respondendo a {replyingTo.senderName}</p>
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-2">{replyingTo.content}</p>
                         </div>
@@ -497,11 +503,11 @@ export const ChatTab = memo(function ChatTab() {
                           onChange={(e) => setNewMessage(e.target.value)}
                           onKeyPress={handleKeyPress}
                           onPaste={handlePaste}
-                          placeholder="Digite sua mensagem... (Shift+Enter para nova linha, Ctrl+V para colar imagem)"
+                          placeholder="💬 Digite sua mensagem... (Shift+Enter para nova linha, Ctrl+V para colar imagem)"
                           className="resize-none"
                           rows={3}
                         />
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <input
                             ref={fileInputRef}
                             type="file"
@@ -516,14 +522,14 @@ export const ChatTab = memo(function ChatTab() {
                             onClick={() => fileInputRef.current?.click()}
                           >
                             <ImageIcon className="h-4 w-4 mr-2" />
-                            Anexar Imagem
+                            📷 Anexar Imagem
                           </Button>
 
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button type="button" variant="outline" size="sm">
                                 <Smile className="h-4 w-4 mr-2" />
-                                Emojis
+                                😊 Emojis
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-80">
@@ -544,7 +550,7 @@ export const ChatTab = memo(function ChatTab() {
                       </div>
                       <Button
                         onClick={handleSend}
-                        disabled={!newMessage.trim()}
+                        disabled={!newMessage.trim() && !attachmentPreview}
                         className="bg-orange-500 hover:bg-orange-600 text-white self-end"
                         size="icon"
                       >
@@ -554,8 +560,10 @@ export const ChatTab = memo(function ChatTab() {
                   </div>
                 </>
               ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  <p>Selecione um operador para iniciar a conversa</p>
+                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                  <MessageCircle className="h-16 w-16 mb-4 opacity-30" />
+                  <p className="text-lg">👈 Selecione um operador</p>
+                  <p className="text-sm">para iniciar a conversa</p>
                 </div>
               )}
             </div>

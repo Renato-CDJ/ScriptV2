@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect, useMemo } from "react"
+import { useRef, useEffect, useMemo, type ElementType } from "react"
 
 // Sanitize HTML to remove script tags and other dangerous elements
 function sanitizeHtml(html: string): string {
@@ -17,7 +17,7 @@ function sanitizeHtml(html: string): string {
 interface SafeHtmlProps {
   html: string
   className?: string
-  as?: keyof JSX.IntrinsicElements
+  as?: ElementType
 }
 
 export function SafeHtml({ html, className, as: Component = "div" }: SafeHtmlProps) {

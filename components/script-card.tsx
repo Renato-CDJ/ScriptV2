@@ -28,7 +28,7 @@ interface ScriptCardProps {
 }
 
 function loadAccessibilitySettings(): { textSize: number; buttonSize: number } {
-  if (typeof window === "undefined") return { textSize: 100, buttonSize: 50 }
+  if (typeof window === "undefined") return { textSize: 100, buttonSize: 80 }
 
   try {
     const saved = localStorage.getItem("callcenter_accessibility_settings")
@@ -39,7 +39,7 @@ function loadAccessibilitySettings(): { textSize: number; buttonSize: number } {
     console.error("[v0] Error loading accessibility settings:", error)
   }
 
-  return { textSize: 100, buttonSize: 50 }
+  return { textSize: 80, buttonSize: 50 }
 }
 
 function saveAccessibilitySettings(textSize: number, buttonSize: number) {
@@ -55,7 +55,7 @@ function saveAccessibilitySettings(textSize: number, buttonSize: number) {
 const calculateFontSize = (baseSize: number, scale: number) => baseSize + (scale / 100) * baseSize
 const calculatePadding = (basePadding: number, scale: number) => basePadding + (scale / 100) * basePadding
 
-const renderContentWithSegments = memo(function renderContentWithSegments(
+function renderContentWithSegments(
   content: string,
   segments: ContentSegment[] | undefined,
   textFontSize: number,
@@ -151,7 +151,7 @@ const renderContentWithSegments = memo(function renderContentWithSegments(
   }
 
   return elements
-})
+}
 
 export const ScriptCard = memo(function ScriptCard({
   step,
@@ -166,14 +166,8 @@ export const ScriptCard = memo(function ScriptCard({
   onSearchStep,
   allSteps = [],
 }: ScriptCardProps) {
-  const [textSize, setTextSize] = useState<number[]>(() => {
-    const settings = loadAccessibilitySettings()
-    return [settings.textSize]
-  })
-  const [buttonSize, setButtonSize] = useState<number[]>(() => {
-    const settings = loadAccessibilitySettings()
-    return [settings.buttonSize]
-  })
+  const [textSize, setTextSize] = useState<number[]>([80])
+  const [buttonSize, setButtonSize] = useState<number[]>([50])
   const [showTabulation, setShowTabulation] = useState(false)
   const [showTabulationPulse, setShowTabulationPulse] = useState(false)
   const [showAlert, setShowAlert] = useState(false)

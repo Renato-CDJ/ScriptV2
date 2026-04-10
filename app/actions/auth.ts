@@ -1,5 +1,5 @@
 "use server"
-import { getAllUsers } from "@/lib/store"
+import { getUsers } from "@/lib/auth-context"
 import type { User, LoginSession } from "@/lib/types"
 
 // Tipos
@@ -13,7 +13,7 @@ const ADMIN_DEFAULT_PASSWORDS = ["rcp@$", "#qualidade@$"]
 
 export async function authenticateUser(username: string, password?: string): Promise<AuthResult> {
   try {
-    const users = await getAllUsers()
+    const users = getUsers()
     const normalizedUsername = username.toLowerCase().trim()
 
     const user = users.find((u) => u.username.toLowerCase() === normalizedUsername)

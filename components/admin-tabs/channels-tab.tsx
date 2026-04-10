@@ -1,87 +1,121 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Edit, Trash2, Save, X, ExternalLink, Copy } from "lucide-react"
+import { Plus, Edit, Trash2, Save, X, ExternalLink, Copy, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getChannels } from "@/lib/store"
-import type { Channel } from "@/lib/types"
+import { useChannels } from "@/hooks/use-supabase-admin"
 import { useToast } from "@/hooks/use-toast"
 
-export function ChannelsTab() {
-  const [channels, setChannels] = useState<Channel[]>(getChannels())
-  const [editingItem, setEditingItem] = useState<Channel | null>(null)
-  const [isCreating, setIsCreating] = useState(false)
-  const { toast } = useToast()
+interface Channel {
+  id: string
+  name: string
+  description: string
+  icon: string
+  contact?: string
+  isActive?: boolean
+  is_active?: boolean
+  created_at: string
+  updated_at: string
+}
 
-  useEffect(() => {
-    const handleStoreUpdate = () => {
-      setChannels(getChannels())
-    }
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [])
+export function ChannelsTab() {
+  const { data: channels, loading, create, update, remove } = useChannels()
+  const { toast } = useToast()
+  const [editingItem, setEditingItem] = useState<Partial<Channel> | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const mappedChannels = useMemo(
+    () => (channels || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description || "",
+      icon: c.icon || "phone",
+      contact: c.icon || "",
+      isActive: c.is_active,
+      created_at: c.created_at,
+      updated_at: c.updated_at,
+    })),
+    [channels],
+  )
 
   const handleEdit = (item: Channel) => {
-    setEditingItem({ ...item })
+    setEditingItem({ ...item, contact: item.icon })
     setIsCreating(false)
   }
 
   const handleCreate = () => {
-    const newItem: Channel = {
-      id: `ch-${Date.now()}`,
+    setEditingItem({
       name: "",
-      contact: "",
-      isActive: true,
-      createdAt: new Date(),
-    }
-    setEditingItem(newItem)
+      description: "",
+      icon: "phone",
+      is_active: true,
+    })
     setIsCreating(true)
   }
 
-  const handleSave = () => {
-    if (!editingItem) return
+  const handleSave = async () => {
+    if (!editingItem || !editingItem.name) return
 
-    if (isCreating) {
-      const newChannels = [...channels, editingItem]
-      localStorage.setItem("callcenter_channels", JSON.stringify(newChannels))
-      setChannels(newChannels)
+    setSaving(true)
+    try {
+      if (isCreating) {
+        const { error } = await create({
+          name: editingItem.name,
+          description: editingItem.description || "",
+          icon: editingItem.contact || editingItem.icon || "phone",
+          is_active: editingItem.is_active !== false,
+        })
+        if (error) throw new Error(error)
+        toast({
+          title: "Canal criado",
+          description: "O novo canal foi criado com sucesso.",
+        })
+      } else if (editingItem.id) {
+        const { error } = await update(editingItem.id, {
+          name: editingItem.name,
+          description: editingItem.description,
+          icon: editingItem.contact || editingItem.icon || "phone",
+          is_active: editingItem.is_active,
+        })
+        if (error) throw new Error(error)
+        toast({
+          title: "Canal atualizado",
+          description: "As alteracoes foram salvas com sucesso.",
+        })
+      }
+    } catch (err: any) {
       toast({
-        title: "Canal criado",
-        description: "O novo canal foi criado com sucesso.",
+        title: "Erro",
+        description: err.message || "Erro ao salvar canal",
+        variant: "destructive",
       })
-    } else {
-      const updatedChannels = channels.map((c) => (c.id === editingItem.id ? editingItem : c))
-      localStorage.setItem("callcenter_channels", JSON.stringify(updatedChannels))
-      setChannels(updatedChannels)
-      toast({
-        title: "Canal atualizado",
-        description: "As alterações foram salvas com sucesso.",
-      })
+    } finally {
+      setSaving(false)
+      setEditingItem(null)
+      setIsCreating(false)
     }
-
-    localStorage.setItem("callcenter_last_update", Date.now().toString())
-    window.dispatchEvent(new CustomEvent("store-updated"))
-
-    setEditingItem(null)
-    setIsCreating(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este canal?")) {
-      const updatedChannels = channels.filter((c) => c.id !== id)
-      localStorage.setItem("callcenter_channels", JSON.stringify(updatedChannels))
-      setChannels(updatedChannels)
-
-      localStorage.setItem("callcenter_last_update", Date.now().toString())
-      window.dispatchEvent(new CustomEvent("store-updated"))
-
+      const { error } = await remove(id)
+      if (error) {
+        toast({
+          title: "Erro",
+          description: error,
+          variant: "destructive",
+        })
+        return
+      }
       toast({
-        title: "Canal excluído",
+        title: "Canal excluido",
         description: "O canal foi removido com sucesso.",
       })
     }
@@ -90,6 +124,14 @@ export function ChannelsTab() {
   const handleCancel = () => {
     setEditingItem(null)
     setIsCreating(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
   }
 
   const isUrl = (text: string | undefined) => {
@@ -184,7 +226,7 @@ export function ChannelsTab() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {channels.map((channel) => (
+          {mappedChannels.map((channel) => (
             <Card key={channel.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">

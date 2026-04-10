@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,13 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  getResultCodes,
-  createResultCode,
-  updateResultCode,
-  deleteResultCode,
-} from "@/lib/store"
-import type { ResultCode } from "@/lib/types"
+import { useResultCodes } from "@/hooks/use-supabase-admin"
 import {
   ListChecks,
   Plus,
@@ -39,126 +33,155 @@ import {
   Search,
   ShieldCheck,
   ShieldAlert,
+  Loader2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
+interface ResultCode {
+  id: string
+  code: string
+  name: string
+  description: string
+  category: string
+  color: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export function ResultCodesTab() {
-  const [resultCodes, setResultCodes] = useState<ResultCode[]>([])
+  const { data: resultCodes, loading, create, update, remove } = useResultCodes()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterPhase, setFilterPhase] = useState<"all" | "before" | "after">("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingCode, setEditingCode] = useState<ResultCode | null>(null)
+  const [formCode, setFormCode] = useState("")
   const [formName, setFormName] = useState("")
   const [formDescription, setFormDescription] = useState("")
   const [formPhase, setFormPhase] = useState<"before" | "after">("before")
+  const [saving, setSaving] = useState(false)
   const { toast } = useToast()
-
-  const loadData = useCallback(() => {
-    setResultCodes(getResultCodes())
-  }, [])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  useEffect(() => {
-    const handleStoreUpdate = () => loadData()
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [loadData])
 
   const filteredCodes = useMemo(() => {
     return resultCodes
       .filter((c) => {
-        if (filterPhase !== "all" && c.phase !== filterPhase) return false
+        if (filterPhase !== "all" && c.category !== filterPhase) return false
         if (searchQuery) {
           const query = searchQuery.toLowerCase()
           return (
-            c.name.toLowerCase().includes(query) || c.description.toLowerCase().includes(query)
+            c.name.toLowerCase().includes(query) || 
+            c.code?.toLowerCase().includes(query) ||
+            c.description?.toLowerCase().includes(query)
           )
         }
         return true
       })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   }, [resultCodes, searchQuery, filterPhase])
 
-  const beforeCount = resultCodes.filter((c) => c.phase === "before").length
-  const afterCount = resultCodes.filter((c) => c.phase === "after").length
+  const beforeCount = resultCodes.filter((c) => c.category === "before").length
+  const afterCount = resultCodes.filter((c) => c.category === "after").length
 
   const resetForm = () => {
+    setFormCode("")
     setFormName("")
     setFormDescription("")
     setFormPhase("before")
     setEditingCode(null)
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formName.trim()) {
       toast({ title: "Erro", description: "O nome e obrigatorio.", variant: "destructive" })
       return
     }
 
-    createResultCode({
+    setSaving(true)
+    const { error } = await create({
+      code: formCode.trim() || `TAB-${Date.now()}`,
       name: formName.trim(),
       description: formDescription.trim(),
-      phase: formPhase,
-      isActive: true,
+      category: formPhase,
+      color: formPhase === "before" ? "#f59e0b" : "#22c55e",
+      is_active: true,
     })
 
-    toast({ title: "Sucesso", description: "Codigo de resultado criado." })
-    resetForm()
-    setShowCreateDialog(false)
-    loadData()
+    if (error) {
+      toast({ title: "Erro", description: error, variant: "destructive" })
+    } else {
+      toast({ title: "Sucesso", description: "Tabulacao criada com sucesso." })
+      resetForm()
+      setShowCreateDialog(false)
+    }
+    setSaving(false)
   }
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingCode) return
     if (!formName.trim()) {
       toast({ title: "Erro", description: "O nome e obrigatorio.", variant: "destructive" })
       return
     }
 
-    updateResultCode(editingCode.id, {
+    setSaving(true)
+    const { error } = await update(editingCode.id, {
+      code: formCode.trim(),
       name: formName.trim(),
       description: formDescription.trim(),
-      phase: formPhase,
+      category: formPhase,
+      color: formPhase === "before" ? "#f59e0b" : "#22c55e",
     })
 
-    toast({ title: "Sucesso", description: "Codigo de resultado atualizado." })
-    resetForm()
-    loadData()
+    if (error) {
+      toast({ title: "Erro", description: error, variant: "destructive" })
+    } else {
+      toast({ title: "Sucesso", description: "Tabulacao atualizada." })
+      resetForm()
+      setEditingCode(null)
+    }
+    setSaving(false)
   }
 
-  const handleDelete = (id: string) => {
-    deleteResultCode(id)
-    toast({ title: "Sucesso", description: "Codigo de resultado removido." })
-    loadData()
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta tabulacao?")) return
+    
+    const { error } = await remove(id)
+    if (error) {
+      toast({ title: "Erro", description: error, variant: "destructive" })
+    } else {
+      toast({ title: "Sucesso", description: "Tabulacao excluida." })
+    }
   }
 
-  const handleToggleActive = (code: ResultCode) => {
-    updateResultCode(code.id, { isActive: !code.isActive })
-    loadData()
+  const handleToggleActive = async (code: ResultCode) => {
+    await update(code.id, { is_active: !code.is_active })
   }
 
   const startEdit = (code: ResultCode) => {
     setEditingCode(code)
+    setFormCode(code.code || "")
     setFormName(code.name)
-    setFormDescription(code.description)
-    setFormPhase(code.phase)
+    setFormDescription(code.description || "")
+    setFormPhase(code.category === "after" ? "after" : "before")
   }
 
   const cancelEdit = () => {
     resetForm()
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
+  }
+
   const formFields = (isEdit: boolean) => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor={isEdit ? "edit-code-name" : "create-code-name"} className="text-sm font-medium">
-          Nome da Tabulacao
-        </Label>
+        <Label className="text-sm font-medium">Nome da Tabulacao</Label>
         <Input
-          id={isEdit ? "edit-code-name" : "create-code-name"}
           placeholder="Ex: Sem Interesse"
           value={formName}
           onChange={(e) => setFormName(e.target.value)}
@@ -166,11 +189,8 @@ export function ResultCodesTab() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={isEdit ? "edit-code-desc" : "create-code-desc"} className="text-sm font-medium">
-          Descricao
-        </Label>
+        <Label className="text-sm font-medium">Descricao</Label>
         <Textarea
-          id={isEdit ? "edit-code-desc" : "create-code-desc"}
           placeholder="Descricao da tabulacao..."
           value={formDescription}
           onChange={(e) => setFormDescription(e.target.value)}
@@ -187,13 +207,13 @@ export function ResultCodesTab() {
             <SelectItem value="before">
               <span className="flex items-center gap-2">
                 <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
-                Antes da Identificacao Positiva
+                Antes de confirmar os dados (CPF)
               </span>
             </SelectItem>
             <SelectItem value="after">
               <span className="flex items-center gap-2">
                 <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
-                Apos Identificacao Positiva
+                Após a confirmar os dados (CPF)
               </span>
             </SelectItem>
           </SelectContent>
@@ -207,16 +227,20 @@ export function ResultCodesTab() {
             </Button>
             <Button
               onClick={handleUpdate}
+              disabled={saving}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Salvar Alteracoes
             </Button>
           </>
         ) : (
           <Button
             onClick={handleCreate}
+            disabled={saving}
             className="bg-orange-500 hover:bg-orange-600 text-white"
           >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Criar Tabulacao
           </Button>
         )}
@@ -231,7 +255,7 @@ export function ResultCodesTab() {
         <div>
           <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <ListChecks className="h-6 w-6 text-orange-500" />
-            Codigos de Resultado
+            Tabulações separadas para usar antes e depois da confirmação dos dados
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Gerencie as tabulacoes antes e apos a identificacao positiva
@@ -321,8 +345,8 @@ export function ResultCodesTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as fases</SelectItem>
-                <SelectItem value="before">Antes da Identificacao Positiva</SelectItem>
-                <SelectItem value="after">Apos Identificacao Positiva</SelectItem>
+                <SelectItem value="before">Antes de confirmar os dados (CPF)</SelectItem>
+                <SelectItem value="after">Após a confirmar os dados (CPF)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -391,7 +415,7 @@ export function ResultCodesTab() {
                         </span>
                       </TableCell>
                       <TableCell className="py-3 text-center">
-                        {code.phase === "before" ? (
+                        {code.category === "before" ? (
                           <Badge
                             variant="outline"
                             className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
@@ -411,7 +435,7 @@ export function ResultCodesTab() {
                       </TableCell>
                       <TableCell className="py-3 text-center">
                         <Switch
-                          checked={code.isActive}
+                          checked={code.is_active}
                           onCheckedChange={() => handleToggleActive(code)}
                         />
                       </TableCell>
