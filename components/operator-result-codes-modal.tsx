@@ -1,13 +1,13 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { useResultCodes } from "@/hooks/use-supabase-admin"
+import { getActiveResultCodes } from "@/lib/store"
 import type { ResultCode } from "@/lib/types"
-import { Search, ListChecks, ShieldCheck, ShieldAlert, X, Loader2 } from "lucide-react"
+import { Search, ListChecks, ShieldCheck, ShieldAlert, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface OperatorResultCodesModalProps {
@@ -16,19 +16,24 @@ interface OperatorResultCodesModalProps {
 }
 
 export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultCodesModalProps) {
-  const { data: resultCodesData, loading } = useResultCodes()
+  const [resultCodes, setResultCodes] = useState<ResultCode[]>([])
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Map Supabase data to component format
-  const resultCodes = useMemo(() => resultCodesData
-    .filter((c: any) => c.is_active)
-    .map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      description: c.description || "",
-      phase: c.category === "before" ? "before" : "after",
-      isActive: c.is_active,
-    })), [resultCodesData])
+  useEffect(() => {
+    if (open) {
+      setResultCodes(getActiveResultCodes())
+    }
+  }, [open])
+
+  useEffect(() => {
+    const handleStoreUpdate = () => {
+      if (open) {
+        setResultCodes(getActiveResultCodes())
+      }
+    }
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
+  }, [open])
 
   const beforeCodes = useMemo(() => {
     return resultCodes
@@ -68,7 +73,7 @@ export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultC
             <div>
               <DialogHeader className="p-0 space-y-0">
                 <DialogTitle className="text-lg font-bold text-foreground">
-                  Tabulações separadas para usar antes e depois da confirmação dos dados
+                  Codigos de Resultado
                 </DialogTitle>
               </DialogHeader>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -101,11 +106,7 @@ export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultC
 
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-auto px-3 py-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : resultCodes.length === 0 ? (
+          {resultCodes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center mb-4">
                 <ListChecks className="h-8 w-8 text-muted-foreground/50" />
@@ -123,7 +124,7 @@ export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultC
                       <div className="flex items-center gap-2">
                         <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
                         <span className="text-xs font-bold uppercase tracking-wide text-foreground">
-                          Antes de confirmar os dados (CPF)
+                          Antes da Identificacao Positiva
                         </span>
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
                           {beforeCodes.length}
@@ -134,7 +135,7 @@ export function OperatorResultCodesModal({ open, onOpenChange }: OperatorResultC
                       <div className="flex items-center gap-2">
                         <ShieldCheck className="h-4 w-4 text-green-500 shrink-0" />
                         <span className="text-xs font-bold uppercase tracking-wide text-foreground">
-                          Após a confirmar os dados (CPF)
+                          Apos Identificacao Positiva
                         </span>
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
                           {afterCodes.length}

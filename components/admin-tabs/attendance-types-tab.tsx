@@ -26,7 +26,7 @@ import {
   deletePersonType,
   getProducts,
 } from "@/lib/store"
-import type { AttendanceTypeOption, PersonTypeOption } from "@/lib/types"
+import type { AttendanceTypeOption, PersonTypeOption } from "@/lib/store"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -113,7 +113,7 @@ export function AttendanceTypesTab() {
         description: "Tipo de atendimento atualizado com sucesso",
       })
     } else {
-      createAttendanceType(attendanceFormData as Omit<AttendanceTypeOption, "id" | "createdAt">)
+      createAttendanceType(attendanceFormData)
       toast({
         title: "Sucesso",
         description: "Tipo de atendimento criado com sucesso",
@@ -204,7 +204,7 @@ export function AttendanceTypesTab() {
         description: "Tipo de pessoa atualizado com sucesso",
       })
     } else {
-      createPersonType(personFormData as Omit<PersonTypeOption, "id" | "createdAt">)
+      createPersonType(personFormData)
       toast({
         title: "Sucesso",
         description: "Tipo de pessoa criado com sucesso",

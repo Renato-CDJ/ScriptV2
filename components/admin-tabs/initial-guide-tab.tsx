@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Edit, Trash2, FileText, Loader2 } from "lucide-react"
-import { useContracts } from "@/hooks/use-supabase-admin"
+import { Plus, Edit, Trash2, FileText } from "lucide-react"
+import { getContracts, addContract, updateContract, deleteContract } from "@/lib/store"
+import type { Contract } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -30,11 +31,10 @@ import {
 import { Switch } from "@/components/ui/switch"
 
 export function InitialGuideTab() {
-  const { data: contracts, loading, create, update, remove } = useContracts()
+  const [contracts, setContracts] = useState<Contract[]>(getContracts())
   const [showDialog, setShowDialog] = useState(false)
-  const [editingContract, setEditingContract] = useState<any | null>(null)
+  const [editingContract, setEditingContract] = useState<Contract | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -42,13 +42,17 @@ export function InitialGuideTab() {
   })
   const { toast } = useToast()
 
-  const handleOpenDialog = (contract?: any) => {
+  const refreshContracts = () => {
+    setContracts(getContracts())
+  }
+
+  const handleOpenDialog = (contract?: Contract) => {
     if (contract) {
       setEditingContract(contract)
       setFormData({
-        name: contract.name || "",
-        description: contract.description || "",
-        isActive: contract.is_active ?? true,
+        name: contract.name,
+        description: contract.description,
+        isActive: contract.isActive,
       })
     } else {
       setEditingContract(null)
@@ -57,7 +61,7 @@ export function InitialGuideTab() {
     setShowDialog(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!formData.name.trim() || !formData.description.trim()) {
       toast({
         title: "Erro",
@@ -67,58 +71,32 @@ export function InitialGuideTab() {
       return
     }
 
-    setSaving(true)
-    try {
-      if (editingContract) {
-        const { error } = await update(editingContract.id, {
-          name: formData.name,
-          description: formData.description,
-          is_active: formData.isActive,
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Sucesso",
-          description: "Contrato atualizado com sucesso",
-        })
-      } else {
-        const { error } = await create({
-          name: formData.name,
-          description: formData.description,
-          is_active: formData.isActive,
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Sucesso",
-          description: "Contrato adicionado com sucesso",
-        })
-      }
-      setShowDialog(false)
-    } catch (err: any) {
+    if (editingContract) {
+      updateContract(editingContract.id, formData)
       toast({
-        title: "Erro",
-        description: err.message || "Erro ao salvar contrato",
-        variant: "destructive",
+        title: "Sucesso",
+        description: "Contrato atualizado com sucesso",
       })
-    } finally {
-      setSaving(false)
+    } else {
+      addContract(formData)
+      toast({
+        title: "Sucesso",
+        description: "Contrato adicionado com sucesso",
+      })
     }
+
+    setShowDialog(false)
+    refreshContracts()
   }
 
-  const handleDelete = async (id: string) => {
-    const { error } = await remove(id)
-    if (error) {
-      toast({
-        title: "Erro",
-        description: error,
-        variant: "destructive",
-      })
-      return
-    }
+  const handleDelete = (id: string) => {
+    deleteContract(id)
     toast({
       title: "Sucesso",
       description: "Contrato removido com sucesso",
     })
     setDeleteConfirm(null)
+    refreshContracts()
   }
 
   return (
@@ -143,11 +121,7 @@ export function InitialGuideTab() {
           <CardDescription>Lista de contratos e suas descrições para os operadores</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : contracts.length === 0 ? (
+          {contracts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhum contrato cadastrado</p>
@@ -164,12 +138,12 @@ export function InitialGuideTab() {
                           <h3 className="text-lg font-semibold">{contract.name}</h3>
                           <span
                             className={`text-xs px-2 py-1 rounded-full ${
-                              contract.is_active
+                              contract.isActive
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                             }`}
                           >
-                            {contract.is_active ? "Ativo" : "Inativo"}
+                            {contract.isActive ? "Ativo" : "Inativo"}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{contract.description}</p>
