@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "habitacional" as "habitacional" | "comercial" | "outros",
+    category: "habitacional" as "habitacional" | "comercial" | "cartao" | "outros",
     scriptId: "",
     isActive: true,
     attendanceTypes: [] as ("ativo" | "receptivo")[],

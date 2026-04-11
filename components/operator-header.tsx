@@ -18,26 +18,18 @@ import {
   Hash,
   Filter,
   Bell,
-  BookOpen,
   FileText,
   ListChecks,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import {
-  getProducts,
-  getActiveMessagesForOperator,
-  getActiveQuizzesForOperator,
-  hasOperatorAnsweredQuiz,
-  getActivePresentationsForOperator,
-} from "@/lib/store"
+import { useProducts, useMessages, useQuizzes } from "@/hooks/use-supabase-admin"
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useTheme } from "next-themes"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { OperatorMessagesModal } from "@/components/operator-messages-modal"
-import { OperatorPresentationsModal } from "@/components/operator-presentations-modal"
+import { QualityCenterModal } from "@/components/quality-center-modal"
 import { OperatorInitialGuideModal } from "@/components/operator-initial-guide-modal"
 import { OperatorResultCodesModal } from "@/components/operator-result-codes-modal"
 
@@ -51,6 +43,7 @@ interface OperatorHeaderProps {
   isSessionActive?: boolean
   onBackToStart?: () => void
   onProductSelect?: (productId: string) => void
+  onOpenChat?: () => void
 }
 
 export const OperatorHeader = memo(function OperatorHeader({
@@ -67,59 +60,45 @@ export const OperatorHeader = memo(function OperatorHeader({
   const { user, logout } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  
+  // Use Supabase hooks for realtime data
+  const { data: productsData } = useProducts()
+  const { data: messagesData } = useMessages(user?.id)
+  const { data: quizzesData } = useQuizzes(user?.id)
+  
   const [showProductSearch, setShowProductSearch] = useState(false)
-  const [products, setProducts] = useState(getProducts().filter((p) => p.isActive))
   const [selectedAttendanceTypes, setSelectedAttendanceTypes] = useState<string[]>([])
   const [selectedPersonTypes, setSelectedPersonTypes] = useState<string[]>([])
   const [showMessagesModal, setShowMessagesModal] = useState(false)
-  const [unseenMessagesCount, setUnseenMessagesCount] = useState(0)
-
-  const [showPresentationsModal, setShowPresentationsModal] = useState(false)
-  const [availablePresentationsCount, setAvailablePresentationsCount] = useState(0)
   const [showInitialGuideModal, setShowInitialGuideModal] = useState(false)
   const [showResultCodesModal, setShowResultCodesModal] = useState(false)
 
-  useEffect(() => {
-    const handleStoreUpdate = () => {
-      setProducts(getProducts().filter((p) => p.isActive))
-      updateUnseenCount()
-      updateAvailablePresentationsCount()
-    }
+  // Map products from Supabase
+  const products = useMemo(() => productsData
+    .filter((p: any) => p.is_active)
+    .map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      isActive: p.is_active,
+      attendanceTypes: p.details?.attendanceTypes || [],
+      personTypes: p.details?.personTypes || [],
+      scriptId: p.details?.scriptId || "",
+    })), [productsData])
 
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [])
+  // Calculate unseen messages count
+  const unseenMessagesCount = useMemo(() => {
+    if (!user) return 0
+    return messagesData.filter((m: any) => m.is_active && (!m.seen_by || !m.seen_by.includes(user.id))).length
+  }, [messagesData, user])
 
-  useEffect(() => {
-    updateUnseenCount()
-    updateAvailablePresentationsCount()
+  // Calculate unanswered quizzes count
+  const unansweredQuizzesCount = useMemo(() => {
+    return quizzesData.filter((q: any) => q.is_active).length
+  }, [quizzesData])
 
-    const interval = setInterval(() => {
-      updateUnseenCount()
-      updateAvailablePresentationsCount()
-    }, 15000)
-
-    return () => clearInterval(interval)
-  }, [user])
-
-  const updateUnseenCount = useCallback(() => {
-    if (!user) return
-
-    const messages = getActiveMessagesForOperator(user.id)
-    const unseenMessages = messages.filter((m) => !m.seenBy.includes(user.id)).length
-
-    const quizzes = getActiveQuizzesForOperator()
-    const unansweredQuizzes = quizzes.filter((q) => !hasOperatorAnsweredQuiz(q.id, user.id)).length
-
-    setUnseenMessagesCount(unseenMessages + unansweredQuizzes)
-  }, [user])
-
-  const updateAvailablePresentationsCount = useCallback(() => {
-    if (!user) return
-
-    const presentations = getActivePresentationsForOperator(user.id)
-    setAvailablePresentationsCount(presentations.length)
-  }, [user])
+  // Total badge count for header notification
+  const totalBadgeCount = unseenMessagesCount + unansweredQuizzesCount
 
   const handleLogout = useCallback(() => {
     logout()
@@ -161,11 +140,11 @@ export const OperatorHeader = memo(function OperatorHeader({
 
       const matchesAttendance =
         selectedAttendanceTypes.length === 0 ||
-        (product.attendanceTypes && product.attendanceTypes.some((type) => selectedAttendanceTypes.includes(type)))
+        (product.attendanceTypes && product.attendanceTypes.some((type: string) => selectedAttendanceTypes.includes(type)))
 
       const matchesPerson =
         selectedPersonTypes.length === 0 ||
-        (product.personTypes && product.personTypes.some((type) => selectedPersonTypes.includes(type)))
+        (product.personTypes && product.personTypes.some((type: string) => selectedPersonTypes.includes(type)))
 
       return matchesAttendance && matchesPerson
     })
@@ -364,35 +343,17 @@ export const OperatorHeader = memo(function OperatorHeader({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setShowPresentationsModal(true)}
-                className="h-9 w-9 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 dark:from-yellow-600 dark:to-orange-600 dark:hover:from-yellow-700 dark:hover:to-orange-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
-                title="Treinamentos"
-              >
-                <BookOpen className="h-4 w-4" />
-                {availablePresentationsCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-                  >
-                    {availablePresentationsCount}
-                  </Badge>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => router.push("/quality-center")}
+                onClick={() => setShowMessagesModal(true)}
                 className="h-9 w-9 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 dark:from-purple-600 dark:to-pink-600 dark:hover:from-purple-700 dark:hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all relative"
                 title="Central da Qualidade"
               >
                 <Bell className="h-4 w-4" />
-                {unseenMessagesCount > 0 && (
+                {totalBadgeCount > 0 && (
                   <Badge
                     variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
                   >
-                    {unseenMessagesCount}
+                    {totalBadgeCount}
                   </Badge>
                 )}
               </Button>
@@ -464,8 +425,7 @@ export const OperatorHeader = memo(function OperatorHeader({
         </div>
       </header>
 
-      <OperatorMessagesModal open={showMessagesModal} onOpenChange={setShowMessagesModal} />
-      <OperatorPresentationsModal isOpen={showPresentationsModal} onClose={() => setShowPresentationsModal(false)} />
+      <QualityCenterModal isOpen={showMessagesModal} onClose={() => setShowMessagesModal(false)} />
       <OperatorInitialGuideModal open={showInitialGuideModal} onOpenChange={setShowInitialGuideModal} />
       <OperatorResultCodesModal open={showResultCodesModal} onOpenChange={setShowResultCodesModal} />
     </>

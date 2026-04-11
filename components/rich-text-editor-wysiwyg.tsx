@@ -29,6 +29,7 @@ interface RichTextEditorWYSIWYGProps {
   value: string
   onChange: (content: string) => void
   placeholder?: string
+  minHeight?: string
 }
 
 const EMOJI_LIST = [

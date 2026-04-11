@@ -10,9 +10,7 @@ import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
 import Image from "next/image"
-import { getAllUsers } from "@/lib/store"
-import { loadFromFirebase } from "@/lib/store"
-import type { LoginSession } from "@/lib/types"
+import { useRouter } from "next/navigation"
 
 export const LoginForm = memo(function LoginForm() {
   const [username, setUsername] = useState("")
@@ -21,12 +19,14 @@ export const LoginForm = memo(function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPasswordField, setShowPasswordField] = useState(false)
   const { theme, setTheme } = useTheme()
-  const { refreshUser } = useAuth()
+  const { login } = useAuth()
+  const router = useRouter()
 
+  // Check if user is admin based on username pattern
   const checkIfAdminUser = useCallback((inputUsername: string) => {
-    const adminPrefixes = ["admin", "monitoria"]
+    const adminPatterns = ["admin", "monitoria", "supervisor", "qualidade"]
     const lowerUsername = inputUsername.toLowerCase()
-    return adminPrefixes.some((prefix) => lowerUsername.startsWith(prefix))
+    return adminPatterns.some((pattern) => lowerUsername.includes(pattern))
   }, [])
 
   const handleUsernameChange = useCallback(
@@ -45,76 +45,30 @@ export const LoginForm = memo(function LoginForm() {
       setIsLoading(true)
 
       try {
-        console.log("[v0] Attempting login for:", username)
-
-        console.log("[v0] Loading users from Firebase before login...")
-        await loadFromFirebase()
-
-        const users = getAllUsers()
-        console.log("[v0] Total users loaded:", users.length)
-        console.log(
-          "[v0] User roles:",
-          users.map((u) => `${u.username}:${u.role}`),
-        )
-
-        const normalizedUsername = username.toLowerCase().trim()
-        const user = users.find((u) => u.username.toLowerCase() === normalizedUsername)
-
-        if (!user) {
-          console.log("[v0] User not found:", normalizedUsername)
-          console.log(
-            "[v0] Available usernames:",
-            users.map((u) => u.username),
-          )
-          setError("Usuário não encontrado")
+        // For admin users, password is required
+        if (showPasswordField && !password) {
+          setError("Senha obrigatoria para administradores")
           setIsLoading(false)
           return
         }
-
-        console.log("[v0] User found:", user.username, "role:", user.role)
-
-        // Check password for admin users
-        if (user.role === "admin") {
-          if (!password) {
-            setError("Senha obrigatória para administradores")
-            setIsLoading(false)
-            return
-          }
-
-          const ADMIN_DEFAULT_PASSWORDS = ["rcp@$", "#qualidade@$"]
-          const validPassword = user.password ? password === user.password : ADMIN_DEFAULT_PASSWORDS.includes(password)
-
-          if (!validPassword) {
-            setError("Senha incorreta")
-            setIsLoading(false)
-            return
-          }
+        
+        const result = await login(username.trim(), showPasswordField ? password : "")
+        
+        if (!result.success) {
+          setError(result.error || "Erro ao fazer login")
+          setIsLoading(false)
+          return
         }
-
-        // Create session
-        const session: LoginSession = {
-          id: `session-${Date.now()}`,
-          loginAt: new Date(),
-        }
-
-        const updatedUser = {
-          ...user,
-          lastLoginAt: new Date(),
-          isOnline: true,
-          loginSessions: [...(user.loginSessions || []), session],
-        }
-
-        // Store user in localStorage
-        localStorage.setItem("callcenter_current_user", JSON.stringify(updatedUser))
-        refreshUser()
+        
+        // Login successful - redirect based on role
+        const isAdmin = checkIfAdminUser(username.trim())
+        window.location.href = isAdmin ? "/admin" : "/operator"
       } catch (err) {
-        console.error("Login error:", err)
         setError("Erro ao fazer login")
-      } finally {
         setIsLoading(false)
       }
     },
-    [username, password, refreshUser],
+    [username, password, login, showPasswordField, checkIfAdminUser],
   )
 
   const toggleTheme = useCallback(() => {
@@ -158,14 +112,14 @@ export const LoginForm = memo(function LoginForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label htmlFor="username" className="sr-only">
-              Usuário ou e-mail
+              Usuario
             </label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 dark:text-zinc-500" />
               <Input
                 id="username"
                 type="text"
-                placeholder="Digite seu usuário ou e-mail"
+                placeholder="Digite seu usuario"
                 value={username}
                 onChange={(e) => handleUsernameChange(e.target.value)}
                 required

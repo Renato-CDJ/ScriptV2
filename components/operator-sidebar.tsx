@@ -2,12 +2,12 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo, useCallback, memo } from "react"
+import { useState, useMemo, useCallback, memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { getTabulations, getSituations, getChannels } from "@/lib/store"
+import { useTabulations, useSituations, useChannels } from "@/hooks/use-supabase-admin"
 import { CheckCircle2, Tags, AlertCircle, Radio, List, Search, CalendarIcon, Maximize2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PromiseCalendarInline } from "@/components/promise-calendar"
@@ -65,33 +65,36 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
   const [selectedChannelForModal, setSelectedChannelForModal] = useState<any>(null)
   const [channelSearchQuery, setChannelSearchQuery] = useState("")
 
-  const [tabulations, setTabulations] = useState(getTabulations())
-  const [situations, setSituations] = useState(getSituations().filter((s) => s.isActive))
-  const [channels, setChannels] = useState(getChannels().filter((c) => c.isActive))
+  // Use Supabase hooks for realtime data
+  const { data: tabulationsData } = useTabulations()
+  const { data: situationsData } = useSituations()
+  const { data: channelsData } = useChannels()
 
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null = null
+  // Map Supabase data to component format
+  const tabulations = useMemo(() => tabulationsData.map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description || "",
+    color: t.color || "#6b7280",
+    isActive: t.is_active,
+  })).filter((t: any) => t.isActive), [tabulationsData])
 
-    const handleStoreUpdate = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-      timeoutId = setTimeout(() => {
-        setTabulations(getTabulations())
-        setSituations(getSituations().filter((s) => s.isActive))
-        setChannels(getChannels().filter((c) => c.isActive))
-        timeoutId = null
-      }, 150)
-    }
+  const situations = useMemo(() => situationsData.map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    description: s.description || "",
+    color: s.color || "#6b7280",
+    isActive: s.is_active,
+  })).filter((s: any) => s.isActive), [situationsData])
 
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-      window.removeEventListener("store-updated", handleStoreUpdate)
-    }
-  }, [])
+  const channels = useMemo(() => channelsData.map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    description: c.description || "",
+    icon: c.icon || "phone",
+    contact: c.icon || "",
+    isActive: c.is_active,
+  })).filter((c: any) => c.isActive), [channelsData])
 
   const selectedSituationData = situations.find((s) => s.id === selectedSituation)
   const selectedChannelData = channels.find((c) => c.id === selectedChannel)
@@ -210,7 +213,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
       </div>
 
       {/* Content area */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         {activeSection === "checkTabulation" && (
           <>
           <Card className="border-border bg-card">
@@ -425,7 +428,45 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
           </Card>
         )}
 
-        {activeSection === "calendar" && <PromiseCalendarInline productCategory={productCategory} />}
+        {activeSection === "calendar" && (
+          <div className="flex flex-col gap-4">
+            <PromiseCalendarInline productCategory={productCategory} />
+
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1 rounded-md bg-gradient-to-br from-orange-500 to-orange-600">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-foreground">Tabulação Recomendada</span>
+              </div>
+
+              {currentStep?.tabulations && currentStep.tabulations.length > 0 ? (
+                <div className="space-y-1.5">
+                  {currentStep.tabulations.map((tabulation, index) => (
+                    <button
+                      type="button"
+                      key={tabulation.id || index}
+                      onClick={() => setExpandedTabulation({ name: tabulation.name, description: tabulation.description })}
+                      className="group flex items-center gap-2 w-full rounded-lg border border-orange-200/60 dark:border-orange-500/30 bg-card hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-400 dark:hover:border-orange-400 px-3 py-2 text-left transition-colors duration-150 cursor-pointer"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 text-orange-500 dark:text-orange-400 flex-shrink-0" />
+                      <span className="text-xs font-medium text-foreground leading-snug break-words flex-1">
+                        {tabulation.name}
+                      </span>
+                      {tabulation.description && (
+                        <Maximize2 className="h-3 w-3 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground py-2">
+                  Nenhuma tabulação recomendada para esta tela.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <Dialog open={showTabulationFullView} onOpenChange={setShowTabulationFullView}>

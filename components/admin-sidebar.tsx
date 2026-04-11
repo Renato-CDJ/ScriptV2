@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -15,20 +16,17 @@ import {
   Sun,
   Moon,
   Settings2,
-  MessageSquare,
   Shield,
   Presentation,
   BookOpen,
-  Megaphone,
   ListChecks,
-  HelpCircle,
-  ExternalLink,
   Award,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
+import { QualityCenterModal } from "@/components/quality-center-modal"
 
 interface AdminSidebarProps {
   activeTab: string
@@ -36,7 +34,8 @@ interface AdminSidebarProps {
 }
 
 const menuItems = [
-  { id: "scripts", label: "Roteiros", icon: FileText, permission: "scripts" },
+  { id: "scripts", label: "Roteiros", icon: FileText, permission: "scripts", hideForSupervisao: true },
+  { id: "operator-view", label: "Visualizar Roteiro", icon: FileText, permission: "scripts", onlyForSupervisao: true },
   { id: "products", label: "Produtos", icon: Package, permission: "products" },
   { id: "initial-guide", label: "Guia Inicial", icon: BookOpen, permission: "dashboard" },
   { id: "attendance-config", label: "Configurar Atendimento", icon: Settings2, permission: "attendanceConfig" },
@@ -45,10 +44,7 @@ const menuItems = [
   { id: "channels", label: "Canais", icon: Radio, permission: "channels" },
   { id: "notes", label: "Bloco de Notas", icon: StickyNote, permission: "notes" },
   { id: "operators", label: "Operadores", icon: Users, permission: "operators" },
-  { id: "messages-quiz", label: "Recados e Quiz", icon: MessageSquare, permission: "messagesQuiz" },
   { id: "presentations", label: "Apresentações", icon: Presentation, permission: "messagesQuiz" },
-  { id: "feedback", label: "Feedback", icon: Megaphone, permission: "messagesQuiz" },
-  { id: "quality-questions", label: "Pergunte p/ Qualidade", icon: HelpCircle, permission: "messagesQuiz" },
   { id: "result-codes", label: "Codigos de Resultado", icon: ListChecks, permission: "tabulations" },
   { id: "settings", label: "Configurações", icon: Settings, permission: "settings" },
 ]
@@ -57,6 +53,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const [showQualityModal, setShowQualityModal] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -67,18 +64,49 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
     setTheme(theme === "dark" ? "light" : "dark")
   }
 
-  const hasPermission = (permission: string) => {
+  const hasPermission = (permission: string, tabId: string) => {
     if (!user) return false
-    // Admin role has all permissions
-    if (user.role === "admin") return true
+    
+    // Master admin and Monitoria have all permissions
+    if (user.adminType === "master" || user.adminType === "monitoria") return true
+    
+    // Supervisao has limited permissions - only allowed tabs
+    if (user.adminType === "supervisao") {
+      // operator-view is always visible for supervisao
+      if (tabId === "operator-view") return true
+      
+      const allowedTabs = user.allowedTabs || []
+      // Map tab IDs to allowed tab names
+      const tabMapping: Record<string, string> = {
+        "dashboard": "dashboard",
+        "central-qualidade": "central-qualidade",
+      }
+      return allowedTabs.includes(tabMapping[tabId] || tabId)
+    }
 
+    // For other admin users, check permissions object
     const permissions = user.permissions || {}
     return permissions[permission as keyof typeof permissions] !== false
   }
 
-  const visibleMenuItems = menuItems.filter((item) => hasPermission(item.permission))
+  const visibleMenuItems = menuItems.filter((item) => {
+    // Check basic permission
+    if (!hasPermission(item.permission, item.id)) return false
+    
+    // Check supervisao-specific visibility
+    const isSupervisao = user?.adminType === "supervisao"
+    
+    // Hide items marked as hideForSupervisao when user is supervisao
+    if (item.hideForSupervisao && isSupervisao) return false
+    
+    // Only show items marked as onlyForSupervisao when user is supervisao
+    if (item.onlyForSupervisao && !isSupervisao) return false
+    
+    return true
+  })
 
-  const isMainAdmin = user?.role === "admin"
+  // Only master and monitoria can see access control
+  const canSeeAccessControl = user?.adminType === "master" || user?.adminType === "monitoria"
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-orange-500/30 dark:border-orange-500/40">
@@ -110,7 +138,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
             )
           })}
 
-          {isMainAdmin && (
+          {canSeeAccessControl && (
             <Button
               variant={activeTab === "access-control" ? "secondary" : "ghost"}
               className={cn(
@@ -130,13 +158,14 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30"
-            onClick={() => router.push("/quality-center")}
+            onClick={() => setShowQualityModal(true)}
           >
             <Award className="h-4 w-4" />
             Central da Qualidade
-            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
           </Button>
         </nav>
+
+        <QualityCenterModal isOpen={showQualityModal} onClose={() => setShowQualityModal(false)} />
       </ScrollArea>
 
       <div className="p-3 border-t border-orange-500/30 dark:border-orange-500/40 space-y-2">
