@@ -1,265 +1,47 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode, useMemo, useCallback, useRef } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { createContext, useContext, useState, useEffect, type ReactNode, useMemo, useCallback } from "react"
 import type { User } from "./types"
+import { getCurrentUser, logout as logoutUser, initializeMockData, cleanupOldSessions } from "./store"
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  isAuthenticated: boolean
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   refreshUser: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const SESSION_KEY = "callcenter_session"
-
-// Use singleton getter instead of top-level instantiation
-const getSupabase = () => createClient()
-
-// Get users from Supabase
-export async function getUsersFromSupabase(): Promise<User[]> {
-  const supabase = getSupabase()
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("is_active", true)
-    .order("created_at", { ascending: true })
-
-  if (error || !data) return []
-
-  return data.map((u) => ({
-    id: u.id,
-    username: u.username,
-    fullName: u.name,
-    email: u.email,
-    password: u.password,
-    role: u.role,
-    adminType: u.admin_type,
-    allowedTabs: u.allowed_tabs || [],
-    isOnline: u.is_online,
-    isActive: u.is_active,
-    createdAt: new Date(u.created_at),
-  }))
-}
-
-// Get users sync (for components that need sync access)
-export function getUsers(): User[] {
-  // This is a fallback - prefer async getUsersFromSupabase
-  if (typeof window === "undefined") return []
-  const cached = localStorage.getItem("cached_users")
-  return cached ? JSON.parse(cached) : []
-}
-
-// Update user in Supabase
-export async function updateUserInStorage(userId: string, updates: Partial<User>): Promise<void> {
-  const supabase = getSupabase()
-  const supabaseUpdates: Record<string, any> = {}
-  
-  if (updates.fullName !== undefined) supabaseUpdates.name = updates.fullName
-  if (updates.email !== undefined) supabaseUpdates.email = updates.email
-  if (updates.password !== undefined) supabaseUpdates.password = updates.password
-  if (updates.role !== undefined) supabaseUpdates.role = updates.role
-  if (updates.adminType !== undefined) supabaseUpdates.admin_type = updates.adminType
-  if (updates.allowedTabs !== undefined) supabaseUpdates.allowed_tabs = updates.allowedTabs
-  if (updates.isOnline !== undefined) supabaseUpdates.is_online = updates.isOnline
-  if (updates.isActive !== undefined) supabaseUpdates.is_active = updates.isActive
-
-  await supabase.from("users").update(supabaseUpdates).eq("id", userId)
-}
-
-// Initialize users export (compatibility)
-export function initializeUsers() {
-  // No-op for Supabase - users are already in DB
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const mountedRef = useRef(true)
 
-  // Load session on mount
   useEffect(() => {
-    mountedRef.current = true
-    
-    const loadSession = async () => {
-      const supabase = getSupabase()
-      try {
-        const sessionData = localStorage.getItem(SESSION_KEY)
-        if (sessionData) {
-          const session = JSON.parse(sessionData)
-          
-          // Verify user still exists in Supabase
-          const { data } = await supabase
-            .from("users")
-            .select("*")
-            .eq("id", session.userId)
-            .eq("is_active", true)
-            .single()
+    // Initialize mock data on first load
+    initializeMockData()
 
-          if (data && mountedRef.current) {
-            const loadedUser: User = {
-              id: data.id,
-              username: data.username,
-              fullName: data.name,
-              email: data.email,
-              password: data.password,
-              role: data.role,
-              adminType: data.admin_type,
-              allowedTabs: data.allowed_tabs || [],
-              isOnline: true,
-              isActive: data.is_active,
-              createdAt: new Date(data.created_at),
-            }
-            setUser(loadedUser)
-            
-            // Update online status
-            await supabase
-              .from("users")
-              .update({ is_online: true, last_seen: new Date().toISOString() })
-              .eq("id", data.id)
-          } else if (!data) {
-            localStorage.removeItem(SESSION_KEY)
-          }
-        }
-      } catch (error) {
-        console.error("Error loading session:", error)
-        localStorage.removeItem(SESSION_KEY)
-      } finally {
-        if (mountedRef.current) {
-          setIsLoading(false)
-        }
-      }
-    }
+    // Check for existing session
+    const currentUser = getCurrentUser()
+    setUser(currentUser)
+    setIsLoading(false)
 
-    loadSession()
-
-    return () => {
-      mountedRef.current = false
-    }
+    cleanupOldSessions()
   }, [])
 
-  const login = useCallback(async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    const supabase = getSupabase()
-    try {
-      // Find user in Supabase with timeout
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("TIMEOUT")), 8000)
-      })
-      
-      const queryPromise = supabase
-        .from("users")
-        .select("*")
-        .ilike("username", username.trim())
-        .single()
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise])
-
-      if (error || !data) {
-        return { success: false, error: "Usuario nao encontrado" }
-      }
-
-      // Check password for admin/supervisor roles
-      const requiresPassword = data.role === "admin" || data.role === "supervisor"
-      if (requiresPassword && data.password && data.password !== password) {
-        return { success: false, error: "Senha incorreta" }
-      }
-
-      const loggedInUser: User = {
-        id: data.id,
-        username: data.username,
-        fullName: data.name,
-        email: data.email,
-        password: data.password,
-        role: data.role,
-        adminType: data.admin_type,
-        allowedTabs: data.allowed_tabs || [],
-        isOnline: true,
-        isActive: data.is_active,
-        createdAt: new Date(data.created_at),
-      }
-
-      // Save session
-      localStorage.setItem(SESSION_KEY, JSON.stringify({
-        userId: data.id,
-        username: data.username,
-        role: data.role,
-        loginTime: new Date().toISOString(),
-      }))
-
-      // Update online status (don't wait for it)
-      supabase
-        .from("users")
-        .update({ is_online: true, last_seen: new Date().toISOString() })
-        .eq("id", data.id)
-        .then(() => {})
-
-      setUser(loggedInUser)
-      return { success: true }
-    } catch (error: any) {
-      if (error?.message === "TIMEOUT") {
-        return { success: false, error: "Banco de dados indisponivel. Verifique o status do Supabase." }
-      }
-      return { success: false, error: "Erro ao conectar. Tente novamente." }
-    }
-  }, [])
-
-  const logout = useCallback(async () => {
-    const supabase = getSupabase()
-    if (user) {
-      // Update online status
-      await supabase
-        .from("users")
-        .update({ is_online: false, last_seen: new Date().toISOString() })
-        .eq("id", user.id)
-    }
-    
-    localStorage.removeItem(SESSION_KEY)
+  const logout = useCallback(() => {
+    logoutUser()
     setUser(null)
-  }, [user])
+  }, [])
 
-  const refreshUser = useCallback(async () => {
-    if (!user) return
+  const refreshUser = useCallback(() => {
+    const currentUser = getCurrentUser()
+    setUser(currentUser)
+  }, [])
 
-    const supabase = getSupabase()
-    const { data } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single()
+  const contextValue = useMemo(() => ({ user, isLoading, logout, refreshUser }), [user, isLoading, logout, refreshUser])
 
-    if (data) {
-      setUser({
-        id: data.id,
-        username: data.username,
-        fullName: data.name,
-        email: data.email,
-        password: data.password,
-        role: data.role,
-        adminType: data.admin_type,
-        allowedTabs: data.allowed_tabs || [],
-        isOnline: data.is_online,
-        isActive: data.is_active,
-        createdAt: new Date(data.created_at),
-      })
-    }
-  }, [user])
-
-  const value = useMemo(
-    () => ({
-      user,
-      isLoading,
-      isAuthenticated: !!user,
-      login,
-      logout,
-      refreshUser,
-    }),
-    [user, isLoading, login, logout, refreshUser]
-  )
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
@@ -268,9 +50,4 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
-}
-
-// Export for compatibility with existing code
-export async function getAllUsers(): Promise<User[]> {
-  return getUsersFromSupabase()
 }

@@ -11,7 +11,7 @@ interface Point {
 export function MouseTrail() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pointsRef = useRef<Point[]>([])
-  const animationFrameRef = useRef<number | null>(null)
+  const animationFrameRef = useRef<number>()
 
   useEffect(() => {
     const canvas = canvasRef.current

@@ -8,40 +8,19 @@ import { ScriptCard } from "@/components/script-card"
 import { AttendanceConfig } from "@/components/attendance-config"
 import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { useAuth } from "@/lib/auth-context"
-import { sendOperatorHeartbeat, trackScriptAccess } from "@/lib/store"
-import { usePresenceHeartbeat, updateOperatorPresence } from "@/hooks/use-supabase-realtime"
-import { useProductScripts, getFirstScriptStep, getScriptsByProductId } from "@/hooks/use-supabase-admin"
-import { createClient } from "@/lib/supabase/client"
+import { getScriptSteps, getScriptStepById, getProductById, sendOperatorHeartbeat, trackScriptAccess } from "@/lib/store"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { useRouter } from "next/navigation"
-
-const mapScriptRowToStep = (step: any): ScriptStep => ({
-  id: step.id,
-  title: step.title,
-  content: step.content,
-  productId: step.product_id,
-  productName: step.product_name,
-  order: step.step_order ?? 0,
-  buttons: step.buttons || [],
-  tabulations: step.tabulations || [],
-  alert: step.alert,
-  isActive: step.is_active,
-  createdAt: step.created_at ? new Date(step.created_at) : new Date(),
-  updatedAt: step.updated_at ? new Date(step.updated_at) : new Date(),
-})
 
 const OperatorContent = memo(function OperatorContent() {
   const { user, logout } = useAuth()
   const router = useRouter()
-  
-  // Maintain presence in Supabase for realtime dashboard
-  usePresenceHeartbeat(user?.id)
   const [currentStep, setCurrentStep] = useState<ScriptStep | null>(null)
   const [stepHistory, setStepHistory] = useState<string[]>([])
   const [isSessionActive, setIsSessionActive] = useState(false)
   const [showConfig, setShowConfig] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [showControls, setShowControls] = useState(false)
+  const [showControls, setShowControls] = useState(false) // Sempre oculto para operadores
   const [attendanceConfig, setAttendanceConfig] = useState<AttendanceConfigType | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [currentProductId, setCurrentProductId] = useState<string | null>(null)
@@ -49,22 +28,7 @@ const OperatorContent = memo(function OperatorContent() {
   const [currentProductCategory, setCurrentProductCategory] = useState<
     "habitacional" | "comercial" | "cartao" | "outros" | undefined
   >(undefined)
-  const [showChatModal, setShowChatModal] = useState(false)
-  const [allSteps, setAllSteps] = useState<ScriptStep[]>([])
-
-  // Load all steps when product changes
-  useEffect(() => {
-    async function loadSteps() {
-      if (!currentProductId) {
-        setAllSteps([])
-        return
-      }
-      const steps = await getScriptsByProductId(currentProductId)
-      const mappedSteps = steps.map(mapScriptRowToStep)
-      setAllSteps(mappedSteps)
-    }
-    loadSteps()
-  }, [currentProductId])
+  const [showChatModal, setShowChatModal] = useState(false) // Declared showChatModal variable
 
   const handleBackToStart = useCallback(() => {
     setIsSessionActive(false)
@@ -76,8 +40,7 @@ const OperatorContent = memo(function OperatorContent() {
     setCurrentProductId(null)
     setCurrentProductName("")
     setCurrentProductCategory(undefined)
-    setShowChatModal(false)
-    setAllSteps([])
+    setShowChatModal(false) // Reset showChatModal on back to start
   }, [])
 
   useEffect(() => {
@@ -116,92 +79,104 @@ const OperatorContent = memo(function OperatorContent() {
     }
   }, [user, isSessionActive, currentProductName])
 
-  // Scripts are updated via allSteps state which loads from Supabase
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+    let isUpdating = false
+
+    const handleStoreUpdate = () => {
+      if (isUpdating) return // Prevent concurrent updates
+
+      if (currentStep && currentProductId) {
+        isUpdating = true
+        clearTimeout(timeoutId)
+
+        timeoutId = setTimeout(() => {
+          const updatedStep = getScriptStepById(currentStep.id, currentProductId)
+          if (updatedStep) {
+            setCurrentStep(updatedStep)
+          }
+          isUpdating = false
+        }, 200) // Increased debounce time
+      }
+    }
+
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener("store-updated", handleStoreUpdate)
+    }
+  }, [currentStep, currentProductId])
 
   const handleSearch = useCallback(
     (query: string) => {
       setSearchQuery(query)
 
-      if (query.trim() && isSessionActive && allSteps.length > 0) {
-        const foundStep = allSteps.find((step) => step.title.toLowerCase().includes(query.toLowerCase()))
+      if (query.trim() && isSessionActive && currentProductId) {
+        const steps = getScriptSteps().filter((s) => s.productId === currentProductId)
+        const foundStep = steps.find((step) => step.title.toLowerCase().includes(query.toLowerCase()))
 
         if (foundStep) {
           setCurrentStep(foundStep)
         }
       }
     },
-    [isSessionActive, allSteps],
+    [isSessionActive, currentProductId],
   )
 
   const handleSearchStep = useCallback(
     (stepId: string) => {
-      const step = allSteps.find((s) => s.id === stepId)
-      if (step) {
-        setStepHistory((prev) => [...prev, step.id])
-        setCurrentStep(step)
-        setSearchQuery("")
+      if (currentProductId) {
+        const step = getScriptStepById(stepId, currentProductId)
+        if (step) {
+          setStepHistory((prev) => [...prev, step.id])
+          setCurrentStep(step)
+          setSearchQuery("")
+        }
       }
     },
-    [allSteps],
+    [currentProductId],
   )
 
-  const handleStartAttendance = useCallback(async (config: AttendanceConfigType) => {
+  const handleStartAttendance = useCallback((config: AttendanceConfigType) => {
     setAttendanceConfig(config)
 
-    // Get product from Supabase
-    const supabase = createClient()
-    const { data: product } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", config.product)
-      .single()
+    const product = getProductById(config.product)
 
     if (product) {
       setCurrentProductId(product.id)
       setCurrentProductName(product.name)
       setCurrentProductCategory(product.category)
-      
-      // Get first script step from Supabase
-      const firstStep = await getFirstScriptStep(product.id)
+      const firstStep = getScriptStepById(product.scriptId, product.id)
 
       if (firstStep) {
-        const mappedStep = mapScriptRowToStep(firstStep)
-        setCurrentStep(mappedStep)
-        setStepHistory([mappedStep.id])
+        setCurrentStep(firstStep)
+        setStepHistory([firstStep.id])
         setIsSessionActive(true)
         setShowConfig(false)
-        
-        // Update presence
-        if (user?.id) {
-          updateOperatorPresence(user.id, {
-            currentProduct: product.name,
-            currentScreen: mappedStep.title,
-            lastScriptAccess: true,
-          })
-        }
       } else {
         alert("Erro: Script não encontrado para este produto. Entre em contato com o administrador.")
       }
     } else {
       alert("Erro: Produto não encontrado. Entre em contato com o administrador.")
     }
-  }, [user?.id])
+  }, [])
 
   const handleButtonClick = useCallback(
-    async (nextStepId: string | null, buttonLabel?: string) => {
-      const supabase = createClient()
-      
+    (nextStepId: string | null, buttonLabel?: string) => {
       if (buttonLabel && buttonLabel.toUpperCase().includes("FINALIZAR")) {
         if (currentProductId) {
-          const firstStep = await getFirstScriptStep(currentProductId)
-          if (firstStep) {
-            const mappedStep = mapScriptRowToStep(firstStep)
-            setCurrentStep(mappedStep)
-            setStepHistory([mappedStep.id])
-            setSearchQuery("")
-            return
+          const product = getProductById(currentProductId)
+          if (product) {
+            const firstStep = getScriptStepById(product.scriptId, product.id)
+            if (firstStep) {
+              setCurrentStep(firstStep)
+              setStepHistory([firstStep.id])
+              setSearchQuery("")
+              return
+            }
           }
         }
+        // Fallback to config if product not found
         handleBackToStart()
         return
       }
@@ -213,23 +188,12 @@ const OperatorContent = memo(function OperatorContent() {
       }
 
       if (nextStepId) {
-        const { data: nextStepData } = await supabase
-          .from("scripts")
-          .select("*")
-          .eq("id", nextStepId)
-          .single()
+        const nextStep = getScriptStepById(nextStepId, currentProductId)
 
-        if (nextStepData) {
-          const nextStep = mapScriptRowToStep(nextStepData)
+        if (nextStep) {
           setStepHistory((prev) => [...prev, nextStep.id])
           setCurrentStep(nextStep)
           setSearchQuery("")
-          
-          if (user?.id) {
-            updateOperatorPresence(user.id, {
-              currentScreen: nextStep.title,
-            })
-          }
         } else {
           alert(`Próxima tela não encontrada. ID: ${nextStepId}. Por favor, contate o administrador.`)
         }
@@ -239,65 +203,47 @@ const OperatorContent = memo(function OperatorContent() {
         )
       }
     },
-    [currentProductId, handleBackToStart, user?.id],
+    [currentProductId, handleBackToStart],
   )
 
-  const handleGoBack = useCallback(async () => {
-    if (stepHistory.length > 1 && currentProductId) {
-      const newHistory = [...stepHistory]
-      newHistory.pop()
-      
-      const previousStepId = newHistory[newHistory.length - 1]
-      const supabase = createClient()
-      
-      const { data: previousStepData } = await supabase
-        .from("scripts")
-        .select("*")
-        .eq("id", previousStepId)
-        .single()
+  const handleGoBack = useCallback(() => {
+    setStepHistory((prev) => {
+      if (prev.length > 1 && currentProductId) {
+        const newHistory = [...prev]
+        newHistory.pop()
 
-      if (previousStepData) {
-        const previousStep = mapScriptRowToStep(previousStepData)
-        setCurrentStep(previousStep)
-        setStepHistory(newHistory)
-        setSearchQuery("")
+        const previousStepId = newHistory[newHistory.length - 1]
+        const previousStep = getScriptStepById(previousStepId, currentProductId)
+
+        if (previousStep) {
+          setCurrentStep(previousStep)
+          setSearchQuery("")
+        }
+
+        return newHistory
       }
-    }
-  }, [currentProductId, stepHistory])
+      return prev
+    })
+  }, [currentProductId])
 
-  const handleProductSelect = useCallback(async (productId: string) => {
-    const supabase = createClient()
-    const { data: product } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", productId)
-      .single()
+  const handleProductSelect = useCallback((productId: string) => {
+    const product = getProductById(productId)
 
     if (product) {
       setCurrentProductId(product.id)
       setCurrentProductName(product.name)
       setCurrentProductCategory(product.category)
-      
-      const firstStep = await getFirstScriptStep(product.id)
+      const firstStep = getScriptStepById(product.scriptId, product.id)
 
       if (firstStep) {
-        const mappedStep = mapScriptRowToStep(firstStep)
-        setCurrentStep(mappedStep)
-        setStepHistory([mappedStep.id])
+        setCurrentStep(firstStep)
+        setStepHistory([firstStep.id])
         setIsSessionActive(true)
         setShowConfig(false)
         setSearchQuery("")
-        
-        if (user?.id) {
-          updateOperatorPresence(user.id, {
-            currentProduct: product.name,
-            currentScreen: mappedStep.title,
-            lastScriptAccess: true,
-          })
-        }
       }
     }
-  }, [user?.id])
+  }, [])
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen((prev) => !prev), [])
   const toggleControls = useCallback(() => setShowControls((prev) => !prev), [])
@@ -349,7 +295,7 @@ const OperatorContent = memo(function OperatorContent() {
                   showControls={showControls}
                   productName={currentProductName}
                   onSearchStep={handleSearchStep}
-                  allSteps={allSteps}
+                  allSteps={currentProductId ? getScriptSteps().filter((s) => s.productId === currentProductId) : []}
                 />
               </div>
             ) : null}

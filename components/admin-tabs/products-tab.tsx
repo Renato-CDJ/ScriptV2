@@ -16,20 +16,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Pencil, Trash2, Package, Loader2 } from "lucide-react"
-import { useProducts, useScripts } from "@/hooks/use-supabase-admin"
+import { Plus, Pencil, Trash2, Package } from "lucide-react"
+import { getProducts, createProduct, updateProduct, deleteProduct, getScriptSteps, getPersonTypes } from "@/lib/store"
 import type { Product, PersonTypeOption } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { getPersonTypes } from "@/lib/store"
 
 export function ProductsTab() {
-  const { data: products, loading, create, update, remove } = useProducts()
-  const { data: scripts } = useScripts()
+  const [products, setProducts] = useState<Product[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<any | null>(null)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [dialogId, setDialogId] = useState<string>("")
   const [personTypeOptions, setPersonTypeOptions] = useState<PersonTypeOption[]>([])
-  const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     scriptId: "",
@@ -40,21 +37,32 @@ export function ProductsTab() {
   const { toast } = useToast()
 
   useEffect(() => {
+    loadProducts()
     setPersonTypeOptions(getPersonTypes())
+    const handleStoreUpdate = () => {
+      loadProducts()
+      setPersonTypeOptions(getPersonTypes())
+    }
+    window.addEventListener("store-updated", handleStoreUpdate)
+    return () => window.removeEventListener("store-updated", handleStoreUpdate)
   }, [])
 
-  const handleOpenDialog = (product?: any) => {
+  const loadProducts = () => {
+    setProducts(getProducts())
+  }
+
+  const handleOpenDialog = (product?: Product) => {
     const newDialogId = `dialog-${Date.now()}`
     setDialogId(newDialogId)
 
     if (product) {
       setEditingProduct(product)
       setFormData({
-        name: product.name || "",
-        scriptId: product.details?.scriptId || "",
-        category: product.category || "habitacional",
-        attendanceTypes: product.details?.attendanceTypes || [],
-        personTypes: product.details?.personTypes || [],
+        name: product.name,
+        scriptId: product.scriptId,
+        category: product.category,
+        attendanceTypes: product.attendanceTypes || [],
+        personTypes: product.personTypes || [],
       })
     } else {
       setEditingProduct(null)
@@ -69,7 +77,7 @@ export function ProductsTab() {
     setIsDialogOpen(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!formData.name.trim() || !formData.scriptId) {
       toast({
         title: "Erro",
@@ -88,79 +96,46 @@ export function ProductsTab() {
       return
     }
 
-    setSaving(true)
-    try {
-      if (editingProduct) {
-        const { error } = await update(editingProduct.id, {
-          name: formData.name,
-          description: `Produto ${formData.name}`,
-          category: formData.category,
-          details: {
-            scriptId: formData.scriptId,
-            attendanceTypes: formData.attendanceTypes,
-            personTypes: formData.personTypes,
-          },
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Sucesso",
-          description: "Produto atualizado com sucesso",
-        })
-      } else {
-        const { error } = await create({
-          name: formData.name,
-          description: `Produto ${formData.name}`,
-          category: formData.category,
-          price: 0,
-          is_active: true,
-          details: {
-            scriptId: formData.scriptId,
-            attendanceTypes: formData.attendanceTypes,
-            personTypes: formData.personTypes,
-          },
-        })
-        if (error) throw new Error(error)
-        toast({
-          title: "Sucesso",
-          description: "Produto criado com sucesso",
-        })
-      }
-
-      setIsDialogOpen(false)
-      setFormData({
-        name: "",
-        scriptId: "",
-        category: "habitacional",
-        attendanceTypes: [],
-        personTypes: [],
+    if (editingProduct) {
+      updateProduct({
+        ...editingProduct,
+        ...formData,
       })
-      setEditingProduct(null)
-    } catch (err: any) {
       toast({
-        title: "Erro",
-        description: err.message || "Erro ao salvar produto",
-        variant: "destructive",
+        title: "Sucesso",
+        description: "Produto atualizado com sucesso",
       })
-    } finally {
-      setSaving(false)
+    } else {
+      createProduct({
+        ...formData,
+        isActive: true,
+      })
+      toast({
+        title: "Sucesso",
+        description: "Produto criado com sucesso",
+      })
     }
+
+    setIsDialogOpen(false)
+    setFormData({
+      name: "",
+      scriptId: "",
+      category: "habitacional",
+      attendanceTypes: [],
+      personTypes: [],
+    })
+    setEditingProduct(null)
+    loadProducts()
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este produto?")) {
-      const { error } = await remove(id)
-      if (error) {
-        toast({
-          title: "Erro",
-          description: error,
-          variant: "destructive",
-        })
-        return
-      }
+      deleteProduct(id)
       toast({
         title: "Sucesso",
         description: "Produto excluído com sucesso",
       })
+      loadProducts()
     }
   }
 
@@ -183,11 +158,12 @@ export function ProductsTab() {
   }
 
   const abordagemSteps = useMemo(() => {
+    const allSteps = getScriptSteps()
     // Filter steps that are "Abordagem" (approach/first screen of each product)
-    return scripts.filter(
-      (step) => step.title?.toLowerCase().includes("abordagem") || step.id?.toLowerCase().includes("abordagem"),
+    return allSteps.filter(
+      (step) => step.title.toLowerCase().includes("abordagem") || step.id.toLowerCase().includes("abordagem"),
     )
-  }, [scripts])
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -203,13 +179,7 @@ export function ProductsTab() {
       </div>
 
       <div className="grid gap-4">
-        {loading ? (
-          <Card>
-            <CardContent className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </CardContent>
-          </Card>
-        ) : products.length === 0 ? (
+        {products.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Package className="h-12 w-12 text-muted-foreground mb-4" />
@@ -231,7 +201,7 @@ export function ProductsTab() {
                       {product.name}
                     </CardTitle>
                     <CardDescription>
-                      Categoria: {(product.category || "outros").charAt(0).toUpperCase() + (product.category || "outros").slice(1)}
+                      Categoria: {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -248,12 +218,12 @@ export function ProductsTab() {
                 <div>
                   <p className="text-sm font-semibold mb-2">Aparece em:</p>
                   <div className="flex flex-wrap gap-2">
-                    {product.details?.attendanceTypes?.map((type: string) => (
+                    {product.attendanceTypes?.map((type) => (
                       <Badge key={type} variant="secondary">
                         Atendimento {type.charAt(0).toUpperCase() + type.slice(1)}
                       </Badge>
                     ))}
-                    {product.details?.personTypes?.map((type: string) => (
+                    {product.personTypes?.map((type) => (
                       <Badge key={type} variant="secondary">
                         Pessoa {type.charAt(0).toUpperCase() + type.slice(1)}
                       </Badge>
@@ -302,7 +272,7 @@ export function ProductsTab() {
                     abordagemSteps.map((step) => (
                       <SelectItem key={step.id} value={step.id}>
                         {step.title}
-                        {step.product_id && ` (${step.product_id})`}
+                        {step.productId && ` (${step.productId})`}
                       </SelectItem>
                     ))
                   )}
