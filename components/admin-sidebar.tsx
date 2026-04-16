@@ -105,8 +105,8 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
     return true
   })
 
-  // Only master and monitoria can see access control
-  const canSeeAccessControl = user?.adminType === "master" || user?.adminType === "monitoria"
+  // Only master, gestao and monitoria can see access control
+  const canSeeAccessControl = user?.adminType === "master" || user?.adminType === "gestao" || user?.adminType === "monitoria"
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-orange-500/30 dark:border-orange-500/40">

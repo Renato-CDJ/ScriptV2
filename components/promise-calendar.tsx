@@ -8,7 +8,7 @@ import { getMaxPromiseDate, isHoliday } from "@/lib/business-days"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ProductType = "cartao" | "comercial" | "habitacional"
-type ProductCategory = "habitacional" | "comercial" | "cartao" | "outros"
+type ProductCategory = "habitacional" | "comercial" | "cartao" | "outros" | "boleto_pre_formatado"
 
 interface PromiseCalendarInlineProps {
   productCategory?: ProductCategory
@@ -89,6 +89,30 @@ export function PromiseCalendarInline({ productCategory }: PromiseCalendarInline
       icon: Home,
     },
   ]
+
+  if (productCategory === "boleto_pre_formatado") {
+    return (
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+            Calendário de Promessas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+            <AlertTriangle className="h-10 w-10 text-amber-500" />
+            <p className="text-sm font-medium text-muted-foreground">
+              De acordo com a data do boleto, não pode ser alterado em hipótese alguma.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Categoria: <span className="font-semibold">Boleto Pré-Formatado</span>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (productCategory === "outros") {
     return (
