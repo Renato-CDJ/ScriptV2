@@ -141,18 +141,21 @@ export function useScripts() {
 }
 
 // Get scripts for a specific product
+// Note: Using single filter + client-side filtering to avoid needing composite indexes
 export async function getScriptsByProductId(productId: string) {
   const db = getFirebaseDb()
   const scriptsRef = collection(db, COLLECTIONS.SCRIPTS)
-  const q = query(
-    scriptsRef, 
-    where("product_id", "==", productId),
-    where("is_active", "==", true),
-    orderBy("step_order", "asc")
-  )
+  // Only filter by product_id in Firestore, filter is_active and sort on client
+  const q = query(scriptsRef, where("product_id", "==", productId))
   const snapshot = await getDocs(q)
   
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  // Filter active scripts and sort by step_order on client side
+  const scripts = snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() } as any))
+    .filter(script => script.is_active === true)
+    .sort((a, b) => (a.step_order || 0) - (b.step_order || 0))
+  
+  return scripts
 }
 
 // Get the first script step for a product
@@ -357,10 +360,18 @@ export function useNotes(userId?: string) {
     
     const db = getFirebaseDb()
     const notesRef = collection(db, COLLECTIONS.NOTES)
-    const q = query(notesRef, where("user_id", "==", userId), orderBy("created_at", "desc"))
+    // Only filter by user_id, sort on client to avoid composite index
+    const q = query(notesRef, where("user_id", "==", userId))
     const snapshot = await getDocs(q)
     
-    setData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+    const notes = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as any))
+      .sort((a, b) => {
+        const dateA = a.created_at?.toDate?.() || new Date(a.created_at || 0)
+        const dateB = b.created_at?.toDate?.() || new Date(b.created_at || 0)
+        return dateB.getTime() - dateA.getTime()
+      })
+    setData(notes)
     setLoading(false)
   }, [userId])
 
@@ -371,10 +382,18 @@ export function useNotes(userId?: string) {
 
     const db = getFirebaseDb()
     const notesRef = collection(db, COLLECTIONS.NOTES)
-    const q = query(notesRef, where("user_id", "==", userId), orderBy("created_at", "desc"))
+    // Only filter by user_id, sort on client to avoid composite index
+    const q = query(notesRef, where("user_id", "==", userId))
     
     unsubscribeRef.current = onSnapshot(q, (snapshot) => {
-      setData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      const notes = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as any))
+        .sort((a, b) => {
+          const dateA = a.created_at?.toDate?.() || new Date(a.created_at || 0)
+          const dateB = b.created_at?.toDate?.() || new Date(b.created_at || 0)
+          return dateB.getTime() - dateA.getTime()
+        })
+      setData(notes)
       setLoading(false)
     })
 

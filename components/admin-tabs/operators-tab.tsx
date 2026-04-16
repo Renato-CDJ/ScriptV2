@@ -21,10 +21,10 @@ import {
   forceLogoutUser,
   getCurrentUser,
 } from "@/lib/store"
-import { createClient } from "@/lib/supabase/client"
+import { getFirebaseDb } from "@/lib/firebase/config"
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot } from "firebase/firestore"
+import { COLLECTIONS, toFirestoreDate } from "@/lib/firebase/firestore"
 import type { User } from "@/lib/types"
-
-const getSupabase = () => createClient()
 import * as XLSX from "xlsx"
 
 export function OperatorsTab() {
@@ -40,63 +40,45 @@ export function OperatorsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const loadOperators = async () => {
-      // Fetch operators from Supabase
-      const supabase = getSupabase()
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("role", "operator")
-        .order("created_at", { ascending: false })
+    const db = getFirebaseDb()
+    const usersRef = collection(db, COLLECTIONS.USERS)
+    const q = query(usersRef, where("role", "==", "operator"), orderBy("created_at", "desc"))
 
-      if (error) {
-        console.error("[v0] Error loading operators:", error)
-        return
-      }
-
-      const ops: User[] = (data || []).map((u: any) => ({
-        id: u.id,
-        username: u.username,
-        fullName: u.name,
-        isOnline: u.is_online || false,
-        role: u.role,
-        createdAt: new Date(u.created_at),
-        loginSessions: [],
-        permissions: {
-          dashboard: true,
-          scripts: true,
-          products: true,
-          attendanceConfig: false,
-          tabulations: false,
-          situations: false,
-          channels: false,
-          notes: true,
-          operators: false,
-          messagesQuiz: false,
-          chat: true,
-          settings: false,
-        },
-      }))
-      setOperators(ops)
-    }
-
-    loadOperators()
-
-    // Subscribe to realtime changes
-    const supabaseForChannel = getSupabase()
-    const channel = supabaseForChannel
-      .channel("operators-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "users", filter: "role=eq.operator" },
-        () => {
-          loadOperators()
+    // Subscribe to realtime changes from Firebase
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ops: User[] = snapshot.docs.map((docSnap) => {
+        const u = docSnap.data()
+        return {
+          id: docSnap.id,
+          username: u.username,
+          fullName: u.name,
+          isOnline: u.is_online || false,
+          role: u.role,
+          createdAt: u.created_at ? new Date(u.created_at) : new Date(),
+          loginSessions: [],
+          permissions: {
+            dashboard: true,
+            scripts: true,
+            products: true,
+            attendanceConfig: false,
+            tabulations: false,
+            situations: false,
+            channels: false,
+            notes: true,
+            operators: false,
+            messagesQuiz: false,
+            chat: true,
+            settings: false,
+          },
         }
-      )
-      .subscribe()
+      })
+      setOperators(ops)
+    }, (error) => {
+      console.error("[v0] Error loading operators:", error)
+    })
 
     return () => {
-      supabaseForChannel.removeChannel(channel)
+      unsubscribe()
     }
   }, [])
 
@@ -119,27 +101,22 @@ export function OperatorsTab() {
 
   const handleDelete = async (operatorId: string) => {
     if (confirm("Tem certeza que deseja excluir este operador?")) {
-      const supabase = getSupabase()
-      // Delete from Supabase
-      const { error } = await supabase
-        .from("users")
-        .delete()
-        .eq("id", operatorId)
+      try {
+        const db = getFirebaseDb()
+        // Delete from Firebase
+        await deleteDoc(doc(db, COLLECTIONS.USERS, operatorId))
 
-      if (error) {
+        toast({
+          title: "Sucesso",
+          description: "Operador excluido com sucesso",
+        })
+      } catch (error: any) {
         toast({
           title: "Erro",
           description: "Erro ao excluir operador: " + error.message,
           variant: "destructive",
         })
-        return
       }
-
-      setOperators(operators.filter(op => op.id !== operatorId))
-      toast({
-        title: "Sucesso",
-        description: "Operador excluido com sucesso",
-      })
     }
   }
 
@@ -174,115 +151,66 @@ export function OperatorsTab() {
       return
     }
 
-    const normalizeUsername = (username: string): string => {
-      return username.toLowerCase().trim().replace(/\s+/g, "")
-    }
+    const db = getFirebaseDb()
+    const usersRef = collection(db, COLLECTIONS.USERS)
 
-    const supabase = getSupabase()
-
-    if (isEditMode && editingOperator) {
-      // Update in Supabase
-      const { error } = await supabase
-        .from("users")
-        .update({
+    try {
+      if (isEditMode && editingOperator) {
+        // Update in Firebase
+        await updateDoc(doc(db, COLLECTIONS.USERS, editingOperator.id), {
           name: formData.fullName.trim(),
           username: formData.username.trim(),
-          updated_at: new Date().toISOString(),
+          updated_at: toFirestoreDate(new Date()),
         })
-        .eq("id", editingOperator.id)
 
-      if (error) {
         toast({
-          title: "Erro",
-          description: "Erro ao atualizar operador: " + error.message,
-          variant: "destructive",
+          title: "Sucesso",
+          description: "Operador atualizado com sucesso",
         })
-        return
-      }
+      } else {
+        // Check if username exists in Firebase
+        const existingQuery = query(usersRef, where("username", "==", formData.username.trim().toLowerCase()))
+        const existingSnapshot = await getDocs(existingQuery)
 
-      setOperators(operators.map(op => 
-        op.id === editingOperator.id 
-          ? { ...op, fullName: formData.fullName, username: formData.username }
-          : op
-      ))
-      toast({
-        title: "Sucesso",
-        description: "Operador atualizado com sucesso",
-      })
-    } else {
-      // Check if username exists in Supabase
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("username")
-        .ilike("username", formData.username.trim())
-        .single()
+        if (!existingSnapshot.empty) {
+          toast({
+            title: "Erro",
+            description: `Usuario "${formData.username.trim()}" ja existe no sistema`,
+            variant: "destructive",
+          })
+          return
+        }
 
-      if (existingUser) {
-        toast({
-          title: "Erro",
-          description: `Usuario "${existingUser.username}" ja existe no sistema`,
-          variant: "destructive",
-        })
-        return
-      }
+        // Generate a new ID for the user
+        const newUserId = `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-      // Insert into Supabase
-      const { data: newUser, error } = await supabase
-        .from("users")
-        .insert({
-          username: formData.username.trim(),
+        // Insert into Firebase
+        await setDoc(doc(db, COLLECTIONS.USERS, newUserId), {
+          username: formData.username.trim().toLowerCase(),
           name: formData.fullName.trim(),
-          email: `${formData.username.trim()}@operador.com`,
+          email: `${formData.username.trim().toLowerCase().replace(/\s+/g, "")}@operador.com`,
           role: "operator",
           is_active: true,
           is_online: false,
           allowed_tabs: ["dashboard", "scripts", "products", "notes", "chat"],
+          created_at: toFirestoreDate(new Date()),
+          updated_at: toFirestoreDate(new Date()),
         })
-        .select()
-        .single()
 
-      if (error) {
         toast({
-          title: "Erro",
-          description: "Erro ao criar operador: " + error.message,
-          variant: "destructive",
+          title: "Sucesso",
+          description: "Operador adicionado com sucesso",
         })
-        return
       }
 
-      const newOperator: User = {
-        id: newUser.id,
-        username: newUser.username,
-        fullName: newUser.name,
-        isOnline: false,
-        role: "operator",
-        createdAt: new Date(newUser.created_at),
-        loginSessions: [],
-        permissions: {
-          dashboard: true,
-          scripts: true,
-          products: true,
-          attendanceConfig: false,
-          tabulations: false,
-          situations: false,
-          channels: false,
-          notes: true,
-          operators: false,
-          messagesQuiz: false,
-          chat: true,
-          settings: false,
-        },
-      }
-
-      setOperators([...operators, newOperator])
-
+      setIsDialogOpen(false)
+    } catch (error: any) {
       toast({
-        title: "Sucesso",
-        description: "Operador adicionado com sucesso",
+        title: "Erro",
+        description: "Erro ao salvar operador: " + error.message,
+        variant: "destructive",
       })
     }
-
-    setIsDialogOpen(false)
   }
 
   const handleImportClick = () => {
@@ -304,7 +232,8 @@ export function OperatorsTab() {
     }
 
     try {
-      const supabase = getSupabase()
+      const db = getFirebaseDb()
+      const usersRef = collection(db, COLLECTIONS.USERS)
       let rows: string[][] = []
 
       if (fileName.endsWith(".csv")) {
@@ -372,73 +301,39 @@ export function OperatorsTab() {
           continue
         }
 
-        // Check if username already exists in Supabase
-        const { data: existingUser } = await supabase
-          .from("users")
-          .select("username")
-          .ilike("username", username)
-          .single()
+        // Check if username already exists in Firebase
+        const existingQuery = query(usersRef, where("username", "==", username.toLowerCase()))
+        const existingSnapshot = await getDocs(existingQuery)
 
-        if (existingUser) {
+        if (!existingSnapshot.empty) {
           errors.push(`Linha ${index + 2}: Usuário "${username}" já existe`)
           skippedCount++
           continue
         }
 
-        // Insert into Supabase
-        const { error: insertError } = await supabase
-          .from("users")
-          .insert({
-            username: username,
+        try {
+          // Generate a new ID for the user
+          const newUserId = `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          
+          // Insert into Firebase
+          await setDoc(doc(db, COLLECTIONS.USERS, newUserId), {
+            username: username.toLowerCase(),
             name: fullName,
             email: `${username.toLowerCase().replace(/\s+/g, "")}@operador.com`,
             role: "operator",
             is_active: true,
             is_online: false,
             allowed_tabs: ["dashboard", "scripts", "products", "notes", "chat"],
+            created_at: toFirestoreDate(new Date()),
+            updated_at: toFirestoreDate(new Date()),
           })
 
-        if (insertError) {
+          importedCount++
+        } catch (insertError: any) {
           errors.push(`Linha ${index + 2}: Erro ao inserir - ${insertError.message}`)
           skippedCount++
           continue
         }
-
-        importedCount++
-      }
-
-      // Reload operators from Supabase
-      const { data: updatedOps } = await supabase
-        .from("users")
-        .select("*")
-        .eq("role", "operator")
-        .order("created_at", { ascending: false })
-
-      if (updatedOps) {
-        const ops: User[] = updatedOps.map((u: any) => ({
-          id: u.id,
-          username: u.username,
-          fullName: u.name,
-          isOnline: u.is_online || false,
-          role: u.role,
-          createdAt: new Date(u.created_at),
-          loginSessions: [],
-          permissions: {
-            dashboard: true,
-            scripts: true,
-            products: true,
-            attendanceConfig: false,
-            tabulations: false,
-            situations: false,
-            channels: false,
-            notes: true,
-            operators: false,
-            messagesQuiz: false,
-            chat: true,
-            settings: false,
-          },
-        }))
-        setOperators(ops)
       }
 
       if (importedCount > 0) {

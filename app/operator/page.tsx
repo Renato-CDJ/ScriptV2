@@ -10,8 +10,10 @@ import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { useAuth } from "@/lib/auth-context"
 import { sendOperatorHeartbeat, trackScriptAccess } from "@/lib/store"
 import { usePresenceHeartbeat, updateOperatorPresence } from "@/hooks/use-supabase-realtime"
-import { useProductScripts, getFirstScriptStep, getScriptsByProductId } from "@/hooks/use-supabase-admin"
-import { createClient } from "@/lib/supabase/client"
+import { useProductScripts, getFirstScriptStep, getScriptsByProductId, getScriptStepByIdFromFirebase } from "@/hooks/use-firebase-admin"
+import { getFirebaseDb } from "@/lib/firebase/config"
+import { doc, getDoc } from "firebase/firestore"
+import { COLLECTIONS } from "@/lib/firebase/firestore"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { useRouter } from "next/navigation"
 
@@ -148,20 +150,18 @@ const OperatorContent = memo(function OperatorContent() {
   const handleStartAttendance = useCallback(async (config: AttendanceConfigType) => {
     setAttendanceConfig(config)
 
-    // Get product from Supabase
-    const supabase = createClient()
-    const { data: product } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", config.product)
-      .single()
+    // Get product from Firebase
+    const db = getFirebaseDb()
+    const productRef = doc(db, COLLECTIONS.PRODUCTS, config.product)
+    const productSnap = await getDoc(productRef)
 
-    if (product) {
+    if (productSnap.exists()) {
+      const product = { id: productSnap.id, ...productSnap.data() } as any
       setCurrentProductId(product.id)
       setCurrentProductName(product.name)
       setCurrentProductCategory(product.category)
       
-      // Get first script step from Supabase
+      // Get first script step from Firebase
       const firstStep = await getFirstScriptStep(product.id)
 
       if (firstStep) {
@@ -189,8 +189,6 @@ const OperatorContent = memo(function OperatorContent() {
 
   const handleButtonClick = useCallback(
     async (nextStepId: string | null, buttonLabel?: string) => {
-      const supabase = createClient()
-      
       if (buttonLabel && buttonLabel.toUpperCase().includes("FINALIZAR")) {
         if (currentProductId) {
           const firstStep = await getFirstScriptStep(currentProductId)
@@ -213,11 +211,8 @@ const OperatorContent = memo(function OperatorContent() {
       }
 
       if (nextStepId) {
-        const { data: nextStepData } = await supabase
-          .from("scripts")
-          .select("*")
-          .eq("id", nextStepId)
-          .single()
+        // Get next step from Firebase
+        const nextStepData = await getScriptStepByIdFromFirebase(nextStepId)
 
         if (nextStepData) {
           const nextStep = mapScriptRowToStep(nextStepData)
@@ -248,13 +243,9 @@ const OperatorContent = memo(function OperatorContent() {
       newHistory.pop()
       
       const previousStepId = newHistory[newHistory.length - 1]
-      const supabase = createClient()
       
-      const { data: previousStepData } = await supabase
-        .from("scripts")
-        .select("*")
-        .eq("id", previousStepId)
-        .single()
+      // Get previous step from Firebase
+      const previousStepData = await getScriptStepByIdFromFirebase(previousStepId)
 
       if (previousStepData) {
         const previousStep = mapScriptRowToStep(previousStepData)
@@ -266,14 +257,13 @@ const OperatorContent = memo(function OperatorContent() {
   }, [currentProductId, stepHistory])
 
   const handleProductSelect = useCallback(async (productId: string) => {
-    const supabase = createClient()
-    const { data: product } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", productId)
-      .single()
+    // Get product from Firebase
+    const db = getFirebaseDb()
+    const productRef = doc(db, COLLECTIONS.PRODUCTS, productId)
+    const productSnap = await getDoc(productRef)
 
-    if (product) {
+    if (productSnap.exists()) {
+      const product = { id: productSnap.id, ...productSnap.data() } as any
       setCurrentProductId(product.id)
       setCurrentProductName(product.name)
       setCurrentProductCategory(product.category)

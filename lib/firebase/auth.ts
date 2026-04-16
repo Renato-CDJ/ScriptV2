@@ -75,19 +75,9 @@ export async function validateUserCredentials(
   password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
-    console.log("[v0] Validating credentials for:", username)
     const db = getFirebaseDb()
-    console.log("[v0] Firestore DB obtained")
     const usersRef = collection(db, COLLECTIONS.USERS)
-    console.log("[v0] Users collection ref:", COLLECTIONS.USERS)
     const snapshot = await getDocs(usersRef)
-    console.log("[v0] Users found in Firestore:", snapshot.docs.length)
-    
-    // Log all usernames for debugging
-    snapshot.docs.forEach(doc => {
-      const data = doc.data()
-      console.log("[v0] User in DB:", data.username, "| Role:", data.role)
-    })
     
     // Find user by username (case insensitive)
     const userDoc = snapshot.docs.find(doc => {
@@ -96,7 +86,6 @@ export async function validateUserCredentials(
     })
     
     if (!userDoc) {
-      console.log("[v0] User not found:", username)
       return { success: false, error: "Usuario nao encontrado" }
     }
     
@@ -124,10 +113,8 @@ export async function validateUserCredentials(
     
     return { success: true, user }
   } catch (error: any) {
-    console.error("[v0] Firebase Auth Validation error:", error)
-    console.error("[v0] Error code:", error?.code)
-    console.error("[v0] Error message:", error?.message)
-    return { success: false, error: `Erro: ${error?.code || error?.message || "Erro desconhecido"}` }
+    console.error("[Firebase Auth] Validation error:", error)
+    return { success: false, error: "Erro ao validar credenciais" }
   }
 }
 
