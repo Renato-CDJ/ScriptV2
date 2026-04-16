@@ -2691,11 +2691,23 @@ function OperatorQuestionsView({
     setIsLoading(true)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from("quality_chat_messages")
-        .select("*")
-        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedMonitor.id}),and(sender_id.eq.${selectedMonitor.id},recipient_id.eq.${user.id})`)
-        .order("created_at", { ascending: true })
+      
+      let query = supabase.from("quality_chat_messages").select("*")
+      
+      // Se for o Grupo Geral da Qualidade, busca todas as mensagens enviadas para "general-quality"
+      // Se for um monitor específico, busca apenas o chat privado
+      if (selectedMonitor.id === "general-quality") {
+        // Grupo Geral: mostra todas as mensagens onde recipient_id = "general-quality"
+        query = query.eq("recipient_id", "general-quality")
+      } else {
+        // Chat privado: mostra apenas mensagens entre operador e monitor específico
+        // Exclui mensagens do grupo geral
+        query = query
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedMonitor.id}),and(sender_id.eq.${selectedMonitor.id},recipient_id.eq.${user.id})`)
+          .neq("recipient_id", "general-quality")
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: true })
 
       if (!error && data) {
         setChatMessages(data.map((m: any) => ({
@@ -3358,11 +3370,23 @@ function MonitoriaOperationChatView({
     setIsLoading(true)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from("quality_chat_messages")
-        .select("*")
-        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedOperator.id}),and(sender_id.eq.${selectedOperator.id},recipient_id.eq.${user.id})`)
-        .order("created_at", { ascending: true })
+      
+      let query = supabase.from("quality_chat_messages").select("*")
+      
+      // Se for o Grupo Geral de Operadores, busca todas as mensagens enviadas para "general-operation"
+      // Se for um operador específico, busca apenas o chat privado
+      if (selectedOperator.id === "general-operation") {
+        // Grupo Geral: mostra todas as mensagens onde recipient_id = "general-operation"
+        query = query.eq("recipient_id", "general-operation")
+      } else {
+        // Chat privado: mostra apenas mensagens entre monitor e operador específico
+        // Exclui mensagens do grupo geral
+        query = query
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedOperator.id}),and(sender_id.eq.${selectedOperator.id},recipient_id.eq.${user.id})`)
+          .neq("recipient_id", "general-operation")
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: true })
 
       if (!error && data) {
         setChatMessages(data.map((m: any) => ({
@@ -4098,11 +4122,23 @@ function SupervisorOperationChatView({
     setIsLoading(true)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from("supervisor_chat_messages")
-        .select("*")
-        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedOperator.id}),and(sender_id.eq.${selectedOperator.id},recipient_id.eq.${user.id})`)
-        .order("created_at", { ascending: true })
+      
+      let query = supabase.from("supervisor_chat_messages").select("*")
+      
+      // Se for o Grupo Geral de Operadores, busca todas as mensagens enviadas para "general-operation"
+      // Se for um operador específico, busca apenas o chat privado
+      if (selectedOperator.id === "general-operation") {
+        // Grupo Geral: mostra todas as mensagens onde recipient_id = "general-operation"
+        query = query.eq("recipient_id", "general-operation")
+      } else {
+        // Chat privado: mostra apenas mensagens entre supervisor e operador específico
+        // Exclui mensagens do grupo geral
+        query = query
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedOperator.id}),and(sender_id.eq.${selectedOperator.id},recipient_id.eq.${user.id})`)
+          .neq("recipient_id", "general-operation")
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: true })
 
       if (!error && data) {
         setChatMessages(data.map((m: any) => ({
@@ -4748,11 +4784,23 @@ function EquipeView({
     setIsLoading(true)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from("supervisor_chat_messages")
-        .select("*")
-        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedSupervisor.id}),and(sender_id.eq.${selectedSupervisor.id},recipient_id.eq.${user.id})`)
-        .order("created_at", { ascending: true })
+      
+      let query = supabase.from("supervisor_chat_messages").select("*")
+      
+      // Se for o Grupo Geral, busca todas as mensagens enviadas para "general"
+      // Se for um supervisor específico, busca apenas o chat privado entre operador e supervisor
+      if (selectedSupervisor.id === "general") {
+        // Grupo Geral: mostra todas as mensagens onde recipient_id = "general"
+        query = query.eq("recipient_id", "general")
+      } else {
+        // Chat privado: mostra apenas mensagens entre o operador e o supervisor específico
+        // Exclui mensagens do grupo geral
+        query = query
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedSupervisor.id}),and(sender_id.eq.${selectedSupervisor.id},recipient_id.eq.${user.id})`)
+          .neq("recipient_id", "general")
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: true })
 
       if (!error && data) {
         setChatMessages(data.map((m: any) => ({
