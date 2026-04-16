@@ -52,31 +52,19 @@ const OperatorContent = memo(function OperatorContent() {
   const [showChatModal, setShowChatModal] = useState(false)
   const [allSteps, setAllSteps] = useState<ScriptStep[]>([])
 
-  // Load all steps when product changes - with caching to avoid redundant loads
+  // Load all steps when product changes
   useEffect(() => {
-    let isMounted = true
-    
     async function loadSteps() {
       if (!currentProductId) {
         setAllSteps([])
         return
       }
-      
-      // Skip if we already have steps for this product
-      if (allSteps.length > 0 && allSteps[0]?.productId === currentProductId) {
-        return
-      }
-      
       const steps = await getScriptsByProductId(currentProductId)
-      if (isMounted) {
-        const mappedSteps = steps.map(mapScriptRowToStep)
-        setAllSteps(mappedSteps)
-      }
+      const mappedSteps = steps.map(mapScriptRowToStep)
+      setAllSteps(mappedSteps)
     }
     loadSteps()
-    
-    return () => { isMounted = false }
-  }, [currentProductId, allSteps])
+  }, [currentProductId])
 
   const handleBackToStart = useCallback(() => {
     setIsSessionActive(false)
@@ -111,13 +99,13 @@ const OperatorContent = memo(function OperatorContent() {
     return () => clearInterval(interval)
   }, [logout, router])
 
-  // Heartbeat: send every 60s to prove operator is active (reduced frequency for better performance)
+  // Heartbeat: send every 30s to prove operator is active
   useEffect(() => {
     if (!user) return
     sendOperatorHeartbeat(user.id)
     const heartbeatInterval = setInterval(() => {
       sendOperatorHeartbeat(user.id)
-    }, 60000)
+    }, 30000)
     return () => clearInterval(heartbeatInterval)
   }, [user])
 

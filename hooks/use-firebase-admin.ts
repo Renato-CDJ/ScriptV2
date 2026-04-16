@@ -172,24 +172,10 @@ export async function getScriptStepByIdFromFirebase(stepId: string) {
 }
 
 // Hook for operator to use scripts with realtime updates
-// Optimized: only uses realtime listener (no redundant initial fetch)
 export function useProductScripts(productId: string | null) {
   const [scripts, setScripts] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const unsubscribeRef = useRef<(() => void) | null>(null)
-
-  const mapScriptData = useCallback((s: any) => ({
-    id: s.id,
-    title: s.title,
-    content: s.content,
-    productId: s.product_id,
-    productName: s.product_name,
-    order: s.step_order,
-    buttons: s.buttons || [],
-    tabulations: s.tabulations || [],
-    alert: s.alert,
-    isActive: s.is_active,
-  }), [])
 
   const fetchScripts = useCallback(async () => {
     if (!productId) {
@@ -199,20 +185,32 @@ export function useProductScripts(productId: string | null) {
     
     setLoading(true)
     const data = await getScriptsByProductId(productId)
-    setScripts(data.map(mapScriptData))
+    
+    const mappedScripts = data.map((s: any) => ({
+      id: s.id,
+      title: s.title,
+      content: s.content,
+      productId: s.product_id,
+      productName: s.product_name,
+      order: s.step_order,
+      buttons: s.buttons || [],
+      tabulations: s.tabulations || [],
+      alert: s.alert,
+      isActive: s.is_active,
+    }))
+    
+    setScripts(mappedScripts)
     setLoading(false)
-  }, [productId, mapScriptData])
+  }, [productId])
 
   useEffect(() => {
     if (!productId) {
       setScripts([])
-      setLoading(false)
       return
     }
 
-    setLoading(true)
+    fetchScripts()
 
-    // Only use realtime listener - it provides initial data too
     const db = getFirebaseDb()
     const scriptsRef = collection(db, COLLECTIONS.SCRIPTS)
     const q = query(
@@ -226,10 +224,20 @@ export function useProductScripts(productId: string | null) {
         .filter((s: any) => s.is_active !== false)
         .sort((a: any, b: any) => (a.step_order || 0) - (b.step_order || 0))
       
-      setScripts(data.map(mapScriptData))
-      setLoading(false)
-    }, (error) => {
-      console.error("[Firebase] Scripts subscription error:", error)
+      const mappedScripts = data.map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        content: s.content,
+        productId: s.product_id,
+        productName: s.product_name,
+        order: s.step_order,
+        buttons: s.buttons || [],
+        tabulations: s.tabulations || [],
+        alert: s.alert,
+        isActive: s.is_active,
+      }))
+      
+      setScripts(mappedScripts)
       setLoading(false)
     })
 
@@ -238,7 +246,7 @@ export function useProductScripts(productId: string | null) {
         unsubscribeRef.current()
       }
     }
-  }, [productId, mapScriptData])
+  }, [productId, fetchScripts])
 
   const getStepById = useCallback((stepId: string) => {
     return scripts.find((s) => s.id === stepId) || null

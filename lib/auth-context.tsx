@@ -8,7 +8,6 @@ import {
   getUserById,
   getAllUsers as getAllUsersFromFirebase,
   mapFirestoreUser,
-  ensureDefaultAdminExists,
 } from "@/lib/firebase/auth"
 import { getFirebaseDb } from "@/lib/firebase/config"
 import { COLLECTIONS, toFirestoreDate, updateDocument } from "@/lib/firebase/firestore"
@@ -99,9 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Sign in anonymously to Firebase for database access
-    signInAnonymouslyToFirebase().then(async () => {
-      // Ensure default admin user exists
-      await ensureDefaultAdminExists()
+    signInAnonymouslyToFirebase().then(() => {
       loadSession()
     }).catch(() => {
       loadSession()

@@ -179,12 +179,8 @@ export const ScriptCard = memo(function ScriptCard({
   const hasAlert = step.alert && step.alert.message
   const alertTitle = step.alert?.title || "Alerta Importante"
 
-  // Debounced save to localStorage to avoid excessive writes
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      saveAccessibilitySettings(textSize[0], buttonSize[0])
-    }, 500)
-    return () => clearTimeout(timeout)
+    saveAccessibilitySettings(textSize[0], buttonSize[0])
   }, [textSize, buttonSize])
 
   useEffect(() => {
@@ -264,13 +260,11 @@ export const ScriptCard = memo(function ScriptCard({
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchText(value)
-      // Debounce search to avoid excessive processing
-      if (value.trim().length >= 2 && allSteps.length > 0) {
-        const lowerValue = value.toLowerCase()
+      if (value.trim() && allSteps.length > 0) {
         const result = allSteps.find(
           (s) =>
-            s.title.toLowerCase().includes(lowerValue) ||
-            s.content.toLowerCase().includes(lowerValue),
+            s.title.toLowerCase().includes(value.toLowerCase()) ||
+            s.content.toLowerCase().includes(value.toLowerCase()),
         )
         if (result && onSearchStep) {
           onSearchStep(result.id)

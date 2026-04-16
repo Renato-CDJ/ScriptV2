@@ -75,9 +75,19 @@ export async function validateUserCredentials(
   password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
+    console.log("[v0] Validating credentials for:", username)
     const db = getFirebaseDb()
+    console.log("[v0] Firestore DB obtained")
     const usersRef = collection(db, COLLECTIONS.USERS)
+    console.log("[v0] Users collection ref:", COLLECTIONS.USERS)
     const snapshot = await getDocs(usersRef)
+    console.log("[v0] Users found in Firestore:", snapshot.docs.length)
+    
+    // Log all usernames for debugging
+    snapshot.docs.forEach(doc => {
+      const data = doc.data()
+      console.log("[v0] User in DB:", data.username, "| Role:", data.role)
+    })
     
     // Find user by username (case insensitive)
     const userDoc = snapshot.docs.find(doc => {
@@ -86,6 +96,7 @@ export async function validateUserCredentials(
     })
     
     if (!userDoc) {
+      console.log("[v0] User not found:", username)
       return { success: false, error: "Usuario nao encontrado" }
     }
     
@@ -113,8 +124,10 @@ export async function validateUserCredentials(
     
     return { success: true, user }
   } catch (error: any) {
-    console.error("[Firebase Auth] Validation error:", error?.code || error?.message)
-    return { success: false, error: "Erro ao conectar. Tente novamente." }
+    console.error("[v0] Firebase Auth Validation error:", error)
+    console.error("[v0] Error code:", error?.code)
+    console.error("[v0] Error message:", error?.message)
+    return { success: false, error: `Erro: ${error?.code || error?.message || "Erro desconhecido"}` }
   }
 }
 
@@ -174,38 +187,4 @@ export async function getActiveUsers(): Promise<User[]> {
   return snapshot.docs
     .map(doc => mapFirestoreUser({ id: doc.id, ...doc.data() }))
     .filter(user => user.isActive !== false)
-}
-
-// Ensure default admin user exists in Firestore
-export async function ensureDefaultAdminExists(): Promise<void> {
-  try {
-    const db = getFirebaseDb()
-    const usersRef = collection(db, COLLECTIONS.USERS)
-    const snapshot = await getDocs(usersRef)
-    
-    // Check if admin user exists
-    const adminExists = snapshot.docs.some(doc => {
-      const data = doc.data()
-      return data.username?.toLowerCase() === "admin"
-    })
-    
-    if (!adminExists) {
-      // Create default admin user
-      const { addDoc } = await import("firebase/firestore")
-      await addDoc(usersRef, {
-        username: "admin",
-        name: "Administrador",
-        password: "rcp@$",
-        role: "admin",
-        admin_type: "master",
-        allowed_tabs: ["dashboard", "operators", "quality-center", "settings", "products", "scripts", "presentations", "feedback"],
-        is_active: true,
-        is_online: false,
-        created_at: toFirestoreDate(new Date()),
-      })
-      console.log("[Firebase] Default admin user created")
-    }
-  } catch (error) {
-    console.error("[Firebase] Error ensuring admin exists:", error)
-  }
 }
