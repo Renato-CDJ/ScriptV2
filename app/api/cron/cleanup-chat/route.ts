@@ -1,21 +1,24 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
-// Este endpoint pode ser chamado por um Vercel Cron Job
+// Este endpoint e chamado automaticamente pelo Vercel Cron Job
 // para limpar mensagens de chat com mais de 24 horas
+// Isso economiza espaco no banco de dados e mantem a privacidade
 
 export async function GET(request: Request) {
-  // Verificar se e uma requisicao do Vercel Cron (opcional mas recomendado)
+  // Verificar se e uma requisicao do Vercel Cron
   const authHeader = request.headers.get("authorization")
-  
-  // Em producao, voce pode adicionar uma verificacao de seguranca
-  // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  // }
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    // Permitir tambem sem autenticacao em ambiente de desenvolvimento
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+  }
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // Usar service role key para ter permissao de deletar
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json(
@@ -24,7 +27,6 @@ export async function GET(request: Request) {
       )
     }
 
-    // Usar service role key para ter permissao de deletar
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const cutoffDate = new Date()
