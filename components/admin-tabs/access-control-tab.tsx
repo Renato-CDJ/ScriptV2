@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { getUsersFromSupabase, updateUserInStorage } from "@/lib/auth-context"
-import { createClient } from "@/lib/supabase/client"
+import { getFirebaseDb } from "@/lib/firebase/config"
+import { COLLECTIONS, createDocument } from "@/lib/firebase/firestore"
+import { collection, getDocs, query, where, deleteDoc, doc } from "firebase/firestore"
 import type { User, AdminPermissions, AdminType } from "@/lib/types"
-
-const getSupabase = () => createClient()
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Shield, Edit2, Save, X, Plus, Trash2, UserPlus, Eye, EyeOff, Key } from "lucide-react"
@@ -220,57 +220,60 @@ export function AccessControlTab() {
       return
     }
 
-    const supabase = getSupabase()
-
-    // Check if username already exists
-    const { data: existing } = await supabase
-      .from("users")
-      .select("id")
-      .ilike("username", newUsername.trim())
-      .single()
-
-    if (existing) {
-      toast({
-        title: "Erro",
-        description: "Nome de usuario ja existe",
-        variant: "destructive",
+    try {
+      const db = getFirebaseDb()
+      const usersRef = collection(db, COLLECTIONS.USERS)
+      
+      // Check if username already exists (case insensitive)
+      const usersSnapshot = await getDocs(usersRef)
+      const existingUser = usersSnapshot.docs.find(doc => {
+        const data = doc.data()
+        return data.username?.toLowerCase() === newUsername.trim().toLowerCase()
       })
-      return
-    }
 
-    const allowedTabs = newAdminType === "supervisao" 
-      ? ["dashboard", "central-qualidade"] 
-      : []
+      if (existingUser) {
+        toast({
+          title: "Erro",
+          description: "Nome de usuario ja existe",
+          variant: "destructive",
+        })
+        return
+      }
 
-    const { error } = await getSupabase().from("users").insert({
-      username: newUsername.trim(),
-      name: newFullName.trim(),
-      email: `${newUsername.trim().toLowerCase()}@rcp.com`,
-      password: newPassword.trim() || "rcp@$",
-      role: "admin",
-      admin_type: newAdminType,
-      allowed_tabs: allowedTabs,
-      is_active: true,
-      is_online: false,
-    })
+      const allowedTabs = newAdminType === "supervisao" 
+        ? ["dashboard", "central-qualidade"] 
+        : []
 
-    if (error) {
+      // Create user in Firebase
+      await createDocument(COLLECTIONS.USERS, {
+        username: newUsername.trim(),
+        name: newFullName.trim(),
+        email: `${newUsername.trim().toLowerCase()}@rcp.com`,
+        password: newPassword.trim() || "rcp@$",
+        role: "admin",
+        admin_type: newAdminType,
+        allowed_tabs: allowedTabs,
+        is_active: true,
+        is_online: false,
+        created_at: new Date().toISOString(),
+      })
+
+      setShowCreateForm(false)
+      setNewUsername("")
+      setNewFullName("")
+      setNewPassword("")
+      setNewAdminType("supervisao")
+      setShowNewPassword(false)
+      loadAdminUsers()
+
+      toast({
+        title: "Usuario criado",
+        description: `Usuario ${newUsername} foi criado com sucesso`,
+      })
+    } catch (error) {
+      console.error("Erro ao criar usuario:", error)
       toast({ title: "Erro", description: "Erro ao criar usuario", variant: "destructive" })
-      return
     }
-
-    setShowCreateForm(false)
-    setNewUsername("")
-    setNewFullName("")
-    setNewPassword("")
-    setNewAdminType("supervisao")
-    setShowNewPassword(false)
-    loadAdminUsers()
-
-    toast({
-      title: "Usuario criado",
-      description: `Usuario ${newUsername} foi criado com sucesso`,
-    })
   }, [newUsername, newFullName, newPassword, newAdminType, toast])
 
   const handleDeleteUser = useCallback(async () => {
@@ -287,15 +290,25 @@ export function AccessControlTab() {
       return
     }
 
-    await getSupabase().from("users").delete().eq("id", userToDelete.id)
+    try {
+      const db = getFirebaseDb()
+      await deleteDoc(doc(db, COLLECTIONS.USERS, userToDelete.id))
 
-    setUserToDelete(null)
-    loadAdminUsers()
+      setUserToDelete(null)
+      loadAdminUsers()
 
-    toast({
-      title: "Usuario excluido",
-      description: `Usuario ${userToDelete.username} foi excluido com sucesso`,
-    })
+      toast({
+        title: "Usuario excluido",
+        description: `Usuario ${userToDelete.username} foi excluido com sucesso`,
+      })
+    } catch (error) {
+      console.error("Erro ao excluir usuario:", error)
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir usuario",
+        variant: "destructive",
+      })
+    }
   }, [userToDelete, toast])
 
   return (

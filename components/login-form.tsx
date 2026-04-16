@@ -76,108 +76,109 @@ export const LoginForm = memo(function LoginForm() {
   }, [theme, setTheme])
 
   return (
-    <Card className="w-full max-w-md bg-gradient-to-br from-white to-zinc-50 dark:from-zinc-900 dark:to-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl backdrop-blur-sm transition-all duration-300 hover:shadow-[0_20px_60px_rgba(249,115,22,0.4)] hover:scale-[1.02] relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-amber-500/5 pointer-events-none"></div>
-
+    <Card className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl transition-all duration-300 hover:shadow-2xl">
+      {/* Botao tema */}
       <div className="absolute top-4 right-4 z-20">
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={toggleTheme}
           title="Alternar tema"
-          className="h-9 w-9 border-2 hover:scale-110 transition-all shadow-md hover:shadow-lg bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 hover:from-orange-100 hover:to-amber-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800"
+          className="h-9 w-9 rounded-full text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
         >
           {theme === "dark" ? (
-            <Sun className="h-5 w-5 text-orange-500 dark:text-white" />
+            <Sun className="h-4 w-4" />
           ) : (
-            <Moon className="h-5 w-5 text-amber-600" />
+            <Moon className="h-4 w-4" />
           )}
         </Button>
       </div>
 
-      <CardContent className="pt-10 pb-10 px-10 relative z-10">
-        <div className="flex justify-center mb-8">
-          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg">
+      <CardContent className="pt-8 pb-8 px-8">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <div className="w-16 h-16 rounded-xl overflow-hidden ring-2 ring-zinc-100 dark:ring-zinc-800">
             <Image
               src="/images/grupo_roveri_logo.jpg"
               alt="Grupo Roveri"
-              width={80}
-              height={80}
+              width={64}
+              height={64}
               className="w-full h-full object-cover"
               priority
             />
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Usuario */}
           <div className="space-y-2">
             <label htmlFor="username" className="sr-only">
               Usuario
             </label>
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 dark:text-zinc-500" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <Input
                 id="username"
                 type="text"
-                placeholder="Digite seu usuario"
+                placeholder="Usuario"
                 value={username}
                 onChange={(e) => handleUsernameChange(e.target.value)}
                 required
                 autoComplete="username"
                 disabled={isLoading}
-                className="h-14 pl-12 text-base bg-white dark:bg-zinc-800/50 border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+                className="h-12 pl-10 text-sm bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30 transition-all"
               />
             </div>
           </div>
 
+          {/* Senha */}
           {showPasswordField && (
             <div className="space-y-2 animate-fade-in">
               <label htmlFor="password" className="sr-only">
                 Senha
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 dark:text-zinc-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Digite sua senha"
+                  placeholder="Senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
                   disabled={isLoading}
-                  className="h-14 pl-12 text-base bg-white dark:bg-zinc-800/50 border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+                  className="h-12 pl-10 text-sm bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30 transition-all"
                 />
               </div>
             </div>
           )}
 
+          {/* Erro */}
           {error && (
             <Alert
               variant="destructive"
-              className="animate-shake bg-red-50 dark:bg-red-950/50 border-2 border-red-200 dark:border-red-900 text-red-800 dark:text-red-200"
+              className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300"
             >
-              <AlertCircle className="h-5 w-5" />
-              <AlertDescription className="font-medium">{error}</AlertDescription>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-sm">{error}</AlertDescription>
             </Alert>
           )}
 
+          {/* Botao */}
           <Button
             type="submit"
-            className="w-full h-14 text-base font-bold bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 hover:from-orange-600 hover:via-orange-700 hover:to-amber-600 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-orange-500/50 text-white border-0 relative overflow-hidden group"
+            className="w-full h-12 text-sm font-semibold bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 text-white transition-all duration-200 shadow-sm hover:shadow-md"
             disabled={isLoading}
           >
-            <span className="relative z-10">
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin">⏳</span>
-                  Entrando...
-                </span>
-              ) : (
-                "Entrar"
-              )}
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Entrando...
+              </span>
+            ) : (
+              "Entrar"
+            )}
           </Button>
         </form>
       </CardContent>
