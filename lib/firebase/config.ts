@@ -3,13 +3,14 @@ import { getFirestore, type Firestore } from "firebase/firestore"
 import { getAuth, type Auth } from "firebase/auth"
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDsu7TC6Ao3uZWtPM4C_Ov45m5RiA4ptts",
-  authDomain: "scriptv2-ac94d.firebaseapp.com",
-  projectId: "scriptv2-ac94d",
-  storageBucket: "scriptv2-ac94d.firebasestorage.app",
-  messagingSenderId: "737031773482",
-  appId: "1:737031773482:web:faa0b0340fb08d91f79253",
-  measurementId: "G-NWCX42GQ26"
+  apiKey: "AIzaSyC5uxT0E3gkjhxGgMGfwZV2t8NH626nlqg",
+  authDomain: "scriptv2-92ba3.firebaseapp.com",
+  databaseURL: "https://scriptv2-92ba3-default-rtdb.firebaseio.com",
+  projectId: "scriptv2-92ba3",
+  storageBucket: "scriptv2-92ba3.firebasestorage.app",
+  messagingSenderId: "256429010558",
+  appId: "1:256429010558:web:61dc70c135c68849f8722f",
+  measurementId: "G-9FWPYCLSR6"
 }
 
 // Initialize Firebase (singleton pattern)
