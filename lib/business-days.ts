@@ -66,7 +66,18 @@ export function addBusinessDays(startDate: Date, businessDays: number): Date {
 
 export function getMaxPromiseDate(productType: "cartao" | "comercial" | "habitacional"): Date {
   const today = new Date()
-  const businessDays = productType === "cartao" ? 6 : 9
+  today.setHours(0, 0, 0, 0)
+  const daysToAdd = productType === "cartao" ? 6 : 9
 
-  return addBusinessDays(today, businessDays)
+  const maxDate = new Date(today)
+  let daysAdded = 0
+
+  while (daysAdded < daysToAdd) {
+    maxDate.setDate(maxDate.getDate() + 1)
+    if (!isHoliday(maxDate)) {
+      daysAdded++
+    }
+  }
+
+  return maxDate
 }

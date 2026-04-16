@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CalendarIcon, CheckCircle2, Info, CreditCard, Building2, Home, AlertTriangle } from "lucide-react"
-import { getMaxPromiseDate, isBusinessDay } from "@/lib/business-days"
+import { getMaxPromiseDate } from "@/lib/business-days"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ProductType = "cartao" | "comercial" | "habitacional"
@@ -62,26 +62,26 @@ export function PromiseCalendarInline({ productCategory }: PromiseCalendarInline
       if (dateTime > maxDateTime) return false
     }
 
-    return isBusinessDay(dateTime)
+    return true
   }
 
   const productOptions = [
     {
       value: "cartao" as ProductType,
       name: "Cartão",
-      deadline: "7 dias úteis",
+      deadline: "7 dias corridos",
       icon: CreditCard,
     },
     {
       value: "comercial" as ProductType,
       name: "Comercial",
-      deadline: "10 dias úteis",
+      deadline: "10 dias corridos",
       icon: Building2,
     },
     {
       value: "habitacional" as ProductType,
       name: "Habitacional",
-      deadline: "10 dias úteis",
+      deadline: "10 dias corridos",
       icon: Home,
     },
   ]
@@ -116,18 +116,26 @@ export function PromiseCalendarInline({ productCategory }: PromiseCalendarInline
         <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
           <CalendarIcon className="h-4 w-4 text-primary" />
           Calendário de Promessas
+          {productCategory !== undefined && (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 cursor-default">
+                    <Info className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Tipo selecionado automaticamente:{" "}
+                  {productCategory === "comercial"
+                    ? "Comercial"
+                    : productCategory === "habitacional"
+                      ? "Habitacional"
+                      : "Cartão"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </CardTitle>
-        {productCategory && productCategory !== "outros" && (
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" />
-            Tipo selecionado automaticamente:{" "}
-            {productCategory === "comercial"
-              ? "Comercial"
-              : productCategory === "habitacional"
-                ? "Habitacional"
-                : "Cartão"}
-          </p>
-        )}
         {!productCategory && (
           <p className="text-xs text-muted-foreground mt-1">
             Selecione o tipo de produto e escolha uma data disponível
@@ -219,24 +227,6 @@ export function PromiseCalendarInline({ productCategory }: PromiseCalendarInline
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Max Date Info */}
-            {maxDate && (
-              <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border-l-4 border-emerald-500 rounded-md p-2">
-                <p className="text-[10px] font-semibold text-emerald-800 dark:text-emerald-200 mb-0.5 flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Data Máxima
-                </p>
-                <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                  {maxDate.toLocaleDateString("pt-BR", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
-            )}
-
             {/* Available Dates Calendar */}
             <div className="space-y-2">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md">

@@ -1,6 +1,7 @@
 // Core types for the call center script system
 
 export type UserRole = "operator" | "admin"
+export type AdminType = "master" | "monitoria" | "supervisao"
 
 export interface AdminPermissions {
   dashboard?: boolean
@@ -21,8 +22,13 @@ export interface User {
   id: string
   username: string
   fullName: string
+  name?: string
+  email?: string
   role: UserRole
+  adminType?: AdminType
+  allowedTabs?: string[]
   isOnline: boolean
+  isActive?: boolean
   createdAt: Date
   lastLoginAt?: Date
   lastHeartbeat?: Date
@@ -40,6 +46,22 @@ export interface LoginSession {
   duration?: number // in milliseconds
 }
 
+export interface AttendanceTypeOption {
+  id: string
+  value: string
+  label: string
+  description?: string
+  createdAt: Date
+}
+
+export interface PersonTypeOption {
+  id: string
+  value: string
+  label: string
+  description?: string
+  createdAt: Date
+}
+
 export interface ScriptStep {
   id: string
   title: string
@@ -49,6 +71,8 @@ export interface ScriptStep {
   createdAt: Date
   updatedAt: Date
   productId?: string // Added productId to track which product this step belongs to
+  productName?: string
+  isActive?: boolean
   tabulations?: Array<{
     id: string
     name: string
@@ -74,9 +98,14 @@ export interface ContentSegment {
   formatting: {
     bold?: boolean
     italic?: boolean
+    underline?: boolean
     color?: string
     backgroundColor?: string
-    fontSize?: "sm" | "base" | "lg" | "xl"
+    fontSize?: "sm" | "base" | "lg" | "xl" | "2xl" | "3xl"
+    alignment?: "left" | "center" | "right"
+    fontFamily?: string
+    listType?: "none" | "bullet" | "numbered"
+    textShadow?: string
   }
 }
 
@@ -183,6 +212,8 @@ export interface ChatMessage {
   }
   createdAt: Date
   isRead: boolean
+  isEdited?: boolean
+  editedAt?: Date
 }
 
 export interface ChatSettings {
@@ -238,6 +269,7 @@ export interface Presentation {
   createdByName: string // admin user name
   createdAt: Date
   updatedAt: Date
+  uploadedAt?: Date
   isActive: boolean
   recipients: string[] // array of operator user ids, empty array means all operators
 }
@@ -260,6 +292,7 @@ export interface FilePresentationProgress {
   viewedAt: Date
   marked_as_seen: boolean
   completion_date?: Date
+  last_accessed?: Date
 }
 
 export interface OperatorRanking {
@@ -284,6 +317,7 @@ export interface QualityQuestion {
   answeredBy?: string
   answeredByName?: string
   answeredAt?: Date
+  status?: string
   isResolved: boolean // operator confirmed it was clarified
   resolvedAt?: Date
   wasClear?: boolean // true = esclarecido, false = nao esclarecido
@@ -311,8 +345,11 @@ export interface Contract {
 }
 
 export interface SupervisorTeam {
+  id?: string
   supervisorId: string // User ID from access control
   operatorIds: string[] // Array of operator IDs assigned to this supervisor
+  createdAt: Date
+  updatedAt?: Date
 }
 
 export interface Feedback {
@@ -336,7 +373,7 @@ export interface Feedback {
 }
 
 // Quality Center types for social feed
-export type QualityPostType = "comunicado" | "quiz" | "recado" | "pergunta"
+export type QualityPostType = "comunicado" | "quiz" | "recado" | "pergunta" | "feedback"
 
 export interface QualityPost {
   id: string
@@ -351,14 +388,22 @@ export interface QualityPost {
   // Engagement
   likes: string[] // array of user ids who liked
   comments: QualityComment[]
+  correctOption?: number
   // For questions only - if it's a question to admin
   isQuestionToAdmin?: boolean
+  // Recipients/Mentions - array of user ids, empty means all operators
+  recipients?: string[]
+  recipientNames?: string[] // names for display
+  sendToAll?: boolean // true if sent to all operators
+  // Background color for post content area
+  backgroundColor?: string // CSS color or color name, defaults to system color
 }
 
 export interface QualityQuizOption {
   id: string
   text: string
   votes: string[] // array of user ids who voted
+  isCorrect?: boolean // marks the correct answer
 }
 
 export interface QualityComment {

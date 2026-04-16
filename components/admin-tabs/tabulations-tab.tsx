@@ -1,29 +1,31 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Edit, Trash2, Save, X } from "lucide-react"
-import { getTabulations } from "@/lib/store"
-import type { Tabulation } from "@/lib/types"
+import { Plus, Edit, Trash2, Save, X, Loader2 } from "lucide-react"
+import { useTabulations } from "@/hooks/use-supabase-admin"
 import { useToast } from "@/hooks/use-toast"
 
-export function TabulationsTab() {
-  const [tabulations, setTabulations] = useState<Tabulation[]>(getTabulations())
-  const [editingItem, setEditingItem] = useState<Tabulation | null>(null)
-  const [isCreating, setIsCreating] = useState(false)
-  const { toast } = useToast()
+interface Tabulation {
+  id: string
+  name: string
+  description: string
+  color: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
-  useEffect(() => {
-    const handleStoreUpdate = () => {
-      setTabulations(getTabulations())
-    }
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [])
+export function TabulationsTab() {
+  const { data: tabulations, loading, create, update, remove } = useTabulations()
+  const [editingItem, setEditingItem] = useState<Partial<Tabulation> | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const { toast } = useToast()
 
   const handleEdit = (item: Tabulation) => {
     setEditingItem({ ...item })
@@ -31,57 +33,70 @@ export function TabulationsTab() {
   }
 
   const handleCreate = () => {
-    const newItem: Tabulation = {
-      id: `tab-${Date.now()}`,
+    setEditingItem({
       name: "",
       description: "",
       color: "#3b82f6",
-      createdAt: new Date(),
-    }
-    setEditingItem(newItem)
+    })
     setIsCreating(true)
   }
 
-  const handleSave = () => {
-    if (!editingItem) return
+  const handleSave = async () => {
+    if (!editingItem || !editingItem.name) return
 
-    if (isCreating) {
-      const newTabulations = [...tabulations, editingItem]
-      localStorage.setItem("callcenter_tabulations", JSON.stringify(newTabulations))
-      setTabulations(newTabulations)
+    setSaving(true)
+    try {
+      if (isCreating) {
+        const { error } = await create({
+          name: editingItem.name,
+          description: editingItem.description || "",
+          color: editingItem.color || "#3b82f6",
+          is_active: true,
+        })
+        if (error) throw new Error(error)
+        toast({
+          title: "Tabulacao criada",
+          description: "A nova tabulacao foi criada com sucesso.",
+        })
+      } else if (editingItem.id) {
+        const { error } = await update(editingItem.id, {
+          name: editingItem.name,
+          description: editingItem.description,
+          color: editingItem.color,
+        })
+        if (error) throw new Error(error)
+        toast({
+          title: "Tabulacao atualizada",
+          description: "As alteracoes foram salvas com sucesso.",
+        })
+      }
+    } catch (err: any) {
       toast({
-        title: "Tabulação criada",
-        description: "A nova tabulação foi criada com sucesso.",
+        title: "Erro",
+        description: err.message || "Erro ao salvar tabulacao",
+        variant: "destructive",
       })
-    } else {
-      const updatedTabulations = tabulations.map((t) => (t.id === editingItem.id ? editingItem : t))
-      localStorage.setItem("callcenter_tabulations", JSON.stringify(updatedTabulations))
-      setTabulations(updatedTabulations)
-      toast({
-        title: "Tabulação atualizada",
-        description: "As alterações foram salvas com sucesso.",
-      })
+    } finally {
+      setSaving(false)
+      setEditingItem(null)
+      setIsCreating(false)
     }
-
-    localStorage.setItem("callcenter_last_update", Date.now().toString())
-    window.dispatchEvent(new CustomEvent("store-updated"))
-
-    setEditingItem(null)
-    setIsCreating(false)
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta tabulação?")) {
-      const updatedTabulations = tabulations.filter((t) => t.id !== id)
-      localStorage.setItem("callcenter_tabulations", JSON.stringify(updatedTabulations))
-      setTabulations(updatedTabulations)
-
-      localStorage.setItem("callcenter_last_update", Date.now().toString())
-      window.dispatchEvent(new CustomEvent("store-updated"))
-
+  const handleDelete = async (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta tabulacao?")) {
+      const { error } = await remove(id)
+      if (error) {
+        toast({
+          title: "Erro",
+          description: error,
+          variant: "destructive",
+        })
+        return
+      }
       toast({
-        title: "Tabulação excluída",
-        description: "A tabulação foi removida com sucesso.",
+        title: "Tabulacao excluida",
+        description: "A tabulacao foi removida com sucesso.",
       })
     }
   }
@@ -89,6 +104,14 @@ export function TabulationsTab() {
   const handleCancel = () => {
     setEditingItem(null)
     setIsCreating(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
   }
 
   return (

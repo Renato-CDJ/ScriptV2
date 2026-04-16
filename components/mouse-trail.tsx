@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useCallback } from "react"
 
 interface Point {
   x: number
@@ -11,99 +11,112 @@ interface Point {
 export function MouseTrail() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pointsRef = useRef<Point[]>([])
-  const animationFrameRef = useRef<number>()
+  const animationFrameRef = useRef<number | null>(null)
+  const isActiveRef = useRef(false)
+  const lastMoveRef = useRef(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext("2d")
+    const ctx = canvas.getContext("2d", { alpha: true })
     if (!ctx) return
 
-    // Set canvas size
+    // Set canvas size with device pixel ratio for performance
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      canvas.width = window.innerWidth * dpr
+      canvas.height = window.innerHeight * dpr
+      canvas.style.width = `${window.innerWidth}px`
+      canvas.style.height = `${window.innerHeight}px`
+      ctx.scale(dpr, dpr)
     }
     resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
+    
+    // Debounced resize handler
+    let resizeTimeout: NodeJS.Timeout
+    const handleResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(resizeCanvas, 150)
+    }
+    window.addEventListener("resize", handleResize, { passive: true })
 
-    // Track mouse movement
+    // Throttled mouse movement (every 16ms = ~60fps)
     const handleMouseMove = (e: MouseEvent) => {
+      const now = Date.now()
+      if (now - lastMoveRef.current < 16) return
+      lastMoveRef.current = now
+
       pointsRef.current.push({
         x: e.clientX,
         y: e.clientY,
-        timestamp: Date.now(),
+        timestamp: now,
       })
 
-      // Keep only recent points (last 500ms)
-      const now = Date.now()
-      pointsRef.current = pointsRef.current.filter((p) => now - p.timestamp < 500)
+      // Keep only recent points (last 300ms for better performance)
+      pointsRef.current = pointsRef.current.filter((p) => now - p.timestamp < 300)
+      
+      // Start animation if not active
+      if (!isActiveRef.current && pointsRef.current.length > 1) {
+        isActiveRef.current = true
+        animate()
+      }
     }
 
-    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("mousemove", handleMouseMove, { passive: true })
 
-    // Animation loop
+    // Animation loop - only runs when there are points to draw
     const animate = () => {
       if (!ctx || !canvas) return
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
       const points = pointsRef.current
-      if (points.length < 2) {
-        animationFrameRef.current = requestAnimationFrame(animate)
+      const now = Date.now()
+      
+      // Clean up old points
+      pointsRef.current = points.filter((p) => now - p.timestamp < 300)
+
+      // Stop animation if no points
+      if (pointsRef.current.length < 2) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        isActiveRef.current = false
         return
       }
 
-      // Draw trail
-      const now = Date.now()
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      for (let i = 1; i < points.length; i++) {
-        const point = points[i]
-        const prevPoint = points[i - 1]
+      // Draw trail with simplified rendering
+      ctx.lineCap = "round"
+      ctx.lineJoin = "round"
+
+      for (let i = 1; i < pointsRef.current.length; i++) {
+        const point = pointsRef.current[i]
+        const prevPoint = pointsRef.current[i - 1]
         const age = now - point.timestamp
-        const maxAge = 500
-
-        // Calculate opacity based on age
+        const maxAge = 300
         const opacity = Math.max(0, 1 - age / maxAge)
 
-        // Create gradient for the line segment
-        const gradient = ctx.createLinearGradient(prevPoint.x, prevPoint.y, point.x, point.y)
-
-        // Orange to amber gradient with opacity
-        gradient.addColorStop(0, `rgba(249, 115, 22, ${opacity * 0.6})`) // orange-500
-        gradient.addColorStop(0.5, `rgba(251, 146, 60, ${opacity * 0.8})`) // orange-400
-        gradient.addColorStop(1, `rgba(251, 191, 36, ${opacity * 0.6})`) // amber-400
-
-        // Draw line segment
-        ctx.strokeStyle = gradient
-        ctx.lineWidth = 3 * opacity
-        ctx.lineCap = "round"
-        ctx.lineJoin = "round"
+        // Simplified color (no gradient per segment for performance)
+        ctx.strokeStyle = `rgba(249, 115, 22, ${opacity * 0.7})`
+        ctx.lineWidth = 2.5 * opacity
 
         ctx.beginPath()
         ctx.moveTo(prevPoint.x, prevPoint.y)
         ctx.lineTo(point.x, point.y)
         ctx.stroke()
-
-        // Add glow effect
-        ctx.shadowBlur = 15 * opacity
-        ctx.shadowColor = `rgba(251, 146, 60, ${opacity * 0.8})`
       }
 
       animationFrameRef.current = requestAnimationFrame(animate)
     }
 
-    animate()
-
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
+      window.removeEventListener("resize", handleResize)
       window.removeEventListener("mousemove", handleMouseMove)
+      clearTimeout(resizeTimeout)
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
   }, [])
 
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-50" />
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-50" style={{ willChange: 'auto' }} />
 }

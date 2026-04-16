@@ -1,90 +1,115 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Edit, Trash2, Save, X, ChevronRight } from "lucide-react"
+import { Plus, Edit, Trash2, Save, X, ChevronRight, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getSituations } from "@/lib/store"
-import type { ServiceSituation } from "@/lib/types"
+import { useSituations } from "@/hooks/use-supabase-admin"
 import { useToast } from "@/hooks/use-toast"
 
+interface Situation {
+  id: string
+  name: string
+  description: string
+  color: string
+  isActive?: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export function SituationsTab() {
-  const [situations, setSituations] = useState<ServiceSituation[]>(getSituations())
-  const [editingItem, setEditingItem] = useState<ServiceSituation | null>(null)
+  const { data: situations, loading, create, update, remove } = useSituations()
+  const [editingItem, setEditingItem] = useState<Partial<Situation> | null>(null)
+  const mappedSituations = useMemo(
+    () => (situations || []).map((s: any) => ({
+      ...s,
+      isActive: s.is_active,
+    })),
+    [situations],
+  )
   const [isCreating, setIsCreating] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    const handleStoreUpdate = () => {
-      setSituations(getSituations())
-    }
-    window.addEventListener("store-updated", handleStoreUpdate)
-    return () => window.removeEventListener("store-updated", handleStoreUpdate)
-  }, [])
-
-  const handleEdit = (item: ServiceSituation) => {
+  const handleEdit = (item: Situation) => {
     setEditingItem({ ...item })
     setIsCreating(false)
   }
 
   const handleCreate = () => {
-    const newItem: ServiceSituation = {
-      id: `sit-${Date.now()}`,
+    setEditingItem({
       name: "",
       description: "",
-      isActive: true,
-      createdAt: new Date(),
-    }
-    setEditingItem(newItem)
+      color: "#6b7280",
+      is_active: true,
+    })
     setIsCreating(true)
   }
 
-  const handleSave = () => {
-    if (!editingItem) return
+  const handleSave = async () => {
+    if (!editingItem || !editingItem.name) return
 
-    if (isCreating) {
-      const newSituations = [...situations, editingItem]
-      localStorage.setItem("callcenter_situations", JSON.stringify(newSituations))
-      setSituations(newSituations)
+    setSaving(true)
+    try {
+      if (isCreating) {
+        const { error } = await create({
+          name: editingItem.name,
+          description: editingItem.description || "",
+          color: editingItem.color || "#6b7280",
+          is_active: editingItem.is_active !== false,
+        })
+        if (error) throw new Error(error)
+        toast({
+          title: "Situacao criada",
+          description: "A nova situacao foi criada com sucesso.",
+        })
+      } else if (editingItem.id) {
+        const { error } = await update(editingItem.id, {
+          name: editingItem.name,
+          description: editingItem.description,
+          color: editingItem.color,
+          is_active: editingItem.is_active,
+        })
+        if (error) throw new Error(error)
+        toast({
+          title: "Situacao atualizada",
+          description: "As alteracoes foram salvas com sucesso.",
+        })
+      }
+    } catch (err: any) {
       toast({
-        title: "Situação criada",
-        description: "A nova situação foi criada com sucesso.",
+        title: "Erro",
+        description: err.message || "Erro ao salvar situacao",
+        variant: "destructive",
       })
-    } else {
-      const updatedSituations = situations.map((s) => (s.id === editingItem.id ? editingItem : s))
-      localStorage.setItem("callcenter_situations", JSON.stringify(updatedSituations))
-      setSituations(updatedSituations)
-      toast({
-        title: "Situação atualizada",
-        description: "As alterações foram salvas com sucesso.",
-      })
+    } finally {
+      setSaving(false)
+      setEditingItem(null)
+      setIsCreating(false)
     }
-
-    localStorage.setItem("callcenter_last_update", Date.now().toString())
-    window.dispatchEvent(new CustomEvent("store-updated"))
-
-    setEditingItem(null)
-    setIsCreating(false)
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta situação?")) {
-      const updatedSituations = situations.filter((s) => s.id !== id)
-      localStorage.setItem("callcenter_situations", JSON.stringify(updatedSituations))
-      setSituations(updatedSituations)
-
-      localStorage.setItem("callcenter_last_update", Date.now().toString())
-      window.dispatchEvent(new CustomEvent("store-updated"))
-
+  const handleDelete = async (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta situacao?")) {
+      const { error } = await remove(id)
+      if (error) {
+        toast({
+          title: "Erro",
+          description: error,
+          variant: "destructive",
+        })
+        return
+      }
       toast({
-        title: "Situação excluída",
-        description: "A situação foi removida com sucesso.",
+        title: "Situacao excluida",
+        description: "A situacao foi removida com sucesso.",
       })
     }
   }
@@ -92,6 +117,14 @@ export function SituationsTab() {
   const handleCancel = () => {
     setEditingItem(null)
     setIsCreating(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    )
   }
 
   return (
@@ -165,7 +198,7 @@ export function SituationsTab() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {situations.map((situation) => (
+          {mappedSituations.map((situation) => (
             <Card
               key={situation.id}
               className="cursor-pointer hover:shadow-md transition-all bg-card hover:bg-accent/50"

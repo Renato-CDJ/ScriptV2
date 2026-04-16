@@ -1,0 +1,31 @@
+"use client"
+
+// Re-export all Firebase admin hooks with Supabase naming for backwards compatibility
+export {
+  useFirebaseTable as useSupabaseTable,
+  useScripts,
+  getScriptsByProductId,
+  getFirstScriptStep,
+  getScriptStepByIdFromFirebase as getScriptStepByIdFromSupabase,
+  useProductScripts,
+  useProducts,
+  useTabulations,
+  useSituations,
+  useChannels,
+  useResultCodes,
+  useInitialGuide,
+  useContracts,
+  useNotes,
+  useAppSettings,
+  usePhraseology,
+  importScriptsFromJson,
+  importTabulationsFromJson,
+  importSituationsFromJson,
+  deleteScriptsForProduct,
+  deleteScriptsForProductByName,
+  useMessages,
+  useQuizzes,
+  usePresentations,
+  useChatMessages,
+  useSupervisorTeams,
+} from "./use-firebase-admin"

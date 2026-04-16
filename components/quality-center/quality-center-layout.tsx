@@ -1,39 +1,30 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { QualityCenterHeader } from "./quality-center-header"
 import { QualityCenterSidebar } from "./quality-center-sidebar"
 import { QualityCenterFeed } from "./quality-center-feed"
 import { QualityCenterOnlineUsers } from "./quality-center-online-users"
 import { QualityCenterAdminPanel } from "./quality-center-admin-panel"
-import { getAllUsers, getAdminQuestions } from "@/lib/store"
-import type { User } from "@/lib/types"
+import { QualityChatView } from "./quality-chat-view"
+import { useAllUsers, useAdminQuestions } from "@/hooks/use-supabase-realtime"
 
 export function QualityCenterLayout() {
   const { user } = useAuth()
   const [showAdminPanel, setShowAdminPanel] = useState(false)
-  const [onlineUsers, setOnlineUsers] = useState<User[]>([])
-  const [pendingQuestions, setPendingQuestions] = useState(0)
+  const [activeView, setActiveView] = useState("feed")
+  
+  const { users: allUsers } = useAllUsers()
+  const { questions: adminQuestions } = useAdminQuestions()
 
-  const loadData = () => {
-    const users = getAllUsers().filter((u) => u.role === "operator" && u.isOnline)
-    setOnlineUsers(users)
-    const questions = getAdminQuestions()
-    setPendingQuestions(questions.length)
-  }
-
-  useEffect(() => {
-    loadData()
-    const handleUpdate = () => loadData()
-    window.addEventListener("store-updated", handleUpdate)
-    return () => window.removeEventListener("store-updated", handleUpdate)
-  }, [])
+  const onlineUsers = allUsers.filter((u) => u.role === "operator" && u.isOnline)
+  const pendingQuestions = adminQuestions.length
 
   const isAdmin = user?.role === "admin"
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <QualityCenterHeader 
         pendingQuestions={pendingQuestions} 
         showAdminPanel={showAdminPanel}
@@ -45,19 +36,35 @@ export function QualityCenterLayout() {
           isAdmin={isAdmin} 
           showAdminPanel={showAdminPanel}
           onShowAdminPanel={() => setShowAdminPanel(true)}
+          activeView={activeView}
+          onViewChange={(view) => {
+            setActiveView(view)
+            setShowAdminPanel(false)
+          }}
+          pendingQuestions={pendingQuestions}
         />
         
-        <main className="flex-1 max-w-3xl mx-auto px-4 py-6">
-          {showAdminPanel && isAdmin ? (
+        {showAdminPanel && isAdmin ? (
+          <main className="flex-1 overflow-auto">
             <QualityCenterAdminPanel pendingQuestions={pendingQuestions} />
-          ) : (
-            <QualityCenterFeed />
-          )}
-        </main>
-        
-        <aside className="hidden lg:block w-72 p-4">
-          <QualityCenterOnlineUsers users={onlineUsers} />
-        </aside>
+          </main>
+        ) : activeView === "chat-qualidade" ? (
+          <main className="flex-1 overflow-auto max-w-4xl mx-auto">
+            <QualityChatView />
+          </main>
+        ) : (
+          <>
+            <main className="flex-1 max-w-2xl mx-auto px-4 py-6">
+              <QualityCenterFeed />
+            </main>
+            
+            <aside className="hidden lg:block w-80 shrink-0 p-4 pr-6">
+              <div className="sticky top-20">
+                <QualityCenterOnlineUsers users={onlineUsers} />
+              </div>
+            </aside>
+          </>
+        )}
       </div>
     </div>
   )

@@ -40,6 +40,7 @@ const InitialGuideTab = lazy(() =>
 const FeedbackTab = lazy(() => import("@/components/admin-tabs/feedback-tab").then((m) => ({ default: m.FeedbackTab })))
 const QualityQuestionsTab = lazy(() => import("@/components/admin-tabs/quality-questions-tab").then((m) => ({ default: m.QualityQuestionsTab })))
 const ResultCodesTab = lazy(() => import("@/components/admin-tabs/result-codes-tab").then((m) => ({ default: m.ResultCodesTab })))
+const SupervisorOperatorView = lazy(() => import("@/components/admin-tabs/supervisor-operator-view").then((m) => ({ default: m.SupervisorOperatorView })))
 
 
 const LoadingFallback = memo(function LoadingFallback() {
@@ -54,9 +55,12 @@ const LoadingFallback = memo(function LoadingFallback() {
 })
 
 const AdminContent = memo(function AdminContent() {
-  const [activeTab, setActiveTab] = useState("scripts")
+  const { logout, user } = useAuth()
+  // Set default tab based on admin type - supervisao users see operator-view by default
+  const [activeTab, setActiveTab] = useState(() => {
+    return user?.adminType === "supervisao" ? "operator-view" : "scripts"
+  })
   const router = useRouter()
-  const { logout } = useAuth()
 
   const handleBack = () => {
     logout()
@@ -159,6 +163,12 @@ const AdminContent = memo(function AdminContent() {
         return (
           <Suspense fallback={<LoadingFallback />}>
             <ResultCodesTab />
+          </Suspense>
+        )
+      case "operator-view":
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <SupervisorOperatorView />
           </Suspense>
         )
       default:

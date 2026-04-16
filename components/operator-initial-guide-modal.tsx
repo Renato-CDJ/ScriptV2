@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { getActiveContracts } from "@/lib/store"
-import { FileText, ZoomIn } from "lucide-react"
+import { useContracts } from "@/hooks/use-supabase-admin"
+import { FileText, ZoomIn, Loader2 } from "lucide-react"
 
 interface OperatorInitialGuideModalProps {
   open: boolean
@@ -14,8 +14,17 @@ interface OperatorInitialGuideModalProps {
 }
 
 export function OperatorInitialGuideModal({ open, onOpenChange }: OperatorInitialGuideModalProps) {
-  const contracts = getActiveContracts()
+  const { data: contractsData, loading } = useContracts()
   const [zoomLevels, setZoomLevels] = useState<Record<string, number>>({})
+
+  // Map and filter active contracts
+  const contracts = useMemo(() => contractsData
+    .filter((c: any) => c.is_active)
+    .map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description || "",
+    })), [contractsData])
 
   const toggleZoom = (contractId: string) => {
     setZoomLevels((prev) => ({
@@ -35,7 +44,11 @@ export function OperatorInitialGuideModal({ open, onOpenChange }: OperatorInitia
         </DialogHeader>
         <ScrollArea className="h-[60vh] pr-4">
           <div className="space-y-4">
-            {contracts.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+              </div>
+            ) : contracts.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Nenhum contrato disponível no momento</p>
