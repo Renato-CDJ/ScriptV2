@@ -19,14 +19,17 @@ import {
 
 // Supabase-like client interface using Firebase
 class FirebaseSupabaseClient {
-  private db = getFirebaseDb()
+  // Lazy initialization to avoid SSR issues
+  private getDb() {
+    return getFirebaseDb()
+  }
 
   from(tableName: string) {
-    return new QueryBuilder(this.db, tableName)
+    return new QueryBuilder(this.getDb(), tableName)
   }
 
   channel(channelName: string) {
-    return new RealtimeChannel(this.db, channelName)
+    return new RealtimeChannel(this.getDb(), channelName)
   }
 
   removeChannel(channel: RealtimeChannel) {
@@ -60,8 +63,9 @@ class QueryBuilder {
   }
 
   ilike(field: string, value: string) {
-    // Firebase doesn't support ILIKE, so we'll do case-insensitive match with lowercase
-    this.constraints.push(where(field.toLowerCase(), "==", value.toLowerCase()))
+    // Firebase doesn't support ILIKE natively, so we store the field and value for post-filtering
+    // For now, we'll do an exact match since Firebase doesn't support case-insensitive queries easily
+    this.constraints.push(where(field, "==", value))
     return this
   }
 

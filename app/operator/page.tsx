@@ -148,13 +148,17 @@ const OperatorContent = memo(function OperatorContent() {
   const handleStartAttendance = useCallback(async (config: AttendanceConfigType) => {
     setAttendanceConfig(config)
 
-    // Get product from Supabase
+    console.log("[v0] handleStartAttendance - config.product ID:", config.product)
+
+    // Get product from Supabase (Firebase compatibility layer)
     const supabase = createClient()
-    const { data: product } = await supabase
+    const { data: product, error } = await supabase
       .from("products")
       .select("*")
       .eq("id", config.product)
       .single()
+
+    console.log("[v0] Product query result:", { product, error })
 
     if (product) {
       setCurrentProductId(product.id)
@@ -183,6 +187,7 @@ const OperatorContent = memo(function OperatorContent() {
         alert("Erro: Script não encontrado para este produto. Entre em contato com o administrador.")
       }
     } else {
+      console.error("[v0] Produto não encontrado! ID buscado:", config.product, "Erro:", error)
       alert("Erro: Produto não encontrado. Entre em contato com o administrador.")
     }
   }, [user?.id])
