@@ -69,19 +69,19 @@ export function PromiseCalendarInline({ productCategory }: PromiseCalendarInline
     {
       value: "cartao" as ProductType,
       name: "Cartão",
-      deadline: "7 dias corridos",
+      deadline: "D+6 (6 dias corridos)",
       icon: CreditCard,
     },
     {
       value: "comercial" as ProductType,
       name: "Comercial",
-      deadline: "10 dias corridos",
+      deadline: "D+9 (9 dias corridos)",
       icon: Building2,
     },
     {
       value: "habitacional" as ProductType,
       name: "Habitacional",
-      deadline: "10 dias corridos",
+      deadline: "D+9 (9 dias corridos)",
       icon: Home,
     },
   ]
