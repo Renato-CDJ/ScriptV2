@@ -3812,7 +3812,7 @@ function MonitoriaOperationChatView({
       {/* General Group Card */}
       <Card 
         className="cursor-pointer hover:shadow-md transition-all border-l-4 border-l-pink-500 bg-gradient-to-r from-pink-500/5 to-transparent"
-        onClick={() => setSelectedOperator({ id: "general-operation", fullName: "Grupo Geral - Qualidade", username: "general-operation", isOnline: true })}
+        onClick={() => setSelectedOperator({ id: "general-operation", fullName: "Grupo Geral - Operadores", username: "general-operation", isOnline: true })}
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
@@ -3820,8 +3820,8 @@ function MonitoriaOperationChatView({
               <Users className="h-6 w-6 text-pink-500" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-lg">Grupo Geral - Qualidade</h3>
-              <p className="text-sm text-muted-foreground">Mensagens para toda a equipe de qualidade</p>
+              <h3 className="font-semibold text-lg">Grupo Geral - Operadores</h3>
+              <p className="text-sm text-muted-foreground">Mensagens para todos os operadores</p>
             </div>
             <Badge className="bg-pink-500 text-white">
               Grupo
@@ -3993,12 +3993,34 @@ function SupervisorOperationChatView({
     return allUsers.filter((u) => u.role === "operator")
   }, [allUsers])
 
-  // Load operators who have sent messages to this supervisor
+  // Load operators who have sent messages to this supervisor with realtime subscription
   useEffect(() => {
-    if (user) {
-      loadOperatorsWithMessages()
+    if (!user) return
+    
+    loadOperatorsWithMessages()
+    
+    // Setup realtime subscription for new messages to update the operators list
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`supervisor_operators_list_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'supervisor_chat_messages',
+        },
+        (payload) => {
+          // Reload operators with messages on any change
+          loadOperatorsWithMessages()
+        }
+      )
+      .subscribe()
+    
+    return () => {
+      supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [user, operators])
 
   const loadOperatorsWithMessages = async () => {
     if (!user) return
