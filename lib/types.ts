@@ -243,7 +243,7 @@ export interface Product {
   id: string
   name: string
   scriptId: string // Links to the first step of the script for this product
-  category: "habitacional" | "comercial" | "cartao" | "outros"
+  category: "habitacional" | "comercial" | "cartao" | "outros" | "boleto_pre_formatado"
   isActive: boolean
   createdAt: Date
   attendanceTypes?: ("ativo" | "receptivo")[]
