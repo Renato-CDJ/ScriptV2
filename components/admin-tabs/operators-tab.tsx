@@ -25,6 +25,9 @@ import { createClient } from "@/lib/supabase/client"
 import type { User } from "@/lib/types"
 import * as XLSX from "xlsx"
 
+// Dominio padrao para emails de operadores
+const EMAIL_DOMAIN = "@gruporoveri.com"
+
 export function OperatorsTab() {
   const [operators, setOperators] = useState<User[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -32,7 +35,7 @@ export function OperatorsTab() {
   const [editingOperator, setEditingOperator] = useState<User | null>(null)
   const [formData, setFormData] = useState({
     fullName: "",
-    username: "",
+    email: "",
   })
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -49,6 +52,7 @@ export function OperatorsTab() {
       const ops: User[] = data.map((u) => ({
         id: u.id,
         username: u.username,
+        email: u.email,
         fullName: u.name,
         isOnline: u.is_online || false,
         role: u.role,
@@ -93,7 +97,7 @@ export function OperatorsTab() {
   }, [])
 
   const handleOpenDialog = () => {
-    setFormData({ fullName: "", username: "" })
+    setFormData({ fullName: "", email: "" })
     setIsEditMode(false)
     setEditingOperator(null)
     setIsDialogOpen(true)
@@ -102,7 +106,7 @@ export function OperatorsTab() {
   const handleEdit = (operator: User) => {
     setFormData({
       fullName: operator.fullName,
-      username: operator.username,
+      email: operator.email || operator.username,
     })
     setIsEditMode(true)
     setEditingOperator(operator)
@@ -152,14 +156,30 @@ export function OperatorsTab() {
     })
   }
 
+  // Funcao para gerar email a partir do nome
+  const generateEmailFromName = (name: string): string => {
+    const parts = name.trim().toLowerCase().split(/\s+/)
+    if (parts.length >= 2) {
+      // nome.sobrenome@gruporoveri.com
+      return `${parts[0]}.${parts[parts.length - 1]}${EMAIL_DOMAIN}`
+    }
+    return `${parts[0]}${EMAIL_DOMAIN}`
+  }
+
   const handleSave = async () => {
-    if (!formData.fullName.trim() || !formData.username.trim()) {
+    if (!formData.fullName.trim() || !formData.email.trim()) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos",
         variant: "destructive",
       })
       return
+    }
+
+    // Garantir que o email tenha o dominio correto
+    let email = formData.email.trim().toLowerCase()
+    if (!email.includes("@")) {
+      email = `${email}${EMAIL_DOMAIN}`
     }
 
     const supabase = createClient()
@@ -171,7 +191,8 @@ export function OperatorsTab() {
           .from("users")
           .update({
             name: formData.fullName.trim(),
-            username: formData.username.trim(),
+            email: email,
+            username: email.split("@")[0], // username = parte antes do @
             updated_at: new Date().toISOString(),
           })
           .eq("id", editingOperator.id)
@@ -183,17 +204,17 @@ export function OperatorsTab() {
           description: "Operador atualizado com sucesso",
         })
       } else {
-        // Check if username exists
+        // Check if email exists
         const { data: existing } = await supabase
           .from("users")
           .select("id")
-          .ilike("username", formData.username.trim())
+          .ilike("email", email)
           .limit(1)
 
         if (existing && existing.length > 0) {
           toast({
             title: "Erro",
-            description: `Usuario "${formData.username.trim()}" ja existe no sistema`,
+            description: `Email "${email}" ja existe no sistema`,
             variant: "destructive",
           })
           return
@@ -201,9 +222,10 @@ export function OperatorsTab() {
 
         // Insert into Supabase
         const { error } = await supabase.from("users").insert({
-          username: formData.username.trim().toLowerCase(),
+          username: email.split("@")[0],
           name: formData.fullName.trim(),
-          email: `${formData.username.trim().toLowerCase().replace(/\s+/g, "")}@operador.com`,
+          email: email,
+          password: "", // Operadores nao precisam de senha
           role: "operator",
           is_active: true,
           is_online: false,
@@ -265,30 +287,38 @@ export function OperatorsTab() {
       }
 
       let nameColumnIndex = -1
-      let usernameColumnIndex = -1
+      let emailColumnIndex = -1
 
       if (rows.length > 0) {
         const headerRow = rows[0].map((cell) => cell.toLowerCase())
 
-        nameColumnIndex = headerRow.findIndex((cell) => cell.includes("nome completo") || cell === "nome")
-
-        usernameColumnIndex = headerRow.findIndex(
-          (cell) => cell.includes("usuario") || cell.includes("usuário") || cell === "usuario",
+        // Buscar coluna de nome
+        nameColumnIndex = headerRow.findIndex((cell) => 
+          cell.includes("nome completo") || cell === "nome" || cell === "name"
         )
 
-        if (nameColumnIndex !== -1 && usernameColumnIndex !== -1) {
+        // Buscar coluna de email (ou usuario para conversao)
+        emailColumnIndex = headerRow.findIndex((cell) => 
+          cell.includes("email") || 
+          cell.includes("e-mail") ||
+          cell.includes("usuario") || 
+          cell.includes("usuário") || 
+          cell === "usuario"
+        )
+
+        if (nameColumnIndex !== -1 && emailColumnIndex !== -1) {
           rows = rows.slice(1)
         } else {
           nameColumnIndex = 0
-          usernameColumnIndex = 1
+          emailColumnIndex = 1
         }
       }
 
       rows = rows.filter(
         (row) =>
-          row.length > Math.max(nameColumnIndex, usernameColumnIndex) &&
+          row.length > Math.max(nameColumnIndex, emailColumnIndex) &&
           row[nameColumnIndex]?.trim() &&
-          row[usernameColumnIndex]?.trim(),
+          row[emailColumnIndex]?.trim(),
       )
 
       if (rows.length === 0) {
@@ -307,23 +337,29 @@ export function OperatorsTab() {
       for (let index = 0; index < rows.length; index++) {
         const row = rows[index]
         const fullName = row[nameColumnIndex]?.trim()
-        const username = row[usernameColumnIndex]?.trim()
+        let emailOrUsername = row[emailColumnIndex]?.trim()
 
-        if (!fullName || !username) {
+        if (!fullName || !emailOrUsername) {
           errors.push(`Linha ${index + 2}: Dados incompletos`)
           skippedCount++
           continue
         }
 
-        // Check if username already exists
+        // Converter username para email se nao tiver @
+        let email = emailOrUsername.toLowerCase()
+        if (!email.includes("@")) {
+          email = `${email.replace(/\s+/g, ".")}${EMAIL_DOMAIN}`
+        }
+
+        // Check if email already exists
         const { data: existing } = await supabase
           .from("users")
           .select("id")
-          .ilike("username", username)
+          .ilike("email", email)
           .limit(1)
 
         if (existing && existing.length > 0) {
-          errors.push(`Linha ${index + 2}: Usuário "${username}" já existe`)
+          errors.push(`Linha ${index + 2}: Email "${email}" já existe`)
           skippedCount++
           continue
         }
@@ -331,9 +367,10 @@ export function OperatorsTab() {
         try {
           // Insert into Supabase
           const { error } = await supabase.from("users").insert({
-            username: username.toLowerCase(),
+            username: email.split("@")[0],
             name: fullName,
-            email: `${username.toLowerCase().replace(/\s+/g, "")}@operador.com`,
+            email: email,
+            password: "", // Operadores nao precisam de senha
             role: "operator",
             is_active: true,
             is_online: false,
@@ -415,7 +452,7 @@ export function OperatorsTab() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-3">{operator.fullName}</CardTitle>
-                    <CardDescription className="mt-1">@{operator.username}</CardDescription>
+                    <CardDescription className="mt-1">{operator.email || operator.username}</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleEdit(operator)}>
@@ -445,7 +482,7 @@ export function OperatorsTab() {
             <DialogDescription>
               {isEditMode
                 ? "Edite as informações do operador."
-                : "Adicione um novo operador ao sistema. O nome será usado para exibição e o usuário para login."}
+                : "Adicione um novo operador ao sistema. O email será usado para login."}
             </DialogDescription>
           </DialogHeader>
 
@@ -455,21 +492,32 @@ export function OperatorsTab() {
               <Input
                 id="fullName"
                 value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onChange={(e) => {
+                  const name = e.target.value
+                  setFormData({ 
+                    ...formData, 
+                    fullName: name,
+                    // Auto-gerar email se estiver vazio
+                    email: formData.email || (name.length > 3 ? generateEmailFromName(name) : "")
+                  })
+                }}
                 placeholder="Nome do operador"
               />
               <p className="text-xs text-muted-foreground">O primeiro nome será exibido na abordagem do script</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="username">Usuário *</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="nome.usuario"
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder={`nome.sobrenome${EMAIL_DOMAIN}`}
               />
-              <p className="text-xs text-muted-foreground">Será usado para fazer login no sistema</p>
+              <p className="text-xs text-muted-foreground">
+                Email para login. Dominio padrao: {EMAIL_DOMAIN}
+              </p>
             </div>
           </div>
 

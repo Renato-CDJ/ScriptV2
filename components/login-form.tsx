@@ -6,37 +6,27 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/lib/auth-context"
-import { AlertCircle, User, Lock, Sun, Moon } from "lucide-react"
+import { AlertCircle, Mail, Lock, Sun, Moon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "next-themes"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
 
 export const LoginForm = memo(function LoginForm() {
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [showPasswordField, setShowPasswordField] = useState(false)
   const { theme, setTheme } = useTheme()
   const { login } = useAuth()
-  const router = useRouter()
 
-  // Check if user is admin based on username pattern
-  const checkIfAdminUser = useCallback((inputUsername: string) => {
+  // Verificar se e um usuario admin baseado no email
+  const isAdminUser = useCallback((inputEmail: string) => {
     const adminPatterns = ["admin", "monitoria", "supervisor", "qualidade"]
-    const lowerUsername = inputUsername.toLowerCase()
-    return adminPatterns.some((pattern) => lowerUsername.includes(pattern))
+    const lowerEmail = inputEmail.toLowerCase()
+    return adminPatterns.some((pattern) => lowerEmail.includes(pattern))
   }, [])
 
-  const handleUsernameChange = useCallback(
-    (value: string) => {
-      setUsername(value)
-      setShowPasswordField(checkIfAdminUser(value))
-      setError("")
-    },
-    [checkIfAdminUser],
-  )
+  const showPasswordField = isAdminUser(email)
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -45,14 +35,21 @@ export const LoginForm = memo(function LoginForm() {
       setIsLoading(true)
 
       try {
-        // For admin users, password is required
+        // Validar email
+        if (!email.trim()) {
+          setError("Email e obrigatorio")
+          setIsLoading(false)
+          return
+        }
+
+        // Para admins, senha e obrigatoria
         if (showPasswordField && !password) {
           setError("Senha obrigatoria para administradores")
           setIsLoading(false)
           return
         }
         
-        const result = await login(username.trim(), showPasswordField ? password : "")
+        const result = await login(email.trim(), showPasswordField ? password : "")
         
         if (!result.success) {
           setError(result.error || "Erro ao fazer login")
@@ -60,15 +57,15 @@ export const LoginForm = memo(function LoginForm() {
           return
         }
         
-        // Login successful - redirect based on role
-        const isAdmin = checkIfAdminUser(username.trim())
+        // Login bem sucedido - redirecionar baseado no role
+        const isAdmin = isAdminUser(email.trim())
         window.location.href = isAdmin ? "/admin" : "/operator"
       } catch (err) {
         setError("Erro ao fazer login")
         setIsLoading(false)
       }
     },
-    [username, password, login, showPasswordField, checkIfAdminUser],
+    [email, password, login, showPasswordField, isAdminUser],
   )
 
   const toggleTheme = useCallback(() => {
@@ -110,28 +107,36 @@ export const LoginForm = memo(function LoginForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Usuario */}
+          {/* Email */}
           <div className="space-y-2">
-            <label htmlFor="username" className="sr-only">
-              Usuario
+            <label htmlFor="email" className="sr-only">
+              Email
             </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <div className="relative flex items-center">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 z-10" />
               <Input
-                id="username"
+                id="email"
                 type="text"
-                placeholder="Usuario"
-                value={username}
-                onChange={(e) => handleUsernameChange(e.target.value)}
+                placeholder="nome.sobrenome"
+                value={email}
+                onChange={(e) => {
+                  // Remover @ e tudo depois se o usuario tentar digitar
+                  const value = e.target.value.split("@")[0]
+                  setEmail(value)
+                  setError("")
+                }}
                 required
                 autoComplete="username"
                 disabled={isLoading}
-                className="h-12 pl-10 text-sm bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                className="h-12 pl-10 pr-[140px] text-sm bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30 transition-all rounded-r-none border-r-0"
               />
+              <div className="h-12 px-3 flex items-center bg-zinc-100 dark:bg-zinc-800 border border-l-0 border-zinc-200 dark:border-zinc-700 rounded-r-md">
+                <span className="text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">@gruporoveri.com</span>
+              </div>
             </div>
           </div>
 
-          {/* Senha */}
+          {/* Senha - apenas para admins */}
           {showPasswordField && (
             <div className="space-y-2 animate-fade-in">
               <label htmlFor="password" className="sr-only">
@@ -181,6 +186,13 @@ export const LoginForm = memo(function LoginForm() {
             )}
           </Button>
         </form>
+
+        {/* Info para operadores */}
+        {!showPasswordField && (
+          <p className="mt-4 text-xs text-center text-zinc-400 dark:text-zinc-500">
+            Operadores: use seu email @gruporoveri.com para entrar
+          </p>
+        )}
       </CardContent>
     </Card>
   )

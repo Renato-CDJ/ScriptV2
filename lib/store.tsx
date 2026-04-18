@@ -36,7 +36,6 @@ import type {
   QualityPost,
   QualityComment,
 } from "./types"
-// Supabase is now enabled for realtime sync
 import debounce from "lodash.debounce" // Import debounce
 
 // Define handleSupabaseError as a placeholder
@@ -94,14 +93,14 @@ function sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
         .map((item) => {
           if (typeof item === "object" && item !== null) {
             // Recursively sanitize objects in arrays
-            return sanitizeForFirebase(item as Record<string, unknown>)
+            return sanitizeData(item as Record<string, unknown>)
           }
           // Skip undefined values in arrays
           return item === undefined ? null : item
         })
         .filter((item) => item !== null) // Remove nulls that were undefined
     } else if (typeof value === "object") {
-      sanitized[key] = sanitizeForFirebase(value as Record<string, unknown>)
+      sanitized[key] = sanitizeData(value as Record<string, unknown>)
     } else {
       sanitized[key] = value
     }
@@ -677,8 +676,6 @@ RESULT_CODES: "callcenter_result_codes",
 // Initialize mock data
 export function initializeMockData() {
   if (typeof window === "undefined") return
-
-  enableFirebaseSync()
 
   const existingUsers = localStorage.getItem(STORAGE_KEYS.USERS)
   if (!existingUsers) {
@@ -1584,8 +1581,7 @@ interface JsonData {
   marcas?: Record<string, Record<string, any>>
 }
 
-// Helper function to sync data to Firebase with debouncing and sanitization
-// The previous syncToFirebase function was removed and consolidated above.
+// A sincronização de dados é feita via Supabase Realtime
 
 export function importScriptFromJson(jsonData: JsonData): { productCount: number; stepCount: number } {
   if (typeof window === "undefined") return { productCount: 0, stepCount: 0 }
@@ -2773,13 +2769,6 @@ function scheduleNotification() {
       window.dispatchEvent(new CustomEvent("store-updated"))
     }
   }, 100) // Small delay to batch multiple updates
-}
-
-export async function loadFromFirebase() {
-  // Firebase is now enabled for realtime sync
-  // This function is kept for backwards compatibility
-  console.log("[v0] loadFromFirebase called - Firebase sync is active")
-  return
 }
 
 // File presentation progress tracking

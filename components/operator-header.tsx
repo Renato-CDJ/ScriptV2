@@ -61,7 +61,7 @@ export const OperatorHeader = memo(function OperatorHeader({
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   
-  // Use cached data instead of realtime Firebase calls
+  // Use cached data from Supabase
   const { products: productsData } = useCachedProducts()
   const { messages: messagesData } = useCachedMessages()
   

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { LoginForm } from "@/components/login-form"
-import { MouseTrail } from "@/components/mouse-trail"
 
 export default function HomePage() {
   const { user, isLoading } = useAuth()
@@ -43,9 +42,7 @@ export default function HomePage() {
   }
 
   return (
-    <>
-      <MouseTrail />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6 relative overflow-hidden">
         {/* Background sutil */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div 
@@ -107,7 +104,6 @@ export default function HomePage() {
         >
           Grupo Roveri
         </p>
-      </div>
-    </>
+    </div>
   )
 }

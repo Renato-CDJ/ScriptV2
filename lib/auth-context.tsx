@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   refreshUser: () => void
 }
@@ -96,19 +96,80 @@ export function initializeUsers() {
   // No-op for Supabase - users are already in DB
 }
 
+// Dominio padrao para emails
+const EMAIL_DOMAIN = "@gruporoveri.com"
+
+// Verificar se e um email de admin
+function isAdminEmail(email: string): boolean {
+  const adminPatterns = ["admin", "monitoria", "supervisor", "qualidade"]
+  const lowerEmail = email.toLowerCase()
+  return adminPatterns.some((pattern) => lowerEmail.includes(pattern))
+}
+
+// Normalizar email adicionando dominio se necessario
+function normalizeEmail(email: string): string {
+  const trimmed = email.trim().toLowerCase()
+  if (!trimmed.includes("@")) {
+    return `${trimmed}${EMAIL_DOMAIN}`
+  }
+  return trimmed
+}
+
+// Extrair username do email
+function extractUsernameFromEmail(email: string): string {
+  const [localPart] = email.split("@")
+  return localPart.replace(/[^a-zA-Z0-9]/g, "_")
+}
+
+// Criar operador automaticamente se nao existir
+async function createOperatorIfNotExists(email: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  const supabase = createClient()
+  
+  try {
+    const username = extractUsernameFromEmail(email)
+    
+    const { data: newUser, error: insertError } = await supabase
+      .from("users")
+      .insert({
+        username,
+        email: email.toLowerCase(),
+        name: username,
+        role: "operator",
+        is_active: true,
+        is_online: true,
+        last_login: new Date().toISOString(),
+        last_activity: new Date().toISOString(),
+        allowed_tabs: [],
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error("[Supabase] Error creating operator:", insertError)
+      return { success: false, error: "Erro ao criar operador" }
+    }
+
+    return { success: true, user: mapSupabaseUser(newUser) }
+  } catch (error: any) {
+    console.error("[Supabase] Error creating operator:", error)
+    return { success: false, error: "Erro ao criar operador" }
+  }
+}
+
 // Validate user credentials against Supabase users table
 async function validateUserCredentials(
-  username: string,
+  email: string,
   password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
     const supabase = createClient()
+    const normalizedEmail = normalizeEmail(email)
     
-    // Find user by username (case insensitive)
+    // Buscar usuario por email (case insensitive)
     const { data: users, error } = await supabase
       .from("users")
       .select("*")
-      .ilike("username", username.trim())
+      .ilike("email", normalizedEmail)
       .limit(1)
 
     if (error) {
@@ -116,18 +177,25 @@ async function validateUserCredentials(
       return { success: false, error: "Erro ao buscar usuario" }
     }
 
+    // Se nao encontrou usuario
     if (!users || users.length === 0) {
-      return { success: false, error: "Usuario nao encontrado" }
+      // Se for admin, nao permitir auto-registro
+      if (isAdminEmail(normalizedEmail)) {
+        return { success: false, error: "Usuario administrador nao encontrado" }
+      }
+      
+      // Para operadores, criar automaticamente
+      return createOperatorIfNotExists(normalizedEmail)
     }
 
     const userData = users[0]
 
-    // Check if user is active
+    // Verificar se usuario esta ativo
     if (userData.is_active === false) {
       return { success: false, error: "Usuario desativado" }
     }
 
-    // Check password for admin/supervisor roles
+    // Verificar senha para admins/supervisores
     const requiresPassword = userData.role === "admin" || userData.role === "supervisor"
     if (requiresPassword && userData.password && userData.password !== password) {
       return { success: false, error: "Senha incorreta" }
@@ -135,7 +203,7 @@ async function validateUserCredentials(
 
     const user = mapSupabaseUser(userData)
 
-    // Update online status
+    // Atualizar status online
     await supabase
       .from("users")
       .update({
@@ -225,18 +293,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Validate credentials against Supabase
-      const result = await validateUserCredentials(username, password)
+      // Validar credenciais no Supabase
+      const result = await validateUserCredentials(email, password)
 
       if (!result.success || !result.user) {
         return { success: false, error: result.error || "Erro desconhecido" }
       }
 
-      // Save session
+      // Salvar sessao
       localStorage.setItem(SESSION_KEY, JSON.stringify({
         userId: result.user.id,
+        email: result.user.email,
         username: result.user.username,
         role: result.user.role,
         loginTime: new Date().toISOString(),
