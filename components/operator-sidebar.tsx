@@ -65,7 +65,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
   const [selectedChannelForModal, setSelectedChannelForModal] = useState<any>(null)
   const [channelSearchQuery, setChannelSearchQuery] = useState("")
 
-  // Use cached data instead of realtime Firebase calls
+  // Use cached data from Supabase
   const { tabulations: tabulationsData } = useCachedTabulations()
   const { situations: situationsData } = useCachedSituations()
   const { channels: channelsData } = useCachedChannels()
