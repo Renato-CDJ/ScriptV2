@@ -15,10 +15,10 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username VARCHAR(100) UNIQUE NOT NULL,
+  username VARCHAR(100) NOT NULL,
   name VARCHAR(255) NOT NULL,
-  email VARCHAR(255),
-  password VARCHAR(255) NOT NULL DEFAULT 'rcp@$',
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) DEFAULT '',
   role VARCHAR(50) NOT NULL DEFAULT 'operator' CHECK (role IN ('admin', 'operator', 'supervisor')),
   admin_type VARCHAR(50) CHECK (admin_type IN ('master', 'monitoria', 'supervisao')),
   allowed_tabs TEXT[] DEFAULT '{}',
@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Indice para busca por email
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
 -- ============================================================
 -- 2. TABELA DE PRODUTOS
@@ -759,9 +763,9 @@ END $$;
 -- ============================================================
 -- INSERIR USUARIO ADMIN PADRAO
 -- ============================================================
-INSERT INTO users (username, name, email, password, role, admin_type, allowed_tabs) 
-VALUES ('admin', 'Administrador RC', 'admin@rcp.com', 'rcp@$', 'admin', 'master', '{}')
-ON CONFLICT (username) DO NOTHING;
+INSERT INTO users (username, name, email, password, role, admin_type, allowed_tabs)
+  VALUES ('admin', 'Administrador RC', 'admin@rcp.com', 'rcp@$', 'admin', 'master', '{}')
+  ON CONFLICT (email) DO NOTHING;
 
 -- Inserir usuarios de Monitoria (10 usuarios)
 INSERT INTO users (username, name, email, password, role, admin_type, allowed_tabs)
@@ -772,11 +776,11 @@ SELECT
   'rcp@$',
   'admin',
   'monitoria',
-  '{}'
-FROM generate_series(1, 10) AS n
-ON CONFLICT (username) DO NOTHING;
-
--- Inserir usuarios de Supervisao (30 usuarios)
+'{}'
+  FROM generate_series(1, 10) AS n
+  ON CONFLICT (email) DO NOTHING;
+  
+  -- Inserir usuarios de Supervisao (30 usuarios)
 INSERT INTO users (username, name, email, password, role, admin_type, allowed_tabs)
 SELECT 
   'Supervisor' || n,
@@ -787,7 +791,7 @@ SELECT
   'supervisao',
   ARRAY['dashboard', 'central-qualidade']
 FROM generate_series(1, 30) AS n
-ON CONFLICT (username) DO NOTHING;
+ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================
 -- INSERIR DADOS PADRAO
