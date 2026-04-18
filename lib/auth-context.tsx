@@ -165,12 +165,16 @@ async function validateUserCredentials(
     const supabase = createClient()
     const normalizedEmail = normalizeEmail(email)
     
+    console.log("[v0] Validating credentials for:", normalizedEmail)
+    
     // Buscar usuario por email (case insensitive)
     const { data: users, error } = await supabase
       .from("users")
       .select("*")
       .ilike("email", normalizedEmail)
       .limit(1)
+
+    console.log("[v0] Query result - users:", users, "error:", error)
 
     if (error) {
       console.error("[Supabase] Query error:", error)
@@ -197,6 +201,7 @@ async function validateUserCredentials(
 
     // Verificar senha para admins/supervisores
     const requiresPassword = userData.role === "admin" || userData.role === "supervisor"
+    console.log("[v0] User role:", userData.role, "requiresPassword:", requiresPassword, "hasPassword:", !!userData.password, "passwordMatch:", userData.password === password)
     if (requiresPassword && userData.password && userData.password !== password) {
       return { success: false, error: "Senha incorreta" }
     }
