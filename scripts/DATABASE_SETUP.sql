@@ -812,12 +812,59 @@ INSERT INTO situations (name, description, color) VALUES
 ('Treinamento', 'Em treinamento', '#8b5cf6')
 ON CONFLICT DO NOTHING;
 
--- Canais padrao
+-- Canais de Atendimento CAIXA
 INSERT INTO channels (name, description, icon) VALUES
-('Telefone', 'Atendimento por telefone', 'phone'),
-('WhatsApp', 'Atendimento por WhatsApp', 'message-circle'),
-('Email', 'Atendimento por email', 'mail'),
-('Chat', 'Atendimento por chat online', 'message-square')
+(
+  'Alo CAIXA:',
+  'Pessoa Fisica, Juridica ou Ente Publico
+Conta corrente, poupanca e emprestimos comerciais
+Cartao de Credito
+Habitacao
+Suporte nos sites, aplicativos e Caixa Eletronico
+Negociacao de dividas, penhor e contratos cedidos
+Resultado de Loterias
+De Olho na Qualidade (Minha Casa Minha Vida)',
+  '4004 0 104 - Capitais e Regioes Metropolitanas / 0800 104 0 104 - Demais regioes'
+),
+(
+  'Atendimento CAIXA Cidadao:',
+  'Atendimento sobre PIS, Beneficios Sociais, FGTS e Cartao Social
+Atendimento eletronico: 24h
+Atendimento humano: seg a sex 8h as 21h, sabado 10h as 16h',
+  '0800 726 0207'
+),
+(
+  'Agencia Digital:',
+  'Servicos e consultoria financeira personalizada
+Atendimento: 8h as 18h (exceto finais de semana e feriados)',
+  '4004 0 104 - Capitais e regioes metropolitanas / 0800 104 0 104 - Demais regioes'
+),
+(
+  'Atendimento para Pessoas Surdas:',
+  'Para esclarecer suas duvidas sobre produtos e servicos, suporte tecnologico, informacoes, reclamacoes, sugestoes e elogios.
+O atendimento ocorre 24 horas por dia, 7 dias por semana.
+Atendimento com Interprete de Libras: Acesse https://icom.app/8AG8Z',
+  'https://icom.app/8AG8Z'
+),
+(
+  'SAC CAIXA:',
+  'Reclamacoes, sugestoes, elogios, cancelamentos
+Atendimento 24h, todos os dias',
+  '0800 726 0101'
+),
+(
+  'Ouvidoria CAIXA:',
+  'Reclamacoes nao solucionadas
+Atendimento: dias uteis, das 9h as 18h',
+  '0800 725 7474'
+),
+(
+  'Canal de Denuncias:',
+  'Fatos irregulares contra a CAIXA e empresas do conglomerado
+Atendimento especializado 24h, todos os dias
+Pagina de denuncia: https://www.caixa.gov.br/denuncia',
+  '0800 721 0738'
+)
 ON CONFLICT DO NOTHING;
 
 -- Codigos de resultado padrao
