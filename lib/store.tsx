@@ -1581,8 +1581,7 @@ interface JsonData {
   marcas?: Record<string, Record<string, any>>
 }
 
-// Helper function para sincronização de dados com debouncing e sanitização
-// A sincronização agora é feita via Supabase Realtime em vez de Firebase.
+// A sincronização de dados é feita via Supabase Realtime
 
 export function importScriptFromJson(jsonData: JsonData): { productCount: number; stepCount: number } {
   if (typeof window === "undefined") return { productCount: 0, stepCount: 0 }
@@ -2770,13 +2769,6 @@ function scheduleNotification() {
       window.dispatchEvent(new CustomEvent("store-updated"))
     }
   }, 100) // Small delay to batch multiple updates
-}
-
-export async function loadFromFirebase() {
-  // Esta função é mantida para compatibilidade retroativa
-  // A sincronização agora é feita via Supabase Realtime
-  console.log("[v0] loadFromFirebase called - dados agora são sincronizados via Supabase")
-  return
 }
 
 // File presentation progress tracking
