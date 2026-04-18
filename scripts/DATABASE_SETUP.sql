@@ -764,28 +764,28 @@ END $$;
 -- INSERIR USUARIO ADMIN PADRAO
 -- ============================================================
 INSERT INTO users (username, name, email, password, role, admin_type, allowed_tabs)
-  VALUES ('admin', 'Administrador RC', 'admin@rcp.com', 'rcp@$', 'admin', 'master', '{}')
+  VALUES ('admin', 'Administrador RC', 'admin@gruporoveri.com', 'rcp@$', 'admin', 'master', '{}')
   ON CONFLICT (email) DO NOTHING;
 
 -- Inserir usuarios de Monitoria (10 usuarios)
 INSERT INTO users (username, name, email, password, role, admin_type, allowed_tabs)
 SELECT 
-  'Monitoria' || n,
+  'monitoria' || n,
   'Usuario Monitoria ' || n,
-  'monitoria' || n || '@rcp.com',
+  'monitoria' || n || '@gruporoveri.com',
   'rcp@$',
   'admin',
   'monitoria',
-'{}'
-  FROM generate_series(1, 10) AS n
-  ON CONFLICT (email) DO NOTHING;
+  '{}'
+FROM generate_series(1, 10) AS n
+ON CONFLICT (email) DO NOTHING;
   
-  -- Inserir usuarios de Supervisao (30 usuarios)
+-- Inserir usuarios de Supervisao (30 usuarios)
 INSERT INTO users (username, name, email, password, role, admin_type, allowed_tabs)
 SELECT 
-  'Supervisor' || n,
+  'supervisor' || n,
   'Usuario Supervisao ' || n,
-  'supervisor' || n || '@rcp.com',
+  'supervisor' || n || '@gruporoveri.com',
   'rcp@$',
   'admin',
   'supervisao',

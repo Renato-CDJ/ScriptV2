@@ -117,7 +117,7 @@ export const LoginForm = memo(function LoginForm() {
               <Input
                 id="email"
                 type="email"
-                placeholder="Email"
+                placeholder="nome.sobrenome@gruporoveri.com"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value)
@@ -185,7 +185,7 @@ export const LoginForm = memo(function LoginForm() {
         {/* Info para operadores */}
         {!showPasswordField && (
           <p className="mt-4 text-xs text-center text-zinc-400 dark:text-zinc-500">
-            Operadores: use seu email corporativo para entrar
+            Operadores: use seu email @gruporoveri.com para entrar
           </p>
         )}
       </CardContent>

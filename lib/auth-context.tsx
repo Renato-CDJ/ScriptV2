@@ -96,11 +96,23 @@ export function initializeUsers() {
   // No-op for Supabase - users are already in DB
 }
 
+// Dominio padrao para emails
+const EMAIL_DOMAIN = "@gruporoveri.com"
+
 // Verificar se e um email de admin
 function isAdminEmail(email: string): boolean {
   const adminPatterns = ["admin", "monitoria", "supervisor", "qualidade"]
   const lowerEmail = email.toLowerCase()
   return adminPatterns.some((pattern) => lowerEmail.includes(pattern))
+}
+
+// Normalizar email adicionando dominio se necessario
+function normalizeEmail(email: string): string {
+  const trimmed = email.trim().toLowerCase()
+  if (!trimmed.includes("@")) {
+    return `${trimmed}${EMAIL_DOMAIN}`
+  }
+  return trimmed
 }
 
 // Extrair username do email
@@ -151,7 +163,7 @@ async function validateUserCredentials(
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
     const supabase = createClient()
-    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedEmail = normalizeEmail(email)
     
     // Buscar usuario por email (case insensitive)
     const { data: users, error } = await supabase
