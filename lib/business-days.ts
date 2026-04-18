@@ -64,9 +64,32 @@ export function addBusinessDays(startDate: Date, businessDays: number): Date {
   return currentDate
 }
 
+/**
+ * Calcula a data máxima de promessa baseada no tipo de produto
+ * - Habitacional e Comercial: D+9 (dia atual + 9 dias corridos, pulando feriados nacionais)
+ * - Cartão: D+6 (dia atual + 6 dias corridos, pulando feriados nacionais)
+ * 
+ * D+N significa: a partir do dia atual (D), conta-se N dias corridos,
+ * pulando apenas feriados nacionais (finais de semana são contados normalmente)
+ */
 export function getMaxPromiseDate(productType: "cartao" | "comercial" | "habitacional"): Date {
   const today = new Date()
-  const businessDays = productType === "cartao" ? 6 : 9
+  today.setHours(0, 0, 0, 0)
+  
+  // D+6 para Cartão, D+9 para Habitacional e Comercial
+  const daysToAdd = productType === "cartao" ? 6 : 9
 
-  return addBusinessDays(today, businessDays)
+  const maxDate = new Date(today)
+  let daysAdded = 0
+
+  // Conta dias corridos a partir de hoje, pulando apenas feriados nacionais
+  while (daysAdded < daysToAdd) {
+    maxDate.setDate(maxDate.getDate() + 1)
+    // Só pula feriados nacionais (finais de semana contam normalmente)
+    if (!isHoliday(maxDate)) {
+      daysAdded++
+    }
+  }
+
+  return maxDate
 }

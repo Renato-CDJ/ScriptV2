@@ -10,10 +10,16 @@ import { OperatorChatModal } from "@/components/operator-chat-modal"
 import { useAuth } from "@/lib/auth-context"
 import { sendOperatorHeartbeat, trackScriptAccess } from "@/lib/store"
 import { usePresenceHeartbeat, updateOperatorPresence } from "@/hooks/use-supabase-realtime"
-import { useProductScripts, getFirstScriptStep, getScriptsByProductId } from "@/hooks/use-supabase-admin"
-import { createClient } from "@/lib/supabase/client"
+import { 
+  useCacheSync, 
+  useCachedProductScripts,
+  getCachedProductById,
+  getCachedScriptsByProductId,
+  getCachedScriptById,
+} from "@/hooks/use-cached-data"
 import type { ScriptStep, AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 
 const mapScriptRowToStep = (step: any): ScriptStep => ({
   id: step.id,
@@ -34,6 +40,9 @@ const OperatorContent = memo(function OperatorContent() {
   const { user, logout } = useAuth()
   const router = useRouter()
   
+  // Inicializar e manter cache sincronizado
+  const { isInitialized, isSyncing } = useCacheSync()
+  
   // Maintain presence in Supabase for realtime dashboard
   usePresenceHeartbeat(user?.id)
   const [currentStep, setCurrentStep] = useState<ScriptStep | null>(null)
@@ -52,19 +61,17 @@ const OperatorContent = memo(function OperatorContent() {
   const [showChatModal, setShowChatModal] = useState(false)
   const [allSteps, setAllSteps] = useState<ScriptStep[]>([])
 
-  // Load all steps when product changes
+  // Load all steps when product changes (from cache)
   useEffect(() => {
-    async function loadSteps() {
-      if (!currentProductId) {
-        setAllSteps([])
-        return
-      }
-      const steps = await getScriptsByProductId(currentProductId)
-      const mappedSteps = steps.map(mapScriptRowToStep)
-      setAllSteps(mappedSteps)
+    if (!currentProductId) {
+      setAllSteps([])
+      return
     }
-    loadSteps()
-  }, [currentProductId])
+    
+    const steps = getCachedScriptsByProductId(currentProductId)
+    const mappedSteps = steps.map(mapScriptRowToStep)
+    setAllSteps(mappedSteps)
+  }, [currentProductId, isInitialized])
 
   const handleBackToStart = useCallback(() => {
     setIsSessionActive(false)
@@ -116,8 +123,6 @@ const OperatorContent = memo(function OperatorContent() {
     }
   }, [user, isSessionActive, currentProductName])
 
-  // Scripts are updated via allSteps state which loads from Supabase
-
   const handleSearch = useCallback(
     (query: string) => {
       setSearchQuery(query)
@@ -145,24 +150,20 @@ const OperatorContent = memo(function OperatorContent() {
     [allSteps],
   )
 
-  const handleStartAttendance = useCallback(async (config: AttendanceConfigType) => {
+  const handleStartAttendance = useCallback((config: AttendanceConfigType) => {
     setAttendanceConfig(config)
 
-    // Get product from Supabase
-    const supabase = createClient()
-    const { data: product } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", config.product)
-      .single()
+    // Get product from cache
+    const product = getCachedProductById(config.product)
 
     if (product) {
       setCurrentProductId(product.id)
       setCurrentProductName(product.name)
       setCurrentProductCategory(product.category)
       
-      // Get first script step from Supabase
-      const firstStep = await getFirstScriptStep(product.id)
+      // Get first script step from cache
+      const steps = getCachedScriptsByProductId(product.id)
+      const firstStep = steps.length > 0 ? steps[0] : null
 
       if (firstStep) {
         const mappedStep = mapScriptRowToStep(firstStep)
@@ -188,12 +189,11 @@ const OperatorContent = memo(function OperatorContent() {
   }, [user?.id])
 
   const handleButtonClick = useCallback(
-    async (nextStepId: string | null, buttonLabel?: string) => {
-      const supabase = createClient()
-      
+    (nextStepId: string | null, buttonLabel?: string) => {
       if (buttonLabel && buttonLabel.toUpperCase().includes("FINALIZAR")) {
         if (currentProductId) {
-          const firstStep = await getFirstScriptStep(currentProductId)
+          const steps = getCachedScriptsByProductId(currentProductId)
+          const firstStep = steps.length > 0 ? steps[0] : null
           if (firstStep) {
             const mappedStep = mapScriptRowToStep(firstStep)
             setCurrentStep(mappedStep)
@@ -213,11 +213,8 @@ const OperatorContent = memo(function OperatorContent() {
       }
 
       if (nextStepId) {
-        const { data: nextStepData } = await supabase
-          .from("scripts")
-          .select("*")
-          .eq("id", nextStepId)
-          .single()
+        // Get next step from cache
+        const nextStepData = getCachedScriptById(nextStepId)
 
         if (nextStepData) {
           const nextStep = mapScriptRowToStep(nextStepData)
@@ -242,19 +239,15 @@ const OperatorContent = memo(function OperatorContent() {
     [currentProductId, handleBackToStart, user?.id],
   )
 
-  const handleGoBack = useCallback(async () => {
+  const handleGoBack = useCallback(() => {
     if (stepHistory.length > 1 && currentProductId) {
       const newHistory = [...stepHistory]
       newHistory.pop()
       
       const previousStepId = newHistory[newHistory.length - 1]
-      const supabase = createClient()
       
-      const { data: previousStepData } = await supabase
-        .from("scripts")
-        .select("*")
-        .eq("id", previousStepId)
-        .single()
+      // Get previous step from cache
+      const previousStepData = getCachedScriptById(previousStepId)
 
       if (previousStepData) {
         const previousStep = mapScriptRowToStep(previousStepData)
@@ -265,20 +258,17 @@ const OperatorContent = memo(function OperatorContent() {
     }
   }, [currentProductId, stepHistory])
 
-  const handleProductSelect = useCallback(async (productId: string) => {
-    const supabase = createClient()
-    const { data: product } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", productId)
-      .single()
+  const handleProductSelect = useCallback((productId: string) => {
+    // Get product from cache
+    const product = getCachedProductById(productId)
 
     if (product) {
       setCurrentProductId(product.id)
       setCurrentProductName(product.name)
       setCurrentProductCategory(product.category)
       
-      const firstStep = await getFirstScriptStep(product.id)
+      const steps = getCachedScriptsByProductId(product.id)
+      const firstStep = steps.length > 0 ? steps[0] : null
 
       if (firstStep) {
         const mappedStep = mapScriptRowToStep(firstStep)
@@ -301,6 +291,16 @@ const OperatorContent = memo(function OperatorContent() {
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen((prev) => !prev), [])
   const toggleControls = useCallback(() => setShowControls((prev) => !prev), [])
+
+  // Show loading while cache initializes
+  if (!isInitialized) {
+    return (
+      <div className="flex flex-col h-screen h-dvh bg-background items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Carregando dados...</p>
+      </div>
+    )
+  }
 
   if (!user) return null
 
@@ -360,6 +360,14 @@ const OperatorContent = memo(function OperatorContent() {
       </div>
 
       <OperatorChatModal isOpen={showChatModal} onClose={() => setShowChatModal(false)} />
+      
+      {/* Indicator de sincronização */}
+      {isSyncing && (
+        <div className="fixed bottom-4 right-4 bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-full text-sm flex items-center gap-2 shadow-lg">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Sincronizando...
+        </div>
+      )}
     </div>
   )
 })

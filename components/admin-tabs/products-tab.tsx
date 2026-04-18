@@ -33,7 +33,7 @@ export function ProductsTab() {
   const [formData, setFormData] = useState({
     name: "",
     scriptId: "",
-    category: "habitacional" as "habitacional" | "comercial" | "cartao" | "outros",
+    category: "habitacional" as "habitacional" | "comercial" | "cartao" | "outros" | "boleto_pre_formatado",
     attendanceTypes: [] as ("ativo" | "receptivo")[],
     personTypes: [] as string[],
   })
@@ -328,6 +328,7 @@ export function ProductsTab() {
                   <SelectItem value="comercial">Comercial</SelectItem>
                   <SelectItem value="cartao">Cartão</SelectItem>
                   <SelectItem value="outros">Outros</SelectItem>
+                  <SelectItem value="boleto_pre_formatado">Boleto Pré-Formatado</SelectItem>
                 </SelectContent>
               </Select>
             </div>

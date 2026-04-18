@@ -48,6 +48,19 @@ export function QualityCenterLayout() {
           <main className="flex-1 overflow-auto">
             <QualityCenterAdminPanel pendingQuestions={pendingQuestions} />
           </main>
+        ) : (activeView === "chat-qualidade" || activeView === "chat-supervisao") && !isAdmin ? (
+          // Block operators from accessing chat views - redirect to feed
+          <>
+            <main className="flex-1 max-w-2xl mx-auto px-4 py-6">
+              <QualityCenterFeed />
+            </main>
+            
+            <aside className="hidden lg:block w-80 shrink-0 p-4 pr-6">
+              <div className="sticky top-20">
+                <QualityCenterOnlineUsers users={onlineUsers} />
+              </div>
+            </aside>
+          </>
         ) : activeView === "chat-qualidade" ? (
           <main className="flex-1 overflow-auto max-w-4xl mx-auto">
             <QualityChatView />

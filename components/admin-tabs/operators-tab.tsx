@@ -23,8 +23,6 @@ import {
 } from "@/lib/store"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@/lib/types"
-
-const getSupabase = () => createClient()
 import * as XLSX from "xlsx"
 
 export function OperatorsTab() {
@@ -39,28 +37,22 @@ export function OperatorsTab() {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    const loadOperators = async () => {
-      // Fetch operators from Supabase
-      const supabase = getSupabase()
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("role", "operator")
-        .order("created_at", { ascending: false })
+  const loadOperators = async () => {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("role", "operator")
+      .order("created_at", { ascending: false })
 
-      if (error) {
-        console.error("[v0] Error loading operators:", error)
-        return
-      }
-
-      const ops: User[] = (data || []).map((u: any) => ({
+    if (!error && data) {
+      const ops: User[] = data.map((u) => ({
         id: u.id,
         username: u.username,
         fullName: u.name,
         isOnline: u.is_online || false,
         role: u.role,
-        createdAt: new Date(u.created_at),
+        createdAt: u.created_at ? new Date(u.created_at) : new Date(),
         loginSessions: [],
         permissions: {
           dashboard: true,
@@ -79,24 +71,24 @@ export function OperatorsTab() {
       }))
       setOperators(ops)
     }
+  }
 
+  useEffect(() => {
     loadOperators()
 
     // Subscribe to realtime changes
-    const supabaseForChannel = getSupabase()
-    const channel = supabaseForChannel
+    const supabase = createClient()
+    const channel = supabase
       .channel("operators-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "users", filter: "role=eq.operator" },
-        () => {
-          loadOperators()
-        }
+        () => loadOperators()
       )
       .subscribe()
 
     return () => {
-      supabaseForChannel.removeChannel(channel)
+      supabase.removeChannel(channel)
     }
   }, [])
 
@@ -119,27 +111,23 @@ export function OperatorsTab() {
 
   const handleDelete = async (operatorId: string) => {
     if (confirm("Tem certeza que deseja excluir este operador?")) {
-      const supabase = getSupabase()
-      // Delete from Supabase
-      const { error } = await supabase
-        .from("users")
-        .delete()
-        .eq("id", operatorId)
+      try {
+        const supabase = createClient()
+        const { error } = await supabase.from("users").delete().eq("id", operatorId)
 
-      if (error) {
+        if (error) throw error
+
+        toast({
+          title: "Sucesso",
+          description: "Operador excluido com sucesso",
+        })
+      } catch (error: any) {
         toast({
           title: "Erro",
           description: "Erro ao excluir operador: " + error.message,
           variant: "destructive",
         })
-        return
       }
-
-      setOperators(operators.filter(op => op.id !== operatorId))
-      toast({
-        title: "Sucesso",
-        description: "Operador excluido com sucesso",
-      })
     }
   }
 
@@ -174,115 +162,70 @@ export function OperatorsTab() {
       return
     }
 
-    const normalizeUsername = (username: string): string => {
-      return username.toLowerCase().trim().replace(/\s+/g, "")
-    }
+    const supabase = createClient()
 
-    const supabase = getSupabase()
+    try {
+      if (isEditMode && editingOperator) {
+        // Update in Supabase
+        const { error } = await supabase
+          .from("users")
+          .update({
+            name: formData.fullName.trim(),
+            username: formData.username.trim(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", editingOperator.id)
 
-    if (isEditMode && editingOperator) {
-      // Update in Supabase
-      const { error } = await supabase
-        .from("users")
-        .update({
-          name: formData.fullName.trim(),
-          username: formData.username.trim(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", editingOperator.id)
+        if (error) throw error
 
-      if (error) {
         toast({
-          title: "Erro",
-          description: "Erro ao atualizar operador: " + error.message,
-          variant: "destructive",
+          title: "Sucesso",
+          description: "Operador atualizado com sucesso",
         })
-        return
-      }
+      } else {
+        // Check if username exists
+        const { data: existing } = await supabase
+          .from("users")
+          .select("id")
+          .ilike("username", formData.username.trim())
+          .limit(1)
 
-      setOperators(operators.map(op => 
-        op.id === editingOperator.id 
-          ? { ...op, fullName: formData.fullName, username: formData.username }
-          : op
-      ))
-      toast({
-        title: "Sucesso",
-        description: "Operador atualizado com sucesso",
-      })
-    } else {
-      // Check if username exists in Supabase
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("username")
-        .ilike("username", formData.username.trim())
-        .single()
+        if (existing && existing.length > 0) {
+          toast({
+            title: "Erro",
+            description: `Usuario "${formData.username.trim()}" ja existe no sistema`,
+            variant: "destructive",
+          })
+          return
+        }
 
-      if (existingUser) {
-        toast({
-          title: "Erro",
-          description: `Usuario "${existingUser.username}" ja existe no sistema`,
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Insert into Supabase
-      const { data: newUser, error } = await supabase
-        .from("users")
-        .insert({
-          username: formData.username.trim(),
+        // Insert into Supabase
+        const { error } = await supabase.from("users").insert({
+          username: formData.username.trim().toLowerCase(),
           name: formData.fullName.trim(),
-          email: `${formData.username.trim()}@operador.com`,
+          email: `${formData.username.trim().toLowerCase().replace(/\s+/g, "")}@operador.com`,
           role: "operator",
           is_active: true,
           is_online: false,
           allowed_tabs: ["dashboard", "scripts", "products", "notes", "chat"],
         })
-        .select()
-        .single()
 
-      if (error) {
+        if (error) throw error
+
         toast({
-          title: "Erro",
-          description: "Erro ao criar operador: " + error.message,
-          variant: "destructive",
+          title: "Sucesso",
+          description: "Operador adicionado com sucesso",
         })
-        return
       }
 
-      const newOperator: User = {
-        id: newUser.id,
-        username: newUser.username,
-        fullName: newUser.name,
-        isOnline: false,
-        role: "operator",
-        createdAt: new Date(newUser.created_at),
-        loginSessions: [],
-        permissions: {
-          dashboard: true,
-          scripts: true,
-          products: true,
-          attendanceConfig: false,
-          tabulations: false,
-          situations: false,
-          channels: false,
-          notes: true,
-          operators: false,
-          messagesQuiz: false,
-          chat: true,
-          settings: false,
-        },
-      }
-
-      setOperators([...operators, newOperator])
-
+      setIsDialogOpen(false)
+    } catch (error: any) {
       toast({
-        title: "Sucesso",
-        description: "Operador adicionado com sucesso",
+        title: "Erro",
+        description: "Erro ao salvar operador: " + error.message,
+        variant: "destructive",
       })
     }
-
-    setIsDialogOpen(false)
   }
 
   const handleImportClick = () => {
@@ -304,7 +247,7 @@ export function OperatorsTab() {
     }
 
     try {
-      const supabase = getSupabase()
+      const supabase = createClient()
       let rows: string[][] = []
 
       if (fileName.endsWith(".csv")) {
@@ -372,24 +315,23 @@ export function OperatorsTab() {
           continue
         }
 
-        // Check if username already exists in Supabase
-        const { data: existingUser } = await supabase
+        // Check if username already exists
+        const { data: existing } = await supabase
           .from("users")
-          .select("username")
+          .select("id")
           .ilike("username", username)
-          .single()
+          .limit(1)
 
-        if (existingUser) {
+        if (existing && existing.length > 0) {
           errors.push(`Linha ${index + 2}: Usuário "${username}" já existe`)
           skippedCount++
           continue
         }
 
-        // Insert into Supabase
-        const { error: insertError } = await supabase
-          .from("users")
-          .insert({
-            username: username,
+        try {
+          // Insert into Supabase
+          const { error } = await supabase.from("users").insert({
+            username: username.toLowerCase(),
             name: fullName,
             email: `${username.toLowerCase().replace(/\s+/g, "")}@operador.com`,
             role: "operator",
@@ -398,47 +340,14 @@ export function OperatorsTab() {
             allowed_tabs: ["dashboard", "scripts", "products", "notes", "chat"],
           })
 
-        if (insertError) {
+          if (error) throw error
+
+          importedCount++
+        } catch (insertError: any) {
           errors.push(`Linha ${index + 2}: Erro ao inserir - ${insertError.message}`)
           skippedCount++
           continue
         }
-
-        importedCount++
-      }
-
-      // Reload operators from Supabase
-      const { data: updatedOps } = await supabase
-        .from("users")
-        .select("*")
-        .eq("role", "operator")
-        .order("created_at", { ascending: false })
-
-      if (updatedOps) {
-        const ops: User[] = updatedOps.map((u: any) => ({
-          id: u.id,
-          username: u.username,
-          fullName: u.name,
-          isOnline: u.is_online || false,
-          role: u.role,
-          createdAt: new Date(u.created_at),
-          loginSessions: [],
-          permissions: {
-            dashboard: true,
-            scripts: true,
-            products: true,
-            attendanceConfig: false,
-            tabulations: false,
-            situations: false,
-            channels: false,
-            notes: true,
-            operators: false,
-            messagesQuiz: false,
-            chat: true,
-            settings: false,
-          },
-        }))
-        setOperators(ops)
       }
 
       if (importedCount > 0) {

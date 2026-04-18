@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useProducts } from "@/hooks/use-supabase-admin"
+import { useCachedProducts } from "@/hooks/use-cached-data"
 import { getAttendanceTypes, getPersonTypes } from "@/lib/store"
 import type { AttendanceConfig as AttendanceConfigType } from "@/lib/types"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
@@ -13,7 +13,7 @@ interface AttendanceConfigProps {
 }
 
 export function AttendanceConfig({ onStart }: AttendanceConfigProps) {
-  const { data: productsData } = useProducts()
+  const { products: productsData } = useCachedProducts()
   const [attendanceType, setAttendanceType] = useState<string | null>(null)
   const [personType, setPersonType] = useState<string | null>(null)
   const [product, setProduct] = useState<string>("")

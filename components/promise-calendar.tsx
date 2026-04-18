@@ -4,11 +4,11 @@ import { useState, useEffect } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CalendarIcon, CheckCircle2, Info, CreditCard, Building2, Home, AlertTriangle } from "lucide-react"
-import { getMaxPromiseDate, isBusinessDay } from "@/lib/business-days"
+import { getMaxPromiseDate, isHoliday } from "@/lib/business-days"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ProductType = "cartao" | "comercial" | "habitacional"
-type ProductCategory = "habitacional" | "comercial" | "cartao" | "outros"
+type ProductCategory = "habitacional" | "comercial" | "cartao" | "outros" | "boleto_pre_formatado"
 
 interface PromiseCalendarInlineProps {
   productCategory?: ProductCategory
@@ -54,7 +54,11 @@ export function PromiseCalendarInline({ productCategory }: PromiseCalendarInline
     const todayTime = new Date(today)
     todayTime.setHours(0, 0, 0, 0)
 
+    // Data anterior a hoje não está disponível
     if (dateTime < todayTime) return false
+
+    // Feriados nacionais não estão disponíveis
+    if (isHoliday(dateTime)) return false
 
     if (maxDate) {
       const maxDateTime = new Date(maxDate)
@@ -62,29 +66,53 @@ export function PromiseCalendarInline({ productCategory }: PromiseCalendarInline
       if (dateTime > maxDateTime) return false
     }
 
-    return isBusinessDay(dateTime)
+    return true
   }
 
   const productOptions = [
     {
       value: "cartao" as ProductType,
       name: "Cartão",
-      deadline: "7 dias úteis",
+      deadline: "D+6 (6 dias corridos)",
       icon: CreditCard,
     },
     {
       value: "comercial" as ProductType,
       name: "Comercial",
-      deadline: "10 dias úteis",
+      deadline: "D+9 (9 dias corridos)",
       icon: Building2,
     },
     {
       value: "habitacional" as ProductType,
       name: "Habitacional",
-      deadline: "10 dias úteis",
+      deadline: "D+9 (9 dias corridos)",
       icon: Home,
     },
   ]
+
+  if (productCategory === "boleto_pre_formatado") {
+    return (
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+            Calendário de Promessas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+            <AlertTriangle className="h-10 w-10 text-amber-500" />
+            <p className="text-sm font-medium text-muted-foreground">
+              De acordo com a data do boleto, não pode ser alterado em hipótese alguma.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Categoria: <span className="font-semibold">Boleto Pré-Formatado</span>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (productCategory === "outros") {
     return (

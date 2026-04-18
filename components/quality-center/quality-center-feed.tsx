@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,23 @@ export function QualityCenterFeed() {
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
   const [mentionType, setMentionType] = useState<"all" | "qualidade" | "supervisao">("qualidade") // "all" = Todos podem ver, "qualidade" = Monitoria, "supervisao" = Supervisores
 
+  const MAX_DAILY_POSTS = 3
+
+  // Count user's posts today
+  const userPostsToday = useMemo(() => {
+    if (!user || user.role !== "operator") return 0
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return allPosts.filter((p) => {
+      const postDate = new Date(p.createdAt)
+      postDate.setHours(0, 0, 0, 0)
+      return p.authorId === user.id && postDate.getTime() === today.getTime()
+    }).length
+  }, [allPosts, user])
+
+  const canPost = user?.role !== "operator" || userPostsToday < MAX_DAILY_POSTS
+  const remainingPosts = MAX_DAILY_POSTS - userPostsToday
+
   // Filter posts based on user role and visibility
   const posts = allPosts.filter((p) => {
     // Admins can see all posts
@@ -57,6 +74,16 @@ export function QualityCenterFeed() {
     if (!newPostContent.trim() || !user) return
 
     const isOperator = user.role === "operator"
+    
+    // Check daily limit for operators
+    if (isOperator && !canPost) {
+      toast({
+        title: "Limite diario atingido",
+        description: "Voce ja fez 3 publicacoes hoje. Tente novamente amanha.",
+        variant: "destructive",
+      })
+      return
+    }
     const postType = isOperator ? "pergunta" : (isQuestionToAdmin ? "pergunta" : "comunicado")
 
     // Determine recipients based on mention type
@@ -170,8 +197,18 @@ export function QualityCenterFeed() {
     <div className="space-y-4">
       {/* Create Post - Only for operators */}
       {user?.role === "operator" && (
-        <Card className="bg-card border-border/50">
+        <Card className={cn("bg-card border-border/50", !canPost && "opacity-75")}>
           <CardContent className="p-4">
+            {/* Daily limit indicator */}
+            <div className="flex items-center justify-between mb-3 text-sm">
+              <span className="text-muted-foreground">Publicacoes hoje:</span>
+              <span className={cn(
+                "font-medium",
+                remainingPosts > 0 ? "text-green-500" : "text-red-500"
+              )}>
+                {userPostsToday}/{MAX_DAILY_POSTS} ({remainingPosts > 0 ? `${remainingPosts} restantes` : "limite atingido"})
+              </span>
+            </div>
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className={cn(getAvatarColor(user?.fullName || ""), "text-white font-medium")}>
@@ -180,10 +217,11 @@ export function QualityCenterFeed() {
               </Avatar>
               <div className="flex-1">
                 <Textarea
-                  placeholder="Compartilhe algo com a equipe..."
+                  placeholder={canPost ? "Compartilhe algo com a equipe..." : "Voce atingiu o limite de 3 publicacoes diarias"}
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
-                  className="min-h-[80px] resize-none bg-muted/30 border-border/50 focus:border-orange-500/50"
+                  disabled={!canPost}
+                  className="min-h-[80px] resize-none bg-muted/30 border-border/50 focus:border-orange-500/50 disabled:opacity-50"
                 />
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-2">
@@ -243,8 +281,8 @@ export function QualityCenterFeed() {
                   </div>
                   <Button
                     onClick={handleCreatePost}
-                    disabled={!newPostContent.trim()}
-                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                    disabled={!newPostContent.trim() || !canPost}
+                    className="bg-orange-500 hover:bg-orange-600 text-white disabled:bg-gray-400"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Publicar

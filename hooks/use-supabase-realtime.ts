@@ -2,76 +2,44 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
-import type { User, QualityPost } from "@/lib/types"
-
-// Use singleton client
-const getSupabase = () => createClient()
+import { mapSupabaseUser } from "@/lib/auth-context"
+import type { User, QualityPost, QualityComment } from "@/lib/types"
 
 // Users hook with realtime
 export function useSupabaseUsers() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const channelRef = useRef<any>(null)
-  const isSubscribedRef = useRef(false)
 
   const fetchUsers = useCallback(async () => {
-    const supabase = getSupabase()
+    const supabase = createClient()
     const { data, error } = await supabase
       .from("users")
       .select("*")
       .order("created_at", { ascending: true })
 
     if (!error && data) {
-      const mappedUsers: User[] = data.map((u) => ({
-        id: u.id,
-        username: u.username,
-        fullName: u.name,
-        email: u.email,
-        password: u.password,
-        role: u.role,
-        adminType: u.admin_type,
-        allowedTabs: u.allowed_tabs || [],
-        isOnline: u.is_online,
-        isActive: u.is_active,
-        createdAt: new Date(u.created_at),
-        // Presence fields for Dashboard
-        lastActivity: u.last_activity,
-        lastLogin: u.last_login,
-        lastScriptAccess: u.last_script_access,
-        currentProduct: u.current_product,
-        currentScreen: u.current_screen,
-      }))
-      setUsers(mappedUsers)
+      setUsers(data.map(mapSupabaseUser))
     }
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    // Prevent duplicate subscriptions (React StrictMode)
-    if (isSubscribedRef.current) return
-    isSubscribedRef.current = true
-    
-    const supabase = getSupabase()
     fetchUsers()
 
-    // Setup realtime subscription with unique channel name
-    const channelName = `users-realtime-${Math.random().toString(36).slice(2)}`
-    const channel = supabase.channel(channelName)
-    
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "users" },
-      () => fetchUsers()
-    ).subscribe()
-
-    channelRef.current = channel
+    const supabase = createClient()
+    const channel = supabase
+      .channel("users-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "users" },
+        () => {
+          fetchUsers()
+        }
+      )
+      .subscribe()
 
     return () => {
-      isSubscribedRef.current = false
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
+      supabase.removeChannel(channel)
     }
   }, [fetchUsers])
 
@@ -82,80 +50,86 @@ export function useSupabaseUsers() {
 export function useQualityPosts() {
   const [posts, setPosts] = useState<QualityPost[]>([])
   const [loading, setLoading] = useState(true)
-  const channelRef = useRef<any>(null)
-  const isSubscribedRef = useRef(false)
 
   const fetchPosts = useCallback(async () => {
-    const supabase = getSupabase()
-    // Buscar todos os posts ativos (is_active = true ou is_active IS NULL para compatibilidade)
-    const { data, error } = await supabase
+    const supabase = createClient()
+    
+    // Fetch posts
+    const { data: postsData, error } = await supabase
       .from("quality_posts")
-      .select(`
-        *,
-        quality_comments (*)
-      `)
-      .or("is_active.eq.true,is_active.is.null")
+      .select("*")
+      .eq("is_active", true)
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Error fetching quality posts:", error.message)
+      console.error("[Supabase] Error fetching posts:", error)
+      setLoading(false)
+      return
     }
-    if (!error && data) {
-      const mappedPosts: QualityPost[] = data.map((p) => ({
-        id: p.id,
-        type: p.type,
-        content: p.content,
-        authorId: p.author_id,
-        authorName: p.author_name,
-        likes: p.likes || [],
-        quizOptions: p.quiz_options || [],
-        createdAt: new Date(p.created_at),
-        isActive: p.is_active ?? true,
-        recipients: p.recipients || [],
-        recipientNames: p.recipient_names || [],
-        sendToAll: p.send_to_all ?? true,
-        backgroundColor: p.background_color || undefined,
-        comments: (p.quality_comments || []).map((c: any) => ({
+
+    // Fetch all comments
+    const { data: commentsData } = await supabase
+      .from("quality_comments")
+      .select("*")
+      .order("created_at", { ascending: true })
+
+    const commentsMap = new Map<string, QualityComment[]>()
+    if (commentsData) {
+      for (const c of commentsData) {
+        const postComments = commentsMap.get(c.post_id) || []
+        postComments.push({
           id: c.id,
           authorId: c.author_id,
           authorName: c.author_name,
           content: c.content,
           createdAt: new Date(c.created_at),
-        })),
-      }))
-      setPosts(mappedPosts)
+        })
+        commentsMap.set(c.post_id, postComments)
+      }
     }
+
+    const mappedPosts: QualityPost[] = (postsData || []).map((p) => ({
+      id: p.id,
+      type: p.type,
+      content: p.content,
+      authorId: p.author_id,
+      authorName: p.author_name,
+      likes: p.likes || [],
+      quizOptions: p.quiz_options || [],
+      correctOption: p.correct_option,
+      createdAt: new Date(p.created_at),
+      isActive: p.is_active ?? true,
+      recipients: p.recipients || [],
+      recipientNames: p.recipient_names || [],
+      sendToAll: p.send_to_all ?? true,
+      backgroundColor: p.background_color || undefined,
+      comments: commentsMap.get(p.id) || [],
+    }))
+
+    setPosts(mappedPosts)
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    if (isSubscribedRef.current) return
-    isSubscribedRef.current = true
-    
-    const supabase = getSupabase()
     fetchPosts()
 
-    const channelName = `quality-posts-${Math.random().toString(36).slice(2)}`
-    const channel = supabase.channel(channelName)
-    
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "quality_posts" },
-      () => fetchPosts()
-    ).on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "quality_comments" },
-      () => fetchPosts()
-    ).subscribe()
-
-    channelRef.current = channel
+    const supabase = createClient()
+    const channel = supabase
+      .channel("quality-posts-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "quality_posts" },
+        () => fetchPosts()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "quality_comments" },
+        () => fetchPosts()
+      )
+      .subscribe()
 
     return () => {
-      isSubscribedRef.current = false
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
+      supabase.removeChannel(channel)
     }
   }, [fetchPosts])
 
@@ -166,17 +140,14 @@ export function useQualityPosts() {
 export function useAdminQuestions(filterByUserId?: string) {
   const [questions, setQuestions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const channelRef = useRef<any>(null)
-  const isSubscribedRef = useRef(false)
 
   const fetchQuestions = useCallback(async () => {
-    const supabase = getSupabase()
+    const supabase = createClient()
     let query = supabase
       .from("admin_questions")
       .select("*")
       .order("created_at", { ascending: false })
-    
-    // Filter by user if provided (for operator view)
+
     if (filterByUserId) {
       query = query.eq("author_id", filterByUserId)
     }
@@ -184,62 +155,54 @@ export function useAdminQuestions(filterByUserId?: string) {
     const { data, error } = await query
 
     if (!error && data) {
-      setQuestions(data.map((q) => ({
-        id: q.id,
-        question: q.question,
-        authorId: q.author_id,
-        authorName: q.author_name,
-        reply: q.reply,
-        repliedBy: q.replied_by,
-        repliedByName: q.replied_by_name,
-        repliedAt: q.replied_at,
-        createdAt: q.created_at,
-        understood: q.understood,
-        replyCount: q.reply_count || 1,
-        needsInPersonFeedback: q.needs_in_person_feedback || false,
-        secondReply: q.second_reply,
-        secondRepliedAt: q.second_replied_at,
-      })))
+      const mapped = data.map((d) => ({
+        id: d.id,
+        question: d.question,
+        authorId: d.author_id,
+        authorName: d.author_name,
+        reply: d.reply,
+        repliedBy: d.replied_by,
+        repliedByName: d.replied_by_name,
+        repliedAt: d.replied_at,
+        createdAt: d.created_at,
+        understood: d.understood,
+        replyCount: d.reply_count || 1,
+        needsInPersonFeedback: d.needs_in_person_feedback || false,
+        secondReply: d.second_reply,
+        secondRepliedAt: d.second_replied_at,
+      }))
+      setQuestions(mapped)
     }
     setLoading(false)
   }, [filterByUserId])
 
   useEffect(() => {
-    if (isSubscribedRef.current) return
-    isSubscribedRef.current = true
-    
-    const supabase = getSupabase()
     fetchQuestions()
 
-    const channelName = `admin-questions-${Math.random().toString(36).slice(2)}`
-    const channel = supabase.channel(channelName)
-    
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "admin_questions" },
-      () => fetchQuestions()
-    ).subscribe()
-
-    channelRef.current = channel
+    const supabase = createClient()
+    const channel = supabase
+      .channel("admin-questions-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "admin_questions" },
+        () => fetchQuestions()
+      )
+      .subscribe()
 
     return () => {
-      isSubscribedRef.current = false
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
+      supabase.removeChannel(channel)
     }
   }, [fetchQuestions])
 
   return { questions, loading, refetch: fetchQuestions }
 }
 
-// All Users hook (simplified)
+// All Users hook (alias)
 export function useAllUsers() {
   return useSupabaseUsers()
 }
 
-// Operator Presence hook - shows online/idle/offline status in realtime
+// Operator Presence hook
 export function useOperatorPresence() {
   const { users, loading, refetch } = useSupabaseUsers()
 
@@ -270,11 +233,11 @@ export function useOperatorPresence() {
           isActive: u.isActive,
           statusDetail,
           lastActivity: u.lastActivity,
-          lastHeartbeat: u.lastActivity, // alias for dashboard
-          lastLoginAt: u.lastLogin,
+          lastHeartbeat: u.lastActivity,
+          lastLoginAt: u.lastLoginAt,
           lastScriptAccess: u.lastScriptAccess,
           currentProduct: u.currentProduct,
-          currentProductName: u.currentProduct || null, // alias for dashboard
+          currentProductName: u.currentProduct || null,
           currentScreen: u.currentScreen,
         }
       })
@@ -284,11 +247,11 @@ export function useOperatorPresence() {
   const idleCount = operatorsWithStatus.filter((o) => o.statusDetail === "idle").length
   const offlineCount = operatorsWithStatus.filter((o) => o.statusDetail === "offline").length
 
-  return { 
-    operators: operatorsWithStatus, 
-    loading, 
-    onlineCount, 
-    idleCount, 
+  return {
+    operators: operatorsWithStatus,
+    loading,
+    onlineCount,
+    idleCount,
     offlineCount,
     totalCount: operatorsWithStatus.length,
     refetch,
@@ -301,27 +264,28 @@ export async function updateOperatorPresence(userId: string, data?: {
   currentScreen?: string
   lastScriptAccess?: boolean
 }) {
-  const supabase = getSupabase()
-  const updates: any = {
-    last_activity: new Date().toISOString(),
-  }
-  
-  if (data?.currentProduct !== undefined) {
-    updates.current_product = data.currentProduct
-  }
-  if (data?.currentScreen !== undefined) {
-    updates.current_screen = data.currentScreen
-  }
-  if (data?.lastScriptAccess) {
-    updates.last_script_access = new Date().toISOString()
-  }
+  try {
+    const supabase = createClient()
+    
+    const updates: any = {
+      last_activity: new Date().toISOString(),
+    }
 
-  const { error } = await supabase
-    .from("users")
-    .update(updates)
-    .eq("id", userId)
+    if (data?.currentProduct !== undefined) {
+      updates.current_product = data.currentProduct
+    }
+    if (data?.currentScreen !== undefined) {
+      updates.current_screen = data.currentScreen
+    }
+    if (data?.lastScriptAccess) {
+      updates.last_script_access = new Date().toISOString()
+    }
 
-  return { error: error?.message }
+    await supabase.from("users").update(updates).eq("id", userId)
+    return { error: null }
+  } catch (error: any) {
+    return { error: error.message }
+  }
 }
 
 // Hook for operator to maintain presence
@@ -329,10 +293,8 @@ export function usePresenceHeartbeat(userId?: string) {
   useEffect(() => {
     if (!userId) return
 
-    // Update presence immediately
     updateOperatorPresence(userId)
 
-    // Then update every 30 seconds
     const interval = setInterval(() => {
       updateOperatorPresence(userId)
     }, 30000)
@@ -341,7 +303,7 @@ export function usePresenceHeartbeat(userId?: string) {
   }, [userId])
 }
 
-// Supabase CRUD functions
+// Quality Post CRUD
 export async function createQualityPostSupabase(post: {
   type: string
   content: string
@@ -355,51 +317,55 @@ export async function createQualityPostSupabase(post: {
   sendToAll?: boolean
   backgroundColor?: string
 }): Promise<QualityPost | null> {
-  const supabase = getSupabase()
-  const { data, error } = await supabase
-    .from("quality_posts")
-    .insert({
-      type: post.type,
+  try {
+    const supabase = createClient()
+    
+    const { data, error } = await supabase
+      .from("quality_posts")
+      .insert({
+        type: post.type,
+        content: post.content,
+        author_id: post.authorId,
+        author_name: post.authorName,
+        quiz_options: post.quizOptions || null,
+        correct_option: post.correctOption ?? null,
+        likes: [],
+        recipients: post.recipients || [],
+        recipient_names: post.recipientNames || [],
+        send_to_all: post.sendToAll ?? true,
+        background_color: post.backgroundColor || null,
+        is_active: true,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return {
+      id: data.id,
+      type: post.type as any,
       content: post.content,
-      author_id: post.authorId,
-      author_name: post.authorName,
-      quiz_options: post.quizOptions || null,
-      correct_option: post.correctOption ?? null,
+      authorId: post.authorId,
+      authorName: post.authorName,
       likes: [],
+      quizOptions: post.quizOptions || [],
+      comments: [],
+      createdAt: new Date(),
+      isActive: true,
       recipients: post.recipients || [],
-      recipient_names: post.recipientNames || [],
-      send_to_all: post.sendToAll ?? true,
-      background_color: post.backgroundColor || null,
-      is_active: true, // Garantir que o post seja ativo
-    })
-    .select()
-    .single()
-
-  if (error) {
-    console.error("Error creating quality post:", error.message)
+      recipientNames: post.recipientNames || [],
+      sendToAll: post.sendToAll ?? true,
+      backgroundColor: post.backgroundColor || undefined,
+    }
+  } catch (error) {
+    console.error("[Supabase] Error creating quality post:", error)
     return null
-  }
-
-  return {
-    id: data.id,
-    type: data.type,
-    content: data.content,
-    authorId: data.author_id,
-    authorName: data.author_name,
-    likes: data.likes || [],
-    quizOptions: data.quiz_options || [],
-    comments: [],
-    createdAt: new Date(data.created_at),
-    isActive: data.is_active ?? true,
-    recipients: data.recipients || [],
-    recipientNames: data.recipient_names || [],
-    sendToAll: data.send_to_all ?? true,
-    backgroundColor: data.background_color || undefined,
   }
 }
 
 export async function likePostSupabase(postId: string, userId: string): Promise<void> {
-  const supabase = getSupabase()
+  const supabase = createClient()
+  
   const { data: post } = await supabase
     .from("quality_posts")
     .select("likes")
@@ -414,17 +380,15 @@ export async function likePostSupabase(postId: string, userId: string): Promise<
     ? currentLikes.filter((id: string) => id !== userId)
     : [...currentLikes, userId]
 
-  await supabase
-    .from("quality_posts")
-    .update({ likes: newLikes })
-    .eq("id", postId)
+  await supabase.from("quality_posts").update({ likes: newLikes }).eq("id", postId)
 }
 
 export async function addCommentSupabase(
   postId: string,
   comment: { authorId: string; authorName: string; content: string }
 ): Promise<void> {
-  const supabase = getSupabase()
+  const supabase = createClient()
+  
   await supabase.from("quality_comments").insert({
     post_id: postId,
     author_id: comment.authorId,
@@ -438,14 +402,15 @@ export async function voteOnQuizSupabase(
   optionId: string,
   userId: string
 ): Promise<void> {
-  const supabase = getSupabase()
+  const supabase = createClient()
+  
   const { data: post } = await supabase
     .from("quality_posts")
     .select("quiz_options")
     .eq("id", postId)
     .single()
 
-  if (!post || !post.quiz_options) return
+  if (!post?.quiz_options) return
 
   const updatedOptions = post.quiz_options.map((opt: any) => ({
     ...opt,
@@ -454,10 +419,7 @@ export async function voteOnQuizSupabase(
       : (opt.votes || []).filter((v: string) => v !== userId),
   }))
 
-  await supabase
-    .from("quality_posts")
-    .update({ quiz_options: updatedOptions })
-    .eq("id", postId)
+  await supabase.from("quality_posts").update({ quiz_options: updatedOptions }).eq("id", postId)
 }
 
 export async function getQualityStatsSupabase(): Promise<{
@@ -467,30 +429,32 @@ export async function getQualityStatsSupabase(): Promise<{
   totalUsers: number
   onlineCount: number
 }> {
-  const supabase = getSupabase()
-  const { data: posts } = await supabase.from("quality_posts").select("likes")
+  const supabase = createClient()
+
+  const { data: posts, count: postsCount } = await supabase
+    .from("quality_posts")
+    .select("likes", { count: "exact" })
+
+  const totalLikes = (posts || []).reduce((acc, p) => acc + (p.likes?.length || 0), 0)
+
   const { count: commentsCount } = await supabase
     .from("quality_comments")
     .select("*", { count: "exact", head: true })
-  const { count: usersCount } = await supabase
+
+  const { data: users } = await supabase
     .from("users")
-    .select("*", { count: "exact", head: true })
+    .select("role, is_online")
     .eq("role", "operator")
 
-  const totalPosts = posts?.length || 0
-  const totalLikes = posts?.reduce((acc, p) => acc + (p.likes?.length || 0), 0) || 0
-  const { count: onlineCount } = await supabase
-    .from("users")
-    .select("*", { count: "exact", head: true })
-    .eq("role", "operator")
-    .eq("is_online", true)
+  const totalUsers = users?.length || 0
+  const onlineCount = users?.filter((u) => u.is_online === true).length || 0
 
-  return { 
-    totalPosts, 
-    totalLikes, 
+  return {
+    totalPosts: postsCount || 0,
+    totalLikes,
     totalComments: commentsCount || 0,
-    totalUsers: usersCount || 0,
-    onlineCount: onlineCount || 0,
+    totalUsers,
+    onlineCount,
   }
 }
 
@@ -498,18 +462,16 @@ export async function getQualityStatsSupabase(): Promise<{
 export function useFeedbacks() {
   const [feedbacks, setFeedbacks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const channelRef = useRef<any>(null)
-  const isSubscribedRef = useRef(false)
 
   const fetchFeedbacks = useCallback(async () => {
-    const supabase = getSupabase()
+    const supabase = createClient()
     const { data, error } = await supabase
       .from("feedbacks")
       .select("*")
       .order("created_at", { ascending: false })
 
     if (!error && data) {
-      setFeedbacks(data.map((f) => ({
+      const mapped = data.map((f) => ({
         id: f.id,
         type: f.type,
         message: f.message,
@@ -517,35 +479,27 @@ export function useFeedbacks() {
         operatorName: f.operator_name,
         isRead: f.is_read,
         createdAt: f.created_at,
-      })))
+      }))
+      setFeedbacks(mapped)
     }
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    if (isSubscribedRef.current) return
-    isSubscribedRef.current = true
-    
-    const supabase = getSupabase()
     fetchFeedbacks()
 
-    const channelName = `feedbacks-${Math.random().toString(36).slice(2)}`
-    const channel = supabase.channel(channelName)
-    
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "feedbacks" },
-      () => fetchFeedbacks()
-    ).subscribe()
-
-    channelRef.current = channel
+    const supabase = createClient()
+    const channel = supabase
+      .channel("feedbacks-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "feedbacks" },
+        () => fetchFeedbacks()
+      )
+      .subscribe()
 
     return () => {
-      isSubscribedRef.current = false
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
+      supabase.removeChannel(channel)
     }
   }, [fetchFeedbacks])
 
@@ -561,8 +515,6 @@ export function useQualityStats() {
     totalUsers: 0,
   })
   const [loading, setLoading] = useState(true)
-  const channelRef = useRef<any>(null)
-  const isSubscribedRef = useRef(false)
 
   const fetchStats = useCallback(async () => {
     const data = await getQualityStatsSupabase()
@@ -571,114 +523,78 @@ export function useQualityStats() {
   }, [])
 
   useEffect(() => {
-    if (isSubscribedRef.current) return
-    isSubscribedRef.current = true
-    
-    const supabase = getSupabase()
     fetchStats()
 
-    const channelName = `quality-stats-${Math.random().toString(36).slice(2)}`
-    const channel = supabase.channel(channelName)
-    
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "quality_posts" },
-      () => fetchStats()
-    ).on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "quality_comments" },
-      () => fetchStats()
-    ).on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "users" },
-      () => fetchStats()
-    ).subscribe()
-
-    channelRef.current = channel
-
-    return () => {
-      isSubscribedRef.current = false
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
-    }
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchStats, 30000)
+    return () => clearInterval(interval)
   }, [fetchStats])
 
   return { stats, loading, refetch: fetchStats }
 }
 
-// Answer admin question (first reply)
+// Admin Question CRUD
 export async function answerAdminQuestion(
   questionId: string,
   reply: string,
   adminId: string,
   adminName: string
 ): Promise<void> {
-  const supabase = getSupabase()
-  await supabase
-    .from("admin_questions")
-    .update({
-      reply,
-      replied_by: adminId,
-      replied_by_name: adminName,
-      replied_at: new Date().toISOString(),
-      reply_count: 1,
-    })
-    .eq("id", questionId)
+  const supabase = createClient()
+  
+  await supabase.from("admin_questions").update({
+    reply,
+    replied_by: adminId,
+    replied_by_name: adminName,
+    replied_at: new Date().toISOString(),
+    reply_count: 1,
+  }).eq("id", questionId)
 }
 
-// Answer admin question (second reply - when operator didn't understand first)
 export async function answerAdminQuestionSecond(
   questionId: string,
   secondReply: string,
   adminId: string,
   adminName: string
 ): Promise<void> {
-  const supabase = getSupabase()
-  await supabase
-    .from("admin_questions")
-    .update({
-      second_reply: secondReply,
-      second_replied_at: new Date().toISOString(),
-      reply_count: 2,
-      understood: null, // Reset understood status for operator to respond again
-    })
-    .eq("id", questionId)
+  const supabase = createClient()
+  
+  await supabase.from("admin_questions").update({
+    second_reply: secondReply,
+    second_replied_at: new Date().toISOString(),
+    reply_count: 2,
+    understood: null,
+  }).eq("id", questionId)
 }
 
-// Operator marks if they understood the answer
 export async function markQuestionUnderstood(
   questionId: string,
   understood: boolean
 ): Promise<void> {
-  const supabase = getSupabase()
-  const updates: any = { understood }
-  
-  // If operator didn't understand after second reply, mark for in-person feedback
-  const { data } = await supabase
+  const supabase = createClient()
+
+  const { data: question } = await supabase
     .from("admin_questions")
     .select("reply_count")
     .eq("id", questionId)
     .single()
-  
-  if (!understood && data?.reply_count >= 2) {
+
+  const updates: any = { understood }
+
+  if (!understood && question?.reply_count >= 2) {
     updates.needs_in_person_feedback = true
   }
-  
-  await supabase
-    .from("admin_questions")
-    .update(updates)
-    .eq("id", questionId)
+
+  await supabase.from("admin_questions").update(updates).eq("id", questionId)
 }
 
-// Create admin question (from operator)
 export async function createAdminQuestion(data: {
   question: string
   authorId: string
   authorName: string
 }): Promise<void> {
-  const supabase = getSupabase()
+  const supabase = createClient()
+  
   await supabase.from("admin_questions").insert({
     question: data.question,
     author_id: data.authorId,
@@ -691,48 +607,49 @@ export async function createAdminQuestion(data: {
 
 // Delete quality post
 export async function deleteQualityPostSupabase(postId: string): Promise<void> {
-  const supabase = getSupabase()
-  // First delete all comments associated with this post
+  const supabase = createClient()
+  
+  // Delete comments first
   await supabase.from("quality_comments").delete().eq("post_id", postId)
-  // Then delete the post
+  
+  // Delete post
   await supabase.from("quality_posts").delete().eq("id", postId)
 }
 
 // Edit quality post
 export async function editQualityPostSupabase(postId: string, content: string, backgroundColor?: string): Promise<void> {
-  const supabase = getSupabase()
+  const supabase = createClient()
+  
   const updates: any = { content, updated_at: new Date().toISOString() }
   if (backgroundColor !== undefined) {
     updates.background_color = backgroundColor || null
   }
-  await supabase
-    .from("quality_posts")
-    .update(updates)
-    .eq("id", postId)
+
+  await supabase.from("quality_posts").update(updates).eq("id", postId)
 }
 
 // Delete comment
 export async function deleteCommentSupabase(commentId: string): Promise<void> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   await supabase.from("quality_comments").delete().eq("id", commentId)
 }
 
 // Edit comment
 export async function editCommentSupabase(commentId: string, content: string): Promise<void> {
-  const supabase = getSupabase()
-  await supabase
-    .from("quality_comments")
-    .update({ content, updated_at: new Date().toISOString() })
-    .eq("id", commentId)
+  const supabase = createClient()
+  await supabase.from("quality_comments").update({
+    content,
+    updated_at: new Date().toISOString(),
+  }).eq("id", commentId)
 }
 
 // Mark feedback as read
 export async function markFeedbackAsRead(feedbackId: string): Promise<void> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   await supabase.from("feedbacks").update({ is_read: true }).eq("id", feedbackId)
 }
 
-// Create feedback for operator (admin function)
+// Create feedback for operator
 export async function createFeedbackSupabase(feedback: {
   operatorId: string
   operatorName: string
@@ -747,9 +664,9 @@ export async function createFeedbackSupabase(feedback: {
   positivePoints?: string
   improvementPoints?: string
 }): Promise<void> {
-  const supabase = getSupabase()
-  
-  // Insert into feedbacks table for detailed tracking
+  const supabase = createClient()
+
+  // Insert into feedbacks table
   await supabase.from("feedbacks").insert({
     type: feedback.feedbackType,
     message: feedback.details,
@@ -763,14 +680,12 @@ export async function createFeedbackSupabase(feedback: {
     score: feedback.score || (feedback.feedbackType === "positive" ? 80 : 40),
     positive_points: feedback.positivePoints || "",
     improvement_points: feedback.improvementPoints || "",
+    is_read: false,
   })
 
   // Also create a quality_post so it appears in the feed
   const feedbackLabel = feedback.feedbackType === "positive" ? "Feedback Positivo" : "Feedback Construtivo"
-  const severityLabel = feedback.severity === "elogio" ? "Elogio" : 
-                        feedback.severity === "leve" ? "Leve" :
-                        feedback.severity === "medio" ? "Medio" : "Grave"
-  
+
   const content = `**${feedbackLabel}** para ${feedback.operatorName}\n\n${feedback.details}${
     feedback.positivePoints ? `\n\n**Pontos positivos:** ${feedback.positivePoints}` : ""
   }${
@@ -786,12 +701,14 @@ export async function createFeedbackSupabase(feedback: {
     recipients: [feedback.operatorId],
     recipient_names: [feedback.operatorName],
     send_to_all: false,
+    is_active: true,
   })
 }
 
 // User management functions
 export async function getUserByUsername(username: string): Promise<User | null> {
-  const supabase = getSupabase()
+  const supabase = createClient()
+  
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -800,50 +717,29 @@ export async function getUserByUsername(username: string): Promise<User | null> 
     .single()
 
   if (error || !data) return null
-
-  return {
-    id: data.id,
-    username: data.username,
-    fullName: data.name,
-    email: data.email,
-    password: data.password,
-    role: data.role,
-    adminType: data.admin_type,
-    allowedTabs: data.allowed_tabs || [],
-    isOnline: data.is_online,
-    isActive: data.is_active,
-    createdAt: new Date(data.created_at),
-  }
+  return mapSupabaseUser(data)
 }
 
 export async function updateUserOnlineStatus(userId: string, isOnline: boolean): Promise<void> {
-  const supabase = getSupabase()
-  await supabase
-    .from("users")
-    .update({ is_online: isOnline, last_seen: new Date().toISOString() })
-    .eq("id", userId)
+  const supabase = createClient()
+  
+  await supabase.from("users").update({
+    is_online: isOnline,
+    last_activity: new Date().toISOString(),
+  }).eq("id", userId)
 }
 
 export async function getAllUsersFromSupabase(): Promise<User[]> {
-  const supabase = getSupabase()
+  const supabase = createClient()
+  
   const { data, error } = await supabase
     .from("users")
     .select("*")
     .order("created_at", { ascending: true })
 
   if (error || !data) return []
-
-  return data.map((u) => ({
-    id: u.id,
-    username: u.username,
-    fullName: u.name,
-    email: u.email,
-    password: u.password,
-    role: u.role,
-    adminType: u.admin_type,
-    allowedTabs: u.allowed_tabs || [],
-    isOnline: u.is_online,
-    isActive: u.is_active,
-    createdAt: new Date(u.created_at),
-  }))
+  return data.map(mapSupabaseUser)
 }
+
+// Re-export types
+export type { User, QualityPost } from "@/lib/types"

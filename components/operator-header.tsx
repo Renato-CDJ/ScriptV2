@@ -22,7 +22,7 @@ import {
   ListChecks,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useProducts, useMessages, useQuizzes } from "@/hooks/use-supabase-admin"
+import { useCachedProducts, useCachedMessages } from "@/hooks/use-cached-data"
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useTheme } from "next-themes"
@@ -61,10 +61,9 @@ export const OperatorHeader = memo(function OperatorHeader({
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   
-  // Use Supabase hooks for realtime data
-  const { data: productsData } = useProducts()
-  const { data: messagesData } = useMessages(user?.id)
-  const { data: quizzesData } = useQuizzes(user?.id)
+  // Use cached data instead of realtime Firebase calls
+  const { products: productsData } = useCachedProducts()
+  const { messages: messagesData } = useCachedMessages()
   
   const [showProductSearch, setShowProductSearch] = useState(false)
   const [selectedAttendanceTypes, setSelectedAttendanceTypes] = useState<string[]>([])
@@ -92,13 +91,8 @@ export const OperatorHeader = memo(function OperatorHeader({
     return messagesData.filter((m: any) => m.is_active && (!m.seen_by || !m.seen_by.includes(user.id))).length
   }, [messagesData, user])
 
-  // Calculate unanswered quizzes count
-  const unansweredQuizzesCount = useMemo(() => {
-    return quizzesData.filter((q: any) => q.is_active).length
-  }, [quizzesData])
-
   // Total badge count for header notification
-  const totalBadgeCount = unseenMessagesCount + unansweredQuizzesCount
+  const totalBadgeCount = unseenMessagesCount
 
   const handleLogout = useCallback(() => {
     logout()

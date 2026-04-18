@@ -29,8 +29,99 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Switch } from "@/components/ui/switch"
 
+// Contratos padrão registrados no código
+const DEFAULT_CONTRACTS = [
+  {
+    id: "default_cdc",
+    name: "CRÉDITO DIRETO CAIXA - CDC",
+    description: "O Crédito Direto Caixa (CDC) é uma modalidade de empréstimo pessoal oferecida pela Caixa Econômica Federal. Ele funciona como um crédito pré-aprovado, que pode ser contratado de forma rápida e simples, com o valor liberado diretamente na conta do cliente.",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_cred_senior",
+    name: "CRED SENIOR",
+    description: "O Cred Sênior da Caixa é uma linha de crédito pessoal voltada para aposentados e pensionistas do INSS, oferecida pela Caixa Econômica Federal. Ele funciona como um empréstimo consignado, com parcelas descontadas diretamente do benefício, garantindo juros mais baixos e prazos mais longos.",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_renegociacao",
+    name: "RENEGOCIAÇÃO DE DÍVIDAS",
+    description: "A renegociação de dívidas da Caixa é um serviço oferecido pela Caixa Econômica Federal para clientes que estão com dificuldades em pagar seus empréstimos, financiamentos ou outros contratos ativos. O objetivo é reorganizar o débito e facilitar o pagamento, evitando que a dívida cresça ainda mais com juros e encargos.",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_consignacao",
+    name: "CONSIGNAÇÃO CAIXA",
+    description: "A \"consignação Caixa\" geralmente se refere ao empréstimo consignado oferecido pela Caixa Econômica Federal, uma modalidade de crédito em que as parcelas são descontadas diretamente do salário, aposentadoria ou pensão do cliente.",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_microcredito",
+    name: "MICROCRÉDITO GIRO",
+    description: "O microcrédito é uma modalidade de empréstimo de pequeno valor, voltada para microempreendedores individuais (MEIs), trabalhadores informais e pessoas de baixa renda que têm dificuldade em acessar crédito tradicional. Ele serve para financiar atividades produtivas, como compra de equipamentos, estoque ou capital de giro.",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_girocaixa_facil",
+    name: "GIROCAIXA FÁCIL",
+    description: "O GiroCaixa Fácil é uma linha de crédito da Caixa Econômica Federal destinada a empresas com faturamento anual de até R$ 50 milhões, voltada para financiar capital de giro. Ele oferece limite de até R$ 2 milhões, com prazos flexíveis e contratação simplificada. É um empréstimo empresarial.",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_fies",
+    name: "FIES",
+    description: "O FIES (Fundo de Financiamento Estudantil) é um programa do governo federal que oferece financiamento das mensalidades em instituições privadas de ensino superior para estudantes que não têm condições de arcar com os custos. Ele é administrado pelo Ministério da Educação (MEC) e operado por bancos como a Caixa Econômica Federal.",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_construcard",
+    name: "CONSTRUCARD",
+    description: "É um tipo de empréstimo oferecido pela Caixa Econômica Federal, mas com uma característica especial: ele é voltado exclusivamente para compra de materiais de construção e reforma em lojas credenciadas. (Não ofertamos o envio do boleto)",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_cheque_especial",
+    name: "CHEQUE ESPECIAL CAIXA",
+    description: "O Cheque Especial é uma modalidade de crédito automático vinculada à conta corrente. Ele funciona como um \"limite extra\" que o banco disponibiliza para o cliente usar quando o saldo da conta não é suficiente para cobrir saques, pagamentos ou transferências. (Não ofertamos o envio do boleto)",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_cheque_especial_empresa",
+    name: "CHEQUE ESPECIAL EMPRESA CAIXA",
+    description: "O Cheque Especial é uma modalidade de crédito automático vinculada à conta corrente. Ele funciona como um \"limite extra\" que o banco disponibiliza para o cliente usar quando o saldo da conta não é suficiente para cobrir saques, pagamentos ou transferências. (Não ofertamos o envio do boleto)",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_financiamento_habitacional",
+    name: "FINANCIAMENTO HABITACIONAL",
+    description: "Um financiamento habitacional é um tipo de crédito que os clientes utilizam para comprar um imóvel (casa, apartamento ou terreno) pagando em parcelas mensais.",
+    is_active: true,
+    is_default: true,
+  },
+  {
+    id: "default_procred_360",
+    name: "GIROCAIXA PROCRED 360 e MICROGIRO PROCRED 360",
+    description: "Programa ProCred 360, que é uma linha de capital de giro voltada exclusivamente para MEI e Microempresas com faturamento anual de até R$ 360 mil. A emissão de 2ª via de boleto é feita pelo SIFEC.",
+    is_active: true,
+    is_default: true,
+  },
+]
+
 export function InitialGuideTab() {
-  const { data: contracts, loading, create, update, remove } = useContracts()
+  const { data: dbContracts, loading, create, update, remove } = useContracts()
+  
+  // Combina contratos padrão com contratos do banco de dados
+  const allContracts = [...DEFAULT_CONTRACTS, ...dbContracts]
   const [showDialog, setShowDialog] = useState(false)
   const [editingContract, setEditingContract] = useState<any | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -147,21 +238,20 @@ export function InitialGuideTab() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : contracts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum contrato cadastrado</p>
-              <p className="text-sm mt-2">Clique em &quot;Adicionar Contrato&quot; para começar</p>
-            </div>
           ) : (
             <div className="space-y-4">
-              {contracts.map((contract) => (
-                <Card key={contract.id} className="border-2">
+              {allContracts.map((contract: any) => (
+                <Card key={contract.id} className={`border-2 ${contract.is_default ? "border-orange-200 dark:border-orange-900" : ""}`}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           <h3 className="text-lg font-semibold">{contract.name}</h3>
+                          {contract.is_default && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                              Padrão
+                            </span>
+                          )}
                           <span
                             className={`text-xs px-2 py-1 rounded-full ${
                               contract.is_active
@@ -174,20 +264,22 @@ export function InitialGuideTab() {
                         </div>
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{contract.description}</p>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="icon" onClick={() => handleOpenDialog(contract)} title="Editar">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setDeleteConfirm(contract.id)}
-                          className="text-red-500 hover:text-red-700"
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {!contract.is_default && (
+                        <div className="flex gap-2 ml-4">
+                          <Button variant="outline" size="icon" onClick={() => handleOpenDialog(contract)} title="Editar">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setDeleteConfirm(contract.id)}
+                            className="text-red-500 hover:text-red-700"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

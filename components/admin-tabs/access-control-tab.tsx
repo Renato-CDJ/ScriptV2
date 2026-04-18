@@ -10,8 +10,6 @@ import { useToast } from "@/hooks/use-toast"
 import { getUsersFromSupabase, updateUserInStorage } from "@/lib/auth-context"
 import { createClient } from "@/lib/supabase/client"
 import type { User, AdminPermissions, AdminType } from "@/lib/types"
-
-const getSupabase = () => createClient()
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Shield, Edit2, Save, X, Plus, Trash2, UserPlus, Eye, EyeOff, Key } from "lucide-react"
@@ -220,57 +218,60 @@ export function AccessControlTab() {
       return
     }
 
-    const supabase = getSupabase()
+    try {
+      const supabase = createClient()
+      
+      // Check if username already exists (case insensitive)
+      const { data: existingUsers } = await supabase
+        .from("users")
+        .select("id")
+        .ilike("username", newUsername.trim())
+        .limit(1)
 
-    // Check if username already exists
-    const { data: existing } = await supabase
-      .from("users")
-      .select("id")
-      .ilike("username", newUsername.trim())
-      .single()
+      if (existingUsers && existingUsers.length > 0) {
+        toast({
+          title: "Erro",
+          description: "Nome de usuario ja existe",
+          variant: "destructive",
+        })
+        return
+      }
 
-    if (existing) {
-      toast({
-        title: "Erro",
-        description: "Nome de usuario ja existe",
-        variant: "destructive",
+      const allowedTabs = newAdminType === "supervisao" 
+        ? ["dashboard", "central-qualidade"] 
+        : []
+
+      // Create user in Supabase
+      const { error } = await supabase.from("users").insert({
+        username: newUsername.trim(),
+        name: newFullName.trim(),
+        email: `${newUsername.trim().toLowerCase()}@rcp.com`,
+        password: newPassword.trim() || "rcp@$",
+        role: "admin",
+        admin_type: newAdminType,
+        allowed_tabs: allowedTabs,
+        is_active: true,
+        is_online: false,
       })
-      return
-    }
 
-    const allowedTabs = newAdminType === "supervisao" 
-      ? ["dashboard", "central-qualidade"] 
-      : []
+      if (error) throw error
 
-    const { error } = await getSupabase().from("users").insert({
-      username: newUsername.trim(),
-      name: newFullName.trim(),
-      email: `${newUsername.trim().toLowerCase()}@rcp.com`,
-      password: newPassword.trim() || "rcp@$",
-      role: "admin",
-      admin_type: newAdminType,
-      allowed_tabs: allowedTabs,
-      is_active: true,
-      is_online: false,
-    })
+      setShowCreateForm(false)
+      setNewUsername("")
+      setNewFullName("")
+      setNewPassword("")
+      setNewAdminType("supervisao")
+      setShowNewPassword(false)
+      loadAdminUsers()
 
-    if (error) {
+      toast({
+        title: "Usuario criado",
+        description: `Usuario ${newUsername} foi criado com sucesso`,
+      })
+    } catch (error) {
+      console.error("Erro ao criar usuario:", error)
       toast({ title: "Erro", description: "Erro ao criar usuario", variant: "destructive" })
-      return
     }
-
-    setShowCreateForm(false)
-    setNewUsername("")
-    setNewFullName("")
-    setNewPassword("")
-    setNewAdminType("supervisao")
-    setShowNewPassword(false)
-    loadAdminUsers()
-
-    toast({
-      title: "Usuario criado",
-      description: `Usuario ${newUsername} foi criado com sucesso`,
-    })
   }, [newUsername, newFullName, newPassword, newAdminType, toast])
 
   const handleDeleteUser = useCallback(async () => {
@@ -287,15 +288,26 @@ export function AccessControlTab() {
       return
     }
 
-    await getSupabase().from("users").delete().eq("id", userToDelete.id)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from("users").delete().eq("id", userToDelete.id)
+      if (error) throw error
 
-    setUserToDelete(null)
-    loadAdminUsers()
+      setUserToDelete(null)
+      loadAdminUsers()
 
-    toast({
-      title: "Usuario excluido",
-      description: `Usuario ${userToDelete.username} foi excluido com sucesso`,
-    })
+      toast({
+        title: "Usuario excluido",
+        description: `Usuario ${userToDelete.username} foi excluido com sucesso`,
+      })
+    } catch (error) {
+      console.error("Erro ao excluir usuario:", error)
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir usuario",
+        variant: "destructive",
+      })
+    }
   }, [userToDelete, toast])
 
   return (

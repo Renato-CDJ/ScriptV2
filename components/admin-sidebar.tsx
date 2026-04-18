@@ -33,9 +33,18 @@ interface AdminSidebarProps {
   onTabChange: (tab: string) => void
 }
 
-const menuItems = [
+const menuItems: {
+  id: string
+  label: string
+  icon: typeof FileText
+  permission: string
+  hideForSupervisao?: boolean
+  hideForMonitoria?: boolean
+  onlyForSupervisao?: boolean
+  onlyForSupervisaoOrMonitoria?: boolean
+}[] = [
+  { id: "operator-view", label: "Visualizar Roteiro", icon: FileText, permission: "scripts", onlyForSupervisaoOrMonitoria: true },
   { id: "scripts", label: "Roteiros", icon: FileText, permission: "scripts", hideForSupervisao: true },
-  { id: "operator-view", label: "Visualizar Roteiro", icon: FileText, permission: "scripts", onlyForSupervisao: true },
   { id: "products", label: "Produtos", icon: Package, permission: "products" },
   { id: "initial-guide", label: "Guia Inicial", icon: BookOpen, permission: "dashboard" },
   { id: "attendance-config", label: "Configurar Atendimento", icon: Settings2, permission: "attendanceConfig" },
@@ -102,11 +111,15 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
     // Only show items marked as onlyForSupervisao when user is supervisao
     if (item.onlyForSupervisao && !isSupervisao) return false
     
+    // Only show items marked as onlyForSupervisaoOrMonitoria when user is supervisao or monitoria
+    const isMonitoria = user?.adminType === "monitoria"
+    if (item.onlyForSupervisaoOrMonitoria && !isSupervisao && !isMonitoria) return false
+    
     return true
   })
 
-  // Only master and monitoria can see access control
-  const canSeeAccessControl = user?.adminType === "master" || user?.adminType === "monitoria"
+  // Only master, gestao and monitoria can see access control
+  const canSeeAccessControl = user?.adminType === "master" || user?.adminType === "gestao" || user?.adminType === "monitoria"
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-orange-500/30 dark:border-orange-500/40">

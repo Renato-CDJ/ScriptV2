@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+
+const TABLE_NAME = 'training_views'
 
 // POST - Registrar visualização de treinamento
 export async function POST(req: NextRequest) {
@@ -11,20 +13,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios faltando' }, { status: 400 })
     }
 
-    const supabase = await createServerSupabaseClient()
-
-    const { error } = await supabase.from('training_views').insert({
+    const supabase = createAdminClient()
+    
+    const { error } = await supabase.from(TABLE_NAME).insert({
       training_filename,
       training_title: training_title || training_filename,
       user_id,
       user_name,
-      viewed_at: new Date().toISOString(),
     })
 
-    if (error) {
-      console.error('[v0] Error registering training view:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    if (error) throw error
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -39,25 +37,22 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const filename = searchParams.get('filename')
 
-    const supabase = await createServerSupabaseClient()
-
+    const supabase = createAdminClient()
+    
     let query = supabase
-      .from('training_views')
+      .from(TABLE_NAME)
       .select('*')
       .order('viewed_at', { ascending: false })
-
+    
     if (filename) {
       query = query.eq('training_filename', filename)
     }
 
-    const { data, error } = await query
+    const { data: views, error } = await query
 
-    if (error) {
-      console.error('[v0] Error fetching training views:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    if (error) throw error
 
-    return NextResponse.json({ views: data || [] })
+    return NextResponse.json({ views: views || [] })
   } catch (error) {
     console.error('[v0] Error in training views GET:', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

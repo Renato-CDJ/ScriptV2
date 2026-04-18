@@ -26,11 +26,14 @@ export function QualityCenterSidebar({
 }: QualityCenterSidebarProps) {
   const { user } = useAuth()
 
+  const isOperator = user?.role === "operator"
+
   const mainMenuItems = [
-    { id: "feed", icon: Home, label: "Inicio" },
-    { id: "chat-qualidade", icon: MessageSquare, label: "Chat com a Qualidade" },
-    { id: "treinamentos", icon: BookOpen, label: "Treinamentos" },
-  ]
+    { id: "feed", icon: Home, label: "Inicio", adminOnly: false },
+    { id: "chat-supervisao", icon: Users, label: "Chat com a Supervisão", adminOnly: true },
+    { id: "chat-qualidade", icon: MessageSquare, label: "Chat com a Qualidade", adminOnly: true },
+    { id: "treinamentos", icon: BookOpen, label: "Treinamentos", adminOnly: false },
+  ].filter(item => !item.adminOnly || !isOperator)
 
   const filterItems = [
     { id: "comunicados", icon: Megaphone, label: "Comunicados", badge: 3 },

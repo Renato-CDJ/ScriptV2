@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { useTabulations, useSituations, useChannels } from "@/hooks/use-supabase-admin"
+import { useCachedTabulations, useCachedSituations, useCachedChannels } from "@/hooks/use-cached-data"
 import { CheckCircle2, Tags, AlertCircle, Radio, List, Search, CalendarIcon, Maximize2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PromiseCalendarInline } from "@/components/promise-calendar"
@@ -65,18 +65,18 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
   const [selectedChannelForModal, setSelectedChannelForModal] = useState<any>(null)
   const [channelSearchQuery, setChannelSearchQuery] = useState("")
 
-  // Use Supabase hooks for realtime data
-  const { data: tabulationsData } = useTabulations()
-  const { data: situationsData } = useSituations()
-  const { data: channelsData } = useChannels()
+  // Use cached data instead of realtime Firebase calls
+  const { tabulations: tabulationsData } = useCachedTabulations()
+  const { situations: situationsData } = useCachedSituations()
+  const { channels: channelsData } = useCachedChannels()
 
-  // Map Supabase data to component format
+  // Map cached data to component format
   const tabulations = useMemo(() => tabulationsData.map((t: any) => ({
     id: t.id,
     name: t.name,
     description: t.description || "",
     color: t.color || "#6b7280",
-    isActive: t.is_active,
+    isActive: t.is_active !== false,
   })).filter((t: any) => t.isActive), [tabulationsData])
 
   const situations = useMemo(() => situationsData.map((s: any) => ({
@@ -84,7 +84,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
     name: s.name,
     description: s.description || "",
     color: s.color || "#6b7280",
-    isActive: s.is_active,
+    isActive: s.is_active !== false,
   })).filter((s: any) => s.isActive), [situationsData])
 
   const channels = useMemo(() => channelsData.map((c: any) => ({
@@ -93,7 +93,7 @@ export const OperatorSidebar = memo(function OperatorSidebar({ isOpen, productCa
     description: c.description || "",
     icon: c.icon || "phone",
     contact: c.icon || "",
-    isActive: c.is_active,
+    isActive: c.is_active !== false,
   })).filter((c: any) => c.isActive), [channelsData])
 
   const selectedSituationData = situations.find((s) => s.id === selectedSituation)

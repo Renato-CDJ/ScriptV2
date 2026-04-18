@@ -2,111 +2,164 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { updateDataVersion } from "@/lib/cache-service"
 
-// Get Supabase instance lazily
-const getSupabase = () => createClient()
+// Collection/table names
+const TABLES = {
+  USERS: "users",
+  SCRIPTS: "scripts",
+  PRODUCTS: "products",
+  TABULATIONS: "tabulations",
+  SITUATIONS: "situations",
+  CHANNELS: "channels",
+  MESSAGES: "messages",
+  QUIZZES: "quizzes",
+  QUIZ_ATTEMPTS: "quiz_attempts",
+  PRESENTATIONS: "presentations",
+  PRESENTATION_PROGRESS: "presentation_progress",
+  CHAT_MESSAGES: "chat_messages",
+  CHAT_SETTINGS: "chat_settings",
+  QUALITY_POSTS: "quality_posts",
+  QUALITY_COMMENTS: "quality_comments",
+  FEEDBACKS: "feedbacks",
+  RESULT_CODES: "result_codes",
+  ADMIN_QUESTIONS: "admin_questions",
+  NOTES: "notes",
+  APP_SETTINGS: "app_settings",
+  INITIAL_GUIDE: "initial_guide",
+  CONTRACTS: "contracts",
+  PHRASEOLOGY: "phraseology",
+  SUPERVISOR_TEAMS: "supervisor_teams",
+} as const
+
+// Mapeamento de table para chave de versão
+const TABLE_TO_VERSION_KEY: Record<string, string> = {
+  [TABLES.PRODUCTS]: "products",
+  [TABLES.SCRIPTS]: "scripts",
+  [TABLES.TABULATIONS]: "tabulations",
+  [TABLES.SITUATIONS]: "situations",
+  [TABLES.CHANNELS]: "channels",
+  [TABLES.RESULT_CODES]: "result_codes",
+  [TABLES.INITIAL_GUIDE]: "initial_guide",
+  [TABLES.MESSAGES]: "messages",
+  [TABLES.APP_SETTINGS]: "app_settings",
+  [TABLES.PHRASEOLOGY]: "phraseology",
+}
 
 // Generic hook for CRUD operations with realtime
 export function useSupabaseTable<T extends { id: string }>(
   tableName: string,
-  orderBy: string = "created_at",
+  orderByField: string = "created_at",
   ascending: boolean = false
 ) {
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabaseRef = useRef(getSupabase())
-  const channelIdRef = useRef(`${tableName}-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const { data: result, error: err } = await supabaseRef.current
+      const supabase = createClient()
+      const { data: result, error: fetchError } = await supabase
         .from(tableName)
         .select("*")
-        .order(orderBy, { ascending })
+        .order(orderByField, { ascending })
 
-      if (err) {
-        setError(err.message)
-      } else {
-        setData((result as T[]) || [])
-        setError(null)
-      }
-    } catch (e) {
-      setError("Erro ao carregar dados")
+      if (fetchError) throw fetchError
+
+      setData(result as T[])
+      setError(null)
+    } catch (e: any) {
+      setError(e.message || "Erro ao carregar dados")
     } finally {
       setLoading(false)
     }
-  }, [tableName, orderBy, ascending])
+  }, [tableName, orderByField, ascending])
 
   useEffect(() => {
     fetchData()
 
-    // Subscribe to realtime changes with unique channel name
-    const channel = supabaseRef.current
-      .channel(channelIdRef.current)
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`${tableName}-changes`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: tableName },
-        () => {
-          fetchData()
-        }
+        () => fetchData()
       )
       .subscribe()
 
     return () => {
-      supabaseRef.current.removeChannel(channel)
+      supabase.removeChannel(channel)
     }
   }, [tableName, fetchData])
 
   const create = async (item: Omit<T, "id" | "created_at" | "updated_at">) => {
     try {
-      const { data: result, error: err } = await supabaseRef.current
+      const supabase = createClient()
+      const { data: result, error: insertError } = await supabase
         .from(tableName)
         .insert(item)
         .select()
         .single()
 
-      if (err) {
-        return { data: null, error: err.message }
+      if (insertError) throw insertError
+
+      // Atualizar versão dos dados para invalidar cache dos operadores
+      const versionKey = TABLE_TO_VERSION_KEY[tableName]
+      if (versionKey) {
+        updateDataVersion(versionKey as any).catch(console.error)
       }
+
       return { data: result as T, error: null }
-    } catch (e) {
-      return { data: null, error: "Erro ao criar" }
+    } catch (e: any) {
+      return { data: null, error: e.message || "Erro ao criar" }
     }
   }
 
   const update = async (id: string, updates: Partial<T>) => {
     try {
-      const { data: result, error: err } = await supabaseRef.current
+      const supabase = createClient()
+      const { data: result, error: updateError } = await supabase
         .from(tableName)
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq("id", id)
         .select()
         .single()
 
-      if (err) {
-        return { data: null, error: err.message }
+      if (updateError) throw updateError
+
+      // Atualizar versão dos dados para invalidar cache dos operadores
+      const versionKey = TABLE_TO_VERSION_KEY[tableName]
+      if (versionKey) {
+        updateDataVersion(versionKey as any).catch(console.error)
       }
+
       return { data: result as T, error: null }
-    } catch (e) {
-      return { data: null, error: "Erro ao atualizar" }
+    } catch (e: any) {
+      return { data: null, error: e.message || "Erro ao atualizar" }
     }
   }
 
   const remove = async (id: string) => {
     try {
-      const { error: err } = await supabaseRef.current
+      const supabase = createClient()
+      const { error: deleteError } = await supabase
         .from(tableName)
         .delete()
         .eq("id", id)
 
-      if (err) {
-        return { error: err.message }
+      if (deleteError) throw deleteError
+
+      // Atualizar versão dos dados para invalidar cache dos operadores
+      const versionKey = TABLE_TO_VERSION_KEY[tableName]
+      if (versionKey) {
+        updateDataVersion(versionKey as any).catch(console.error)
       }
+
       return { error: null }
-    } catch (e) {
-      return { error: "Erro ao excluir" }
+    } catch (e: any) {
+      return { error: e.message || "Erro ao excluir" }
     }
   }
 
@@ -137,20 +190,21 @@ export function useScripts() {
     is_active: boolean
     created_at: string
     updated_at: string
-  }>("scripts")
+  }>(TABLES.SCRIPTS)
 }
 
 // Get scripts for a specific product
 export async function getScriptsByProductId(productId: string) {
-  const supabase = getSupabase()
+  const supabase = createClient()
   const { data, error } = await supabase
-    .from("scripts")
+    .from(TABLES.SCRIPTS)
     .select("*")
     .eq("product_id", productId)
     .eq("is_active", true)
     .order("step_order", { ascending: true })
 
   if (error) {
+    console.error("[Supabase] Error fetching scripts:", error)
     return []
   }
 
@@ -159,36 +213,20 @@ export async function getScriptsByProductId(productId: string) {
 
 // Get the first script step for a product
 export async function getFirstScriptStep(productId: string) {
-  const supabase = getSupabase()
-  const { data, error } = await supabase
-    .from("scripts")
-    .select("*")
-    .eq("product_id", productId)
-    .eq("is_active", true)
-    .order("step_order", { ascending: true })
-    .limit(1)
-    .single()
-
-  if (error) {
-    return null
-  }
-
-  return data
+  const scripts = await getScriptsByProductId(productId)
+  return scripts.length > 0 ? scripts[0] : null
 }
 
 // Get a specific script step by ID
 export async function getScriptStepByIdFromSupabase(stepId: string) {
-  const supabase = getSupabase()
+  const supabase = createClient()
   const { data, error } = await supabase
-    .from("scripts")
+    .from(TABLES.SCRIPTS)
     .select("*")
     .eq("id", stepId)
     .single()
 
-  if (error) {
-    return null
-  }
-
+  if (error) return null
   return data
 }
 
@@ -202,11 +240,10 @@ export function useProductScripts(productId: string | null) {
       setScripts([])
       return
     }
-    
+
     setLoading(true)
     const data = await getScriptsByProductId(productId)
-    
-    // Map to ScriptStep format
+
     const mappedScripts = data.map((s: any) => ({
       id: s.id,
       title: s.title,
@@ -219,23 +256,30 @@ export function useProductScripts(productId: string | null) {
       alert: s.alert,
       isActive: s.is_active,
     }))
-    
+
     setScripts(mappedScripts)
     setLoading(false)
   }, [productId])
 
   useEffect(() => {
+    if (!productId) {
+      setScripts([])
+      return
+    }
+
     fetchScripts()
 
-    if (!productId) return
-
-    // Subscribe to realtime changes
-    const supabase = getSupabase()
+    const supabase = createClient()
     const channel = supabase
       .channel(`scripts-${productId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "scripts", filter: `product_id=eq.${productId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: TABLES.SCRIPTS,
+          filter: `product_id=eq.${productId}`,
+        },
         () => fetchScripts()
       )
       .subscribe()
@@ -245,9 +289,12 @@ export function useProductScripts(productId: string | null) {
     }
   }, [productId, fetchScripts])
 
-  const getStepById = useCallback((stepId: string) => {
-    return scripts.find((s) => s.id === stepId) || null
-  }, [scripts])
+  const getStepById = useCallback(
+    (stepId: string) => {
+      return scripts.find((s) => s.id === stepId) || null
+    },
+    [scripts]
+  )
 
   const getFirstStep = useCallback(() => {
     return scripts.length > 0 ? scripts[0] : null
@@ -267,7 +314,7 @@ export function useProducts() {
     details: Record<string, any>
     created_at: string
     updated_at: string
-  }>("products")
+  }>(TABLES.PRODUCTS)
 }
 
 export function useTabulations() {
@@ -279,7 +326,7 @@ export function useTabulations() {
     is_active: boolean
     created_at: string
     updated_at: string
-  }>("tabulations")
+  }>(TABLES.TABULATIONS)
 }
 
 export function useSituations() {
@@ -291,7 +338,7 @@ export function useSituations() {
     is_active: boolean
     created_at: string
     updated_at: string
-  }>("situations")
+  }>(TABLES.SITUATIONS)
 }
 
 export function useChannels() {
@@ -303,7 +350,7 @@ export function useChannels() {
     is_active: boolean
     created_at: string
     updated_at: string
-  }>("channels")
+  }>(TABLES.CHANNELS)
 }
 
 export function useResultCodes() {
@@ -317,7 +364,7 @@ export function useResultCodes() {
     is_active: boolean
     created_at: string
     updated_at: string
-  }>("result_codes")
+  }>(TABLES.RESULT_CODES)
 }
 
 export function useInitialGuide() {
@@ -329,7 +376,7 @@ export function useInitialGuide() {
     is_active: boolean
     created_at: string
     updated_at: string
-  }>("initial_guide", "step_order", true)
+  }>(TABLES.INITIAL_GUIDE, "step_order", true)
 }
 
 export function useContracts() {
@@ -340,7 +387,7 @@ export function useContracts() {
     is_active: boolean
     created_at: string
     updated_at: string
-  }>("contracts")
+  }>(TABLES.CONTRACTS)
 }
 
 export function useNotes(userId?: string) {
@@ -350,28 +397,36 @@ export function useNotes(userId?: string) {
   const fetchData = useCallback(async () => {
     if (!userId) return
     setLoading(true)
-    const supabase = getSupabase()
-    const { data: result } = await supabase
-      .from("notes")
+
+    const supabase = createClient()
+    const { data: notes, error } = await supabase
+      .from(TABLES.NOTES)
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
 
-    setData(result || [])
+    if (!error && notes) {
+      setData(notes)
+    }
     setLoading(false)
   }, [userId])
 
   useEffect(() => {
-    fetchData()
-
     if (!userId) return
 
-    const supabase = getSupabase()
+    fetchData()
+
+    const supabase = createClient()
     const channel = supabase
       .channel(`notes-${userId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "notes", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: TABLES.NOTES,
+          filter: `user_id=eq.${userId}`,
+        },
         () => fetchData()
       )
       .subscribe()
@@ -382,29 +437,35 @@ export function useNotes(userId?: string) {
   }, [userId, fetchData])
 
   const create = async (note: { title: string; content: string; color?: string }) => {
-    const supabase = getSupabase()
+    const supabase = createClient()
     const { data: result, error } = await supabase
-      .from("notes")
+      .from(TABLES.NOTES)
       .insert({ ...note, user_id: userId })
       .select()
       .single()
-    return { data: result, error: error?.message }
+
+    if (error) return { data: null, error: error.message }
+    return { data: result, error: null }
   }
 
   const update = async (id: string, updates: any) => {
-    const supabase = getSupabase()
+    const supabase = createClient()
     const { data: result, error } = await supabase
-      .from("notes")
-      .update(updates)
+      .from(TABLES.NOTES)
+      .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
       .single()
-    return { data: result, error: error?.message }
+
+    if (error) return { data: null, error: error.message }
+    return { data: result, error: null }
   }
 
   const remove = async (id: string) => {
-    const { error } = await getSupabase().from("notes").delete().eq("id", id)
-    return { error: error?.message }
+    const supabase = createClient()
+    const { error } = await supabase.from(TABLES.NOTES).delete().eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
   return { data, loading, refetch: fetchData, create, update, remove }
@@ -416,26 +477,28 @@ export function useAppSettings() {
 
   const fetchSettings = useCallback(async () => {
     setLoading(true)
-    const supabase = getSupabase()
-    const { data } = await supabase.from("app_settings").select("*")
-    
-    const settingsMap: Record<string, any> = {}
-    data?.forEach((item: any) => {
-      settingsMap[item.key] = item.value
-    })
-    setSettings(settingsMap)
+    const supabase = createClient()
+    const { data, error } = await supabase.from(TABLES.APP_SETTINGS).select("*")
+
+    if (!error && data) {
+      const settingsMap: Record<string, any> = {}
+      data.forEach((item) => {
+        settingsMap[item.key] = item.value
+      })
+      setSettings(settingsMap)
+    }
     setLoading(false)
   }, [])
 
   useEffect(() => {
     fetchSettings()
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     const channel = supabase
       .channel("app-settings-changes")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "app_settings" },
+        { event: "*", schema: "public", table: TABLES.APP_SETTINGS },
         () => fetchSettings()
       )
       .subscribe()
@@ -446,11 +509,13 @@ export function useAppSettings() {
   }, [fetchSettings])
 
   const updateSetting = async (key: string, value: any) => {
-    const supabase = getSupabase()
+    const supabase = createClient()
     const { error } = await supabase
-      .from("app_settings")
+      .from(TABLES.APP_SETTINGS)
       .upsert({ key, value, updated_at: new Date().toISOString() })
-    return { error: error?.message }
+
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
   return { settings, loading, refetch: fetchSettings, updateSetting }
@@ -466,62 +531,55 @@ export function usePhraseology() {
     is_active: boolean
     created_at: string
     updated_at: string
-  }>("phraseology")
+  }>(TABLES.PHRASEOLOGY)
 }
 
 // Import scripts from JSON file
 export async function importScriptsFromJson(jsonData: any): Promise<{ productCount: number; stepCount: number }> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   let productCount = 0
   let stepCount = 0
-  const errors: string[] = []
 
-  // Handle the JSON structure: { marcas: { PRODUTO: { step_key: {...} } } }
   const marcas = jsonData.marcas || jsonData
 
   for (const [productName, steps] of Object.entries(marcas)) {
     // Check if product already exists by name
-    const { data: existingProduct } = await supabase
-      .from("products")
+    const { data: existingProducts } = await supabase
+      .from(TABLES.PRODUCTS)
       .select("id")
       .eq("name", productName)
-      .single()
+      .limit(1)
 
     let productId: string
 
-    if (existingProduct) {
-      productId = existingProduct.id
+    if (existingProducts && existingProducts.length > 0) {
+      productId = existingProducts[0].id
       productCount++
-      
-      // Delete existing scripts for this product to reimport
-      await supabase.from("scripts").delete().eq("product_id", productId)
+
+      // Delete existing scripts for this product
+      await supabase.from(TABLES.SCRIPTS).delete().eq("product_id", productId)
     } else {
-      // Create new product with auto-generated UUID
-      const { data: newProduct, error: productError } = await supabase
-        .from("products")
+      // Create new product
+      const { data: newProduct } = await supabase
+        .from(TABLES.PRODUCTS)
         .insert({
           name: productName,
           description: `Produto ${productName}`,
           category: "imported",
           is_active: true,
         })
-        .select("id")
+        .select()
         .single()
 
-      if (productError) {
-        console.error("[Supabase] Product error:", productError)
-        errors.push(`Produto ${productName}: ${productError.message}`)
-        continue
-      }
-      
+      if (!newProduct) continue
       productId = newProduct.id
       productCount++
     }
 
-    // PHASE 1: Create all steps and build ID mapping (originalId -> newUUID)
+    // Create all steps and build ID mapping
     const idMapping: Record<string, string> = {}
     const stepsToInsert: any[] = []
-    
+
     if (typeof steps === "object" && steps !== null) {
       const stepsObj = steps as Record<string, any>
       let order = 0
@@ -529,11 +587,8 @@ export async function importScriptsFromJson(jsonData: any): Promise<{ productCou
       for (const [stepKey, stepData] of Object.entries(stepsObj)) {
         order++
         const step = stepData as any
-        
-        // Get the original ID from the JSON (either from step.id or the key)
+
         const originalId = step.id || stepKey
-        
-        // Get content - try multiple possible field names (body is used in this JSON)
         const stepContent = step.body || step.conteudo || step.content || step.texto || ""
         const stepTitle = step.title || step.titulo || stepKey
 
@@ -552,137 +607,127 @@ export async function importScriptsFromJson(jsonData: any): Promise<{ productCou
       }
     }
 
-    // Insert all steps and get their new UUIDs
+    // Insert all steps
     for (const stepData of stepsToInsert) {
       const { originalId, ...insertData } = stepData
-      
-      const { data: newStep, error: stepError } = await supabase
-        .from("scripts")
+
+      const { data: newStep } = await supabase
+        .from(TABLES.SCRIPTS)
         .insert(insertData)
-        .select("id")
+        .select()
         .single()
 
-      if (stepError) {
-        console.error("[Supabase] Step error:", stepError)
-        errors.push(`Tela ${stepData.title}: ${stepError.message}`)
-      } else if (newStep) {
+      if (newStep) {
         idMapping[originalId] = newStep.id
         stepCount++
       }
     }
 
-    // PHASE 2: Update all buttons to use new UUIDs
+    // Update all buttons to use new IDs
     for (const [originalId, newId] of Object.entries(idMapping)) {
-      // Get current step data
-      const { data: currentStep } = await supabase
-        .from("scripts")
+      const { data: script } = await supabase
+        .from(TABLES.SCRIPTS)
         .select("buttons")
         .eq("id", newId)
         .single()
 
-      if (currentStep?.buttons && Array.isArray(currentStep.buttons)) {
-        // Map button next values to new UUIDs and rename to nextStepId
-        const updatedButtons = currentStep.buttons.map((btn: any, index: number) => {
-          const nextId = btn.next ? (idMapping[btn.next] || btn.next) : null
+      if (script?.buttons) {
+        const updatedButtons = script.buttons.map((btn: any, index: number) => {
+          const nextId = btn.next ? idMapping[btn.next] || btn.next : null
           return {
             id: btn.id || `btn-${index}`,
-            label: btn.label || btn.text || `Botão ${index + 1}`,
+            label: btn.label || btn.text || `Botao ${index + 1}`,
             nextStepId: nextId,
-            next: nextId, // Keep both for compatibility
+            next: nextId,
             order: btn.order ?? index,
-            primary: btn.primary ?? (index === 0),
+            primary: btn.primary ?? index === 0,
             variant: btn.variant || (index === 0 ? "primary" : "secondary"),
           }
         })
 
-        // Update the step with mapped buttons
-        await supabase
-          .from("scripts")
-          .update({ buttons: updatedButtons })
-          .eq("id", newId)
+        await supabase.from(TABLES.SCRIPTS).update({ buttons: updatedButtons }).eq("id", newId)
       }
     }
   }
 
-  if (errors.length > 0 && stepCount === 0) {
-    throw new Error(`Erros na importação: ${errors[0]}`)
-  }
+  // Atualizar versão dos dados para invalidar cache dos operadores
+  await updateDataVersion("products")
+  await updateDataVersion("scripts")
 
   return { productCount, stepCount }
 }
 
 // Bulk import tabulations
 export async function importTabulationsFromJson(tabulationsData: any[]): Promise<number> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   let count = 0
-  
+
   for (const tab of tabulationsData) {
-    const { error } = await supabase
-      .from("tabulations")
-      .upsert({
-        id: tab.id || `tab-${Date.now()}-${count}`,
-        name: tab.name || tab.nome,
-        description: tab.description || tab.descricao || "",
-        color: tab.color || tab.cor || "#6b7280",
-        is_active: true,
-      }, { onConflict: "id" })
-    
+    const { error } = await supabase.from(TABLES.TABULATIONS).insert({
+      name: tab.name || tab.nome,
+      description: tab.description || tab.descricao || "",
+      color: tab.color || tab.cor || "#6b7280",
+      is_active: true,
+    })
+
     if (!error) count++
   }
-  
+
+  // Atualizar versão dos dados
+  await updateDataVersion("tabulations")
+
   return count
 }
 
 // Bulk import situations
 export async function importSituationsFromJson(situationsData: any[]): Promise<number> {
-  const supabase = getSupabase()
+  const supabase = createClient()
   let count = 0
-  
+
   for (const sit of situationsData) {
-    const { error } = await supabase
-      .from("situations")
-      .upsert({
-        id: sit.id || `sit-${Date.now()}-${count}`,
-        name: sit.name || sit.nome,
-        description: sit.description || sit.descricao || "",
-        color: sit.color || sit.cor || "#6b7280",
-        is_active: true,
-      }, { onConflict: "id" })
-    
+    const { error } = await supabase.from(TABLES.SITUATIONS).insert({
+      name: sit.name || sit.nome,
+      description: sit.description || sit.descricao || "",
+      color: sit.color || sit.cor || "#6b7280",
+      is_active: true,
+    })
+
     if (!error) count++
   }
-  
+
+  // Atualizar versão dos dados
+  await updateDataVersion("situations")
+
   return count
 }
 
 // Delete all scripts for a product
 export async function deleteScriptsForProduct(productId: string): Promise<void> {
-  const supabase = getSupabase()
-  // First delete all scripts associated with the product
-  await supabase
-    .from("scripts")
-    .delete()
-    .eq("product_id", productId)
-  
-  // Then delete the product
-  await supabase
-    .from("products")
-    .delete()
-    .eq("id", productId)
+  const supabase = createClient()
+
+  // Delete scripts
+  await supabase.from(TABLES.SCRIPTS).delete().eq("product_id", productId)
+
+  // Delete product
+  await supabase.from(TABLES.PRODUCTS).delete().eq("id", productId)
+
+  // Atualizar versão dos dados
+  await updateDataVersion("products")
+  await updateDataVersion("scripts")
 }
 
 // Delete all scripts for a product by name
 export async function deleteScriptsForProductByName(productName: string): Promise<void> {
-  const supabase = getSupabase()
-  // Find product by name
-  const { data: product } = await supabase
-    .from("products")
+  const supabase = createClient()
+
+  const { data: products } = await supabase
+    .from(TABLES.PRODUCTS)
     .select("id")
     .eq("name", productName)
-    .single()
-  
-  if (product) {
-    await deleteScriptsForProduct(product.id)
+    .limit(1)
+
+  if (products && products.length > 0) {
+    await deleteScriptsForProduct(products[0].id)
   }
 }
 
@@ -693,25 +738,27 @@ export function useMessages(userId?: string) {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const supabase = getSupabase()
-    const { data: result } = await supabase
-      .from("messages")
+    const supabase = createClient()
+    const { data: messages, error } = await supabase
+      .from(TABLES.MESSAGES)
       .select("*")
       .order("created_at", { ascending: false })
 
-    setData(result || [])
+    if (!error && messages) {
+      setData(messages)
+    }
     setLoading(false)
   }, [])
 
   useEffect(() => {
     fetchData()
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     const channel = supabase
-      .channel("messages-realtime")
+      .channel("messages-changes")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "messages" },
+        { event: "*", schema: "public", table: TABLES.MESSAGES },
         () => fetchData()
       )
       .subscribe()
@@ -728,26 +775,36 @@ export function useMessages(userId?: string) {
 
     const seenBy = message.seen_by || []
     if (!seenBy.includes(userId)) {
-      await getSupabase()
-        .from("messages")
+      const supabase = createClient()
+      await supabase
+        .from(TABLES.MESSAGES)
         .update({ seen_by: [...seenBy, userId] })
         .eq("id", messageId)
     }
   }
 
   const create = async (messageData: any) => {
-    const { error } = await getSupabase().from("messages").insert(messageData)
-    return { error: error?.message }
+    const supabase = createClient()
+    const { error } = await supabase.from(TABLES.MESSAGES).insert(messageData)
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
   const update = async (id: string, updates: any) => {
-    const { error } = await getSupabase().from("messages").update(updates).eq("id", id)
-    return { error: error?.message }
+    const supabase = createClient()
+    const { error } = await supabase
+      .from(TABLES.MESSAGES)
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
   const remove = async (id: string) => {
-    const { error } = await getSupabase().from("messages").delete().eq("id", id)
-    return { error: error?.message }
+    const supabase = createClient()
+    const { error } = await supabase.from(TABLES.MESSAGES).delete().eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
   return { data, loading, refetch: fetchData, markAsSeen, create, update, remove }
@@ -760,25 +817,27 @@ export function useQuizzes(userId?: string) {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const supabase = getSupabase()
-    const { data: result } = await supabase
-      .from("quizzes")
+    const supabase = createClient()
+    const { data: quizzes, error } = await supabase
+      .from(TABLES.QUIZZES)
       .select("*")
       .order("created_at", { ascending: false })
 
-    setData(result || [])
+    if (!error && quizzes) {
+      setData(quizzes)
+    }
     setLoading(false)
   }, [])
 
   useEffect(() => {
     fetchData()
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     const channel = supabase
-      .channel("quizzes-realtime")
+      .channel("quizzes-changes")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "quizzes" },
+        { event: "*", schema: "public", table: TABLES.QUIZZES },
         () => fetchData()
       )
       .subscribe()
@@ -788,92 +847,61 @@ export function useQuizzes(userId?: string) {
     }
   }, [fetchData])
 
-  const submitAttempt = async (quizId: string, answer: string, isCorrect: boolean) => {
-    if (!userId) return { error: "No user" }
-
-    const { error } = await getSupabase()
-      .from("quiz_attempts")
-      .insert({
-        quiz_id: quizId,
-        user_id: userId,
-        selected_answer: answer,
-        is_correct: isCorrect,
-      })
-
-    return { error: error?.message }
-  }
-
-  const hasAnswered = async (quizId: string): Promise<boolean> => {
-    if (!userId) return false
-
-    const { data: attempts } = await getSupabase()
-      .from("quiz_attempts")
-      .select("id")
-      .eq("quiz_id", quizId)
-      .eq("user_id", userId)
-      .limit(1)
-
-    return (attempts?.length || 0) > 0
-  }
-
   const create = async (quizData: any) => {
-    const { error } = await getSupabase().from("quizzes").insert(quizData)
-    return { error: error?.message }
+    const supabase = createClient()
+    const { error } = await supabase.from(TABLES.QUIZZES).insert(quizData)
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
   const update = async (id: string, updates: any) => {
-    const { error } = await getSupabase().from("quizzes").update(updates).eq("id", id)
-    return { error: error?.message }
+    const supabase = createClient()
+    const { error } = await supabase
+      .from(TABLES.QUIZZES)
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
   const remove = async (id: string) => {
-    const { error } = await getSupabase().from("quizzes").delete().eq("id", id)
-    return { error: error?.message }
+    const supabase = createClient()
+    const { error } = await supabase.from(TABLES.QUIZZES).delete().eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
-  const getAttempts = async (quizId: string) => {
-    const supabase = getSupabase()
-    const { data: attempts } = await supabase
-      .from("quiz_attempts")
-      .select("*")
-      .eq("quiz_id", quizId)
-      .order("created_at", { ascending: false })
-    return attempts || []
-  }
-
-  return { data, loading, refetch: fetchData, submitAttempt, hasAnswered, create, update, remove, getAttempts }
+  return { data, loading, refetch: fetchData, create, update, remove }
 }
 
-// Feedbacks hook for operators
-export function useFeedbacksForOperator(userId?: string) {
+// Presentations hook
+export function usePresentations() {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
-    if (!userId) return
     setLoading(true)
-    const supabase = getSupabase()
-    const { data: result } = await supabase
-      .from("feedbacks")
+    const supabase = createClient()
+    const { data: presentations, error } = await supabase
+      .from(TABLES.PRESENTATIONS)
       .select("*")
-      .eq("recipient_id", userId)
       .order("created_at", { ascending: false })
 
-    setData(result || [])
+    if (!error && presentations) {
+      setData(presentations)
+    }
     setLoading(false)
-  }, [userId])
+  }, [])
 
   useEffect(() => {
     fetchData()
 
-    if (!userId) return
-
-    const supabase = getSupabase()
+    const supabase = createClient()
     const channel = supabase
-      .channel(`feedbacks-${userId}`)
+      .channel("presentations-changes")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "feedbacks", filter: `recipient_id=eq.${userId}` },
+        { event: "*", schema: "public", table: TABLES.PRESENTATIONS },
         () => fetchData()
       )
       .subscribe()
@@ -881,80 +909,116 @@ export function useFeedbacksForOperator(userId?: string) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, fetchData])
+  }, [fetchData])
 
-  const markAsRead = async (feedbackId: string) => {
-    const supabase = getSupabase()
-    await supabase
-      .from("feedbacks")
-      .update({ is_read: true })
-      .eq("id", feedbackId)
+  const create = async (presentationData: any) => {
+    const supabase = createClient()
+    const { data: result, error } = await supabase
+      .from(TABLES.PRESENTATIONS)
+      .insert(presentationData)
+      .select()
+      .single()
+
+    if (error) return { data: null, error: error.message }
+    return { data: result, error: null }
   }
 
-  return { data, loading, refetch: fetchData, markAsRead }
+  const update = async (id: string, updates: any) => {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from(TABLES.PRESENTATIONS)
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
+  }
+
+  const remove = async (id: string) => {
+    const supabase = createClient()
+    const { error } = await supabase.from(TABLES.PRESENTATIONS).delete().eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
+  }
+
+  return { data, loading, refetch: fetchData, create, update, remove }
 }
 
-export function useChatMessages(userId?: string) {
-  const [messages, setMessages] = useState<any[]>([])
+// Chat messages hook
+export function useChatMessages() {
+  const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchMessages = useCallback(async () => {
-    if (!userId) return
+  const fetchData = useCallback(async () => {
     setLoading(true)
-    
-    const supabase = getSupabase()
-    const { data } = await supabase
-      .from("chat_messages")
+    const supabase = createClient()
+    const { data: messages, error } = await supabase
+      .from(TABLES.CHAT_MESSAGES)
       .select("*")
-      .or(`sender_id.eq.${userId},recipient_id.eq.${userId},is_global.eq.true`)
       .order("created_at", { ascending: true })
-      .limit(100)
 
-    setMessages(data || [])
+    if (!error && messages) {
+      setData(messages)
+    }
     setLoading(false)
-  }, [userId])
+  }, [])
 
   useEffect(() => {
-    fetchMessages()
+    fetchData()
 
-    const supabase = getSupabase()
+    const supabase = createClient()
     const channel = supabase
-      .channel("chat-messages")
+      .channel("chat-messages-changes")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages" },
-        () => fetchMessages()
+        { event: "*", schema: "public", table: TABLES.CHAT_MESSAGES },
+        () => fetchData()
       )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, fetchMessages])
+  }, [fetchData])
 
-  const sendMessage = async (message: {
-    content: string
-    sender_name: string
-    recipient_id?: string
-    recipient_name?: string
-    is_global?: boolean
-  }) => {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from("chat_messages")
-      .insert({ ...message, sender_id: userId })
+  const create = async (messageData: any) => {
+    const supabase = createClient()
+    const { data: result, error } = await supabase
+      .from(TABLES.CHAT_MESSAGES)
+      .insert(messageData)
       .select()
       .single()
-    return { data, error: error?.message }
+
+    if (error) return { data: null, error: error.message }
+    return { data: result, error: null }
   }
 
-  const markAsRead = async (messageId: string) => {
-    const supabase = getSupabase()
-    await supabase
-      .from("chat_messages")
-      .update({ is_read: true })
-      .eq("id", messageId)
+  const update = async (id: string, updates: any) => {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from(TABLES.CHAT_MESSAGES)
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
   }
 
-  return { messages, loading, refetch: fetchMessages, sendMessage, markAsRead }
+  const remove = async (id: string) => {
+    const supabase = createClient()
+    const { error } = await supabase.from(TABLES.CHAT_MESSAGES).delete().eq("id", id)
+    if (error) return { error: error.message }
+    return { error: null }
+  }
+
+  return { data, loading, refetch: fetchData, create, update, remove }
+}
+
+// Supervisor teams hook
+export function useSupervisorTeams() {
+  return useSupabaseTable<{
+    id: string
+    supervisor_id: string
+    operator_ids: string[]
+    created_at: string
+    updated_at: string
+  }>(TABLES.SUPERVISOR_TEAMS)
 }
