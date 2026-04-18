@@ -112,22 +112,27 @@ export const LoginForm = memo(function LoginForm() {
             <label htmlFor="email" className="sr-only">
               Email
             </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <div className="relative flex items-center">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 z-10" />
               <Input
                 id="email"
-                type="email"
-                placeholder="nome.sobrenome@gruporoveri.com"
+                type="text"
+                placeholder="nome.sobrenome"
                 value={email}
                 onChange={(e) => {
-                  setEmail(e.target.value)
+                  // Remover @ e tudo depois se o usuario tentar digitar
+                  const value = e.target.value.split("@")[0]
+                  setEmail(value)
                   setError("")
                 }}
                 required
-                autoComplete="email"
+                autoComplete="username"
                 disabled={isLoading}
-                className="h-12 pl-10 text-sm bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30 transition-all"
+                className="h-12 pl-10 pr-[140px] text-sm bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30 transition-all rounded-r-none border-r-0"
               />
+              <div className="h-12 px-3 flex items-center bg-zinc-100 dark:bg-zinc-800 border border-l-0 border-zinc-200 dark:border-zinc-700 rounded-r-md">
+                <span className="text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">@gruporoveri.com</span>
+              </div>
             </div>
           </div>
 
